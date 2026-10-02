@@ -18,6 +18,7 @@ Application data root
 └── Panels/
     └── {panel-id}/
         ├── content.rtf
+        ├── content.md
         └── image.png
 ```
 
@@ -39,11 +40,15 @@ Each panel object stores geometry as **flat** numbers, not a nested `frame` obje
 x, y, width, height
 ```
 
+These are portable numeric fields, but coordinates are platform/display-layout restoration hints, not a guarantee of pixel-identical placement across operating systems.
+
 Other fields include `id`, `kindIdentifier`, `displayIdentifier`, `isPinned`, `isLocked`, `isCollapsed`, `isPassThrough`, `opacity`, `themeIdentifier`, `payloadPath`, `payloadVersion`, `createdAt`, `updatedAt`.
+
+`displayIdentifier` is an opaque, platform-local display hint. It is not guaranteed to match across operating systems. If a future client cannot recognize it, fall back to the main or current display and recover/clamp geometry.
 
 Dates are ISO-8601. `payloadPath` is relative to the application data root, typically `Panels/{uuid}`.
 
-`panels.backup.json` is the previous successful write of the same envelope.
+`panels.backup.json` stores a secondary copy of the latest successfully encoded metadata.
 
 ## Text payload: RTF
 
@@ -52,6 +57,16 @@ Panels/{panel-id}/content.rtf
 ```
 
 Rich text for text panels. Missing file means an empty new panel. An existing unreadable file is left on disk and not overwritten.
+
+## Markdown payload: UTF-8
+
+```text
+kindIdentifier: com.glance.panel.markdown
+payloadVersion: 1
+Panels/{panel-id}/content.md
+```
+
+Plain UTF-8 Markdown source. Missing file means an empty new panel. An existing file that cannot be decoded as UTF-8 is left on disk and not overwritten.
 
 ## Image payload: PNG
 
@@ -63,10 +78,11 @@ Copied into the panel directory. Deleting the original source file does not blan
 
 ## Kinds
 
-V0.2 panel `kindIdentifier` values:
+Current `kindIdentifier` values:
 
 ```text
 com.glance.panel.text
+com.glance.panel.markdown
 com.glance.panel.image
 ```
 
@@ -74,4 +90,4 @@ Unknown kinds still restore as metadata so a newer client’s panels are not del
 
 ## Future clients
 
-Any future Windows (or other) client should read and write this JSON + RTF + PNG layout. Windowing, shortcuts, and tray code are platform-specific; the files are not.
+Any future Windows (or other) client should read and write this JSON + RTF + Markdown + PNG layout. Windowing, shortcuts, and tray code are platform-specific; the files are not.
