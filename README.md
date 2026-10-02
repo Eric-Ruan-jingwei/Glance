@@ -4,7 +4,7 @@
 
 A lightweight, local-first floating panel app for macOS.
 
-Glance is not another notes app. It is an always-on-top information layer: put the text, todos, or reference images you need to keep seeing on independent panels, pin them anywhere on screen, and they stay there while you work in the browser, editor, or chat.
+Glance is not another notes app. It is an always-on-top information layer: put the text or reference images you need to keep seeing on independent panels, pin them anywhere on screen, and they stay there while you work in the browser, editor, or chat.
 
 ## Highlights
 
@@ -16,11 +16,21 @@ Glance is not another notes app. It is an always-on-top information layer: put t
 - No cloud
 - Open source
 
-## V0.1
+## V0.2 已支持
 
-The first version only proves the core loop:
+- Text panel
+- Image panel
+- Always on top
+- Lock
+- Click-through
+- Option temporary interaction
+- Opacity
+- Global hide/show shortcut
+- Launch at login
+- Local persistence
+- Multi-display recovery
 
-Create a panel → put content in it → drag it where you want → it stays floating → quit and reopen, everything is still there.
+The core loop is still: create a panel → put content in it → drag it where you want → it stays floating → quit and reopen, everything is still there.
 
 Status-item menu:
 
@@ -28,13 +38,25 @@ Status-item menu:
 新建文字面板
 新建图片面板
 ────────────
-显示全部 / 隐藏全部
+显示全部 / 隐藏全部    ⌥⌘H
 ────────────
 设置…
 退出
 ```
 
 The Dock icon is hidden. There is no traditional main window.
+
+### Panel control
+
+Each panel can be pinned, locked, made click-through, and faded independently. Those flags are stored on the panel record and restored after relaunch.
+
+- **Lock** prevents accidental drag, resize, text editing, checklist toggles, and image replace. Right-click, unlock, opacity, pin, click-through, delete, and panel settings still work.
+- **Click-through** ignores mouse events until you hold Option. Lock still wins: Option can open the menu and settings, but cannot move, resize, or edit a locked panel.
+- **Opacity** ranges from 30% to 100% (`window.alphaValue`). The slider in panel settings updates live and persists after you release.
+
+### App settings
+
+Glance settings include launch at login (`SMAppService.mainApp`), the ⌥⌘H shortcut (not customizable in V0.2), the local data folder, and the version from the app bundle.
 
 ## Requirements
 
@@ -89,7 +111,7 @@ There is no save button. Moves, resizes, and text edits are debounced and flushe
 
 ## Architecture
 
-Windows are AppKit `NSPanel`s. SwiftUI is used for settings. Panel metadata is stored as JSON so the project builds with either Xcode or Command Line Tools; payload files stay in Application Support so future panel types (code, PDF, markdown) do not explode the database schema.
+Windows are AppKit `NSPanel`s. SwiftUI is used for app settings and the small panel settings window. Panel metadata is stored as JSON so the project builds with either Xcode or Command Line Tools; payload files stay in Application Support.
 
 ## License
 
