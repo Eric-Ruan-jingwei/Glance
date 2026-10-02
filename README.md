@@ -58,7 +58,11 @@ open Glance.xcodeproj
 
 Then run the Glance scheme. The app is an agent (`LSUIElement`): look for the pin icon in the menu bar, not in the Dock.
 
-Foundation checks (no Xcode required):
+```bash
+swift test
+```
+
+or:
 
 ```bash
 ./scripts/run-tests.sh

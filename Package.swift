@@ -8,8 +8,7 @@ let package = Package(
         .macOS(.v14)
     ],
     products: [
-        .executable(name: "Glance", targets: ["Glance"]),
-        .executable(name: "GlanceFoundationChecks", targets: ["GlanceFoundationChecks"])
+        .executable(name: "Glance", targets: ["Glance"])
     ],
     targets: [
         .target(
@@ -21,9 +20,6 @@ let package = Package(
                 "Assets.xcassets",
                 "AppIcon.icns",
                 "Application/AppEntry.swift"
-            ],
-            swiftSettings: [
-                .unsafeFlags(["-enable-testing"], .when(configuration: .debug))
             ]
         ),
         .executableTarget(
@@ -31,10 +27,10 @@ let package = Package(
             dependencies: ["GlanceCore"],
             path: "App"
         ),
-        .executableTarget(
-            name: "GlanceFoundationChecks",
+        .testTarget(
+            name: "GlanceCoreTests",
             dependencies: ["GlanceCore"],
-            path: "Tests/GlanceFoundationChecks"
+            path: "Tests/GlanceCoreTests"
         )
     ]
 )
