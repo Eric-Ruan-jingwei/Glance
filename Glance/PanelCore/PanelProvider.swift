@@ -15,6 +15,7 @@ protocol PanelContentControlling: AnyObject {
     func savePayload(to directory: URL) throws
     func enterEditing()
     func exitEditing()
+    func flushPendingUserChanges() -> Bool
     func additionalContextMenuItems() -> [NSMenuItem]
     func handlePaste() -> Bool
     func primaryEditMenuTitle() -> String?
@@ -23,6 +24,7 @@ protocol PanelContentControlling: AnyObject {
 extension PanelContentControlling {
     var allowsKeyInReadingMode: Bool { false }
     func primaryEditMenuTitle() -> String? { nil }
+    func flushPendingUserChanges() -> Bool { false }
 }
 
 protocol PanelProviding {

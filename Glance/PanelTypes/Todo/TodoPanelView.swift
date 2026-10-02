@@ -23,6 +23,12 @@ final class TodoPanelView: NSView, PanelContentControlling {
         case editing(UUID, original: String)
     }
 
+    private struct DraftKey: Equatable {
+        var isAdding: Bool
+        var editingID: UUID?
+        var text: String
+    }
+
     private let scrollView = NSScrollView()
     private let documentView = TodoFlippedView()
     private let stack = NSStackView()
@@ -32,6 +38,7 @@ final class TodoPanelView: NSView, PanelContentControlling {
     private var session: Session = .none
     private var isApplying = false
     private var focusedRow: TodoRowView?
+    private var lastAbsorbedDraft: DraftKey?
 
     init() {
         super.init(frame: .zero)
@@ -50,7 +57,6 @@ final class TodoPanelView: NSView, PanelContentControlling {
     }
 
     func savePayload(to directory: URL) throws {
-        commitPendingEditor(continueAdding: false, notify: false)
         try TodoPayloadFile.writeDocument(document, to: directory)
     }
 
@@ -62,9 +68,13 @@ final class TodoPanelView: NSView, PanelContentControlling {
     }
 
     func exitEditing() {
-        commitPendingEditor(continueAdding: false, notify: true)
         session = .none
+        lastAbsorbedDraft = nil
         reloadRows()
+    }
+
+    func flushPendingUserChanges() -> Bool {
+        absorbDraftIntoDocument()
     }
 
     func additionalContextMenuItems() -> [NSMenuItem] { [] }
@@ -147,6 +157,7 @@ final class TodoPanelView: NSView, PanelContentControlling {
 
     private func beginAdding() {
         session = .adding
+        lastAbsorbedDraft = nil
         reloadRows()
         focusedRow?.focusField()
     }
@@ -161,24 +172,60 @@ final class TodoPanelView: NSView, PanelContentControlling {
         focusedRow?.focusField()
     }
 
+    private func pendingSession() -> TodoPendingSession {
+        switch session {
+        case .none:
+            return .none
+        case .adding:
+            return .adding
+        case .editing(let id, _):
+            return .editing(id: id)
+        }
+    }
+
+    private func currentDraftKey() -> DraftKey {
+        DraftKey(
+            isAdding: {
+                if case .adding = session { return true }
+                return false
+            }(),
+            editingID: {
+                if case .editing(let id, _) = session { return id }
+                return nil
+            }(),
+            text: TodoMutation.trimmed(focusedRow?.field.stringValue ?? "")
+        )
+    }
+
+    @discardableResult
+    private func absorbDraftIntoDocument() -> Bool {
+        guard !isApplying else { return false }
+        let key = currentDraftKey()
+        if lastAbsorbedDraft == key {
+            return false
+        }
+        let mutated = TodoPendingFlush.apply(
+            to: &document,
+            session: pendingSession(),
+            draft: focusedRow?.field.stringValue ?? ""
+        )
+        lastAbsorbedDraft = key
+        return mutated
+    }
+
     private func commitPendingEditor(continueAdding: Bool, notify: Bool) {
         guard !isApplying else { return }
-        var mutated = false
+        let draft = focusedRow?.field.stringValue ?? ""
+        let mutated = TodoPendingFlush.apply(to: &document, session: pendingSession(), draft: draft)
         switch session {
         case .none:
             return
         case .adding:
-            if TodoMutation.add(&document, text: focusedRow?.field.stringValue ?? "") != nil {
-                mutated = true
-                session = continueAdding ? .adding : .none
-            } else {
-                session = .none
-            }
-        case .editing(let id, _):
-            let result = TodoMutation.edit(&document, id: id, text: focusedRow?.field.stringValue ?? "")
-            mutated = result == .updated || result == .deleted
+            session = mutated && continueAdding ? .adding : .none
+        case .editing:
             session = continueAdding ? .adding : .none
         }
+        lastAbsorbedDraft = nil
         if mutated, notify {
             onPayloadChange?()
         }
@@ -190,6 +237,7 @@ final class TodoPanelView: NSView, PanelContentControlling {
 
     private func cancelEditor() {
         session = .none
+        lastAbsorbedDraft = nil
         reloadRows()
         NSApp.deactivate()
     }
@@ -205,11 +253,10 @@ final class TodoPanelView: NSView, PanelContentControlling {
 
     private func delete(id: UUID) {
         guard allowsContentMutation else { return }
-        if TodoMutation.delete(&document, id: id) {
-            session = .none
-            onPayloadChange?()
-            reloadRows()
-        }
+        commitPendingEditor(continueAdding: false, notify: true)
+        guard TodoMutation.delete(&document, id: id) else { return }
+        onPayloadChange?()
+        reloadRows()
     }
 
     private func reloadRows() {

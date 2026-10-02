@@ -80,6 +80,7 @@ final class PanelWindowController: NSWindowController, NSWindowDelegate {
     }
 
     func persistAllNow() {
+        absorbPendingUserChanges()
         environment.debouncer.flush(id: frameDebounceID)
         environment.debouncer.flush(id: payloadDebounceID)
         environment.debouncer.flush(id: opacityDebounceID)
@@ -111,6 +112,7 @@ final class PanelWindowController: NSWindowController, NSWindowDelegate {
 
     func setPassThrough(_ enabled: Bool) {
         if enabled {
+            absorbPendingUserChanges()
             persistPayloadNow()
             applyPassThroughMode()
             mutateRecord { record in
@@ -120,6 +122,7 @@ final class PanelWindowController: NSWindowController, NSWindowDelegate {
         } else {
             isPassThrough = false
             if interactionState == .editing {
+                absorbPendingUserChanges()
                 persistPayloadNow()
                 content.exitEditing()
             }
@@ -188,6 +191,7 @@ final class PanelWindowController: NSWindowController, NSWindowDelegate {
     }
 
     private func leaveEditing() {
+        absorbPendingUserChanges()
         persistPayloadNow()
         switch PanelModeTransition.stateAfterLeavingEditing(persistedPassThrough: isPassThrough) {
         case .passThrough:
@@ -422,6 +426,12 @@ final class PanelWindowController: NSWindowController, NSWindowDelegate {
     private func persistOpacity() {
         mutateRecord { record in
             record.opacity = opacity
+        }
+    }
+
+    private func absorbPendingUserChanges() {
+        if content.flushPendingUserChanges() {
+            payloadDirty.markUserEdit()
         }
     }
 

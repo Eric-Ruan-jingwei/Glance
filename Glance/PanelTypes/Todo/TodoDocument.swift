@@ -70,3 +70,33 @@ enum TodoMutation {
         return document.items.count < before
     }
 }
+
+enum TodoPendingSession: Equatable {
+    case none
+    case adding
+    case editing(id: UUID)
+}
+
+enum TodoPendingFlush {
+    /// Copies the in-progress draft into the document. Does not change UI session.
+    @discardableResult
+    static func apply(
+        to document: inout TodoDocument,
+        session: TodoPendingSession,
+        draft: String
+    ) -> Bool {
+        switch session {
+        case .none:
+            return false
+        case .adding:
+            return TodoMutation.add(&document, text: draft) != nil
+        case .editing(let id):
+            switch TodoMutation.edit(&document, id: id, text: draft) {
+            case .updated, .deleted:
+                return true
+            case .unchanged, .notFound:
+                return false
+            }
+        }
+    }
+}
