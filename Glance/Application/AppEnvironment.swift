@@ -19,9 +19,12 @@ final class AppEnvironment {
     }
 
     private init() throws {
-        let root = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("Glance", isDirectory: true)
-        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        let environment = ProcessInfo.processInfo.environment
+        let root = ApplicationDataLocation.resolve(environment: environment)
+        try ApplicationDataLocation.prepare(root, environment: environment)
+        if environment[ApplicationDataLocation.environmentKey] != nil {
+            NSLog("Glance: using isolated data root %@", root.path)
+        }
         self.applicationSupportRoot = root
         self.payloadStore = try PayloadStore(applicationSupportRoot: root)
         self.repository = try PanelRepository(fileURL: payloadStore.metadataURL)
