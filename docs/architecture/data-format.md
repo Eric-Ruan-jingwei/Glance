@@ -19,6 +19,7 @@ Application data root
     └── {panel-id}/
         ├── content.rtf
         ├── content.md
+        ├── todo.json
         └── image.png
 ```
 
@@ -68,6 +69,16 @@ Panels/{panel-id}/content.md
 
 Plain UTF-8 Markdown source. Missing file means an empty new panel. An existing file that cannot be decoded as UTF-8 is left on disk and not overwritten.
 
+## Todo payload: UTF-8 JSON
+
+```text
+kindIdentifier: com.glance.panel.todo
+payloadVersion: 1
+Panels/{panel-id}/todo.json
+```
+
+UTF-8 JSON with a payload-local `version` field (currently `1`) and an `items` array. Each item has `id`, `text`, `isCompleted`, and `createdAt` (ISO-8601). Missing file means an empty checklist. An existing file that cannot be parsed, or whose `version` is unsupported, is left on disk and not overwritten.
+
 ## Image payload: PNG
 
 ```text
@@ -83,6 +94,7 @@ Current `kindIdentifier` values:
 ```text
 com.glance.panel.text
 com.glance.panel.markdown
+com.glance.panel.todo
 com.glance.panel.image
 ```
 
@@ -90,4 +102,4 @@ Unknown kinds still restore as metadata so a newer client’s panels are not del
 
 ## Future clients
 
-Any future Windows (or other) client should read and write this JSON + RTF + Markdown + PNG layout. Windowing, shortcuts, and tray code are platform-specific; the files are not.
+Any future Windows (or other) client should read and write this JSON + RTF + Markdown + Todo JSON + PNG layout. Windowing, shortcuts, and tray code are platform-specific; the files are not.

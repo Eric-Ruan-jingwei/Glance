@@ -13,15 +13,16 @@ There is no Windows client yet. Shared data contracts are documented so a future
 - Native macOS
 - Always on top
 - Local-first
-- Text, Markdown, and images
+- Text, Markdown, Todo, and images
 - No account
 - No cloud
 - Open source
 
-## V0.3 已支持
+## V0.4 已支持
 
 - Text panel
 - Markdown panel (rendered preview, double-click to edit raw UTF-8 `.md`)
+- Todo panel (interactive checklist with inline add/edit/complete/delete)
 - Image panel
 - Always on top
 - Lock
@@ -40,6 +41,7 @@ Status-item menu:
 ```text
 新建文字面板
 新建 Markdown 面板
+新建待办面板
 新建图片面板
 ────────────
 显示全部 / 隐藏全部    ⌥⌘G
@@ -55,7 +57,8 @@ The Dock icon is hidden. There is no traditional main window.
 Each panel can be pinned, locked, made click-through, and faded independently. Those flags are stored on the panel record and restored after relaunch.
 
 - **Markdown** shows a rendered preview. Double-click to edit the raw Markdown source. Payload is UTF-8 `content.md`.
-- **Lock** prevents accidental drag, resize, text editing, checklist toggles, Markdown source edits, and image replace. Right-click, unlock, opacity, pin, click-through, delete, and panel settings still work.
+- **Todo** is a lightweight on-screen checklist: add, inline edit, complete, and delete. Payload is UTF-8 `todo.json`. There is no reorder, due date, reminder, or priority system.
+- **Lock** prevents accidental drag, resize, text editing, checklist toggles, Markdown source edits, Todo mutations, and image replace. Right-click, unlock, opacity, pin, click-through, delete, and panel settings still work.
 - **Click-through** ignores mouse events until you hold Option. Lock still wins: Option can open the menu and settings, but cannot move, resize, or edit a locked panel.
 - **Opacity** ranges from 30% to 100% (`window.alphaValue`). The slider in panel settings updates live and persists after you release.
 
@@ -101,6 +104,7 @@ Everything lives on disk. See [docs/architecture/data-format.md](docs/architectu
     └── {panel-id}/
         ├── content.rtf
         ├── content.md
+        ├── todo.json
         └── image.png
 ```
 
