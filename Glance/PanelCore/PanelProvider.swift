@@ -9,6 +9,7 @@ protocol PanelContentControlling: AnyObject {
     var onRequestPreferredSize: ((NSSize) -> Void)? { get set }
     var allowsMove: Bool { get set }
     var allowsContentMutation: Bool { get set }
+    var allowsKeyInReadingMode: Bool { get }
 
     func loadPayload(from directory: URL) throws
     func savePayload(to directory: URL) throws
@@ -16,6 +17,12 @@ protocol PanelContentControlling: AnyObject {
     func exitEditing()
     func additionalContextMenuItems() -> [NSMenuItem]
     func handlePaste() -> Bool
+    func primaryEditMenuTitle() -> String?
+}
+
+extension PanelContentControlling {
+    var allowsKeyInReadingMode: Bool { false }
+    func primaryEditMenuTitle() -> String? { nil }
 }
 
 protocol PanelProviding {
@@ -35,6 +42,8 @@ enum PanelProviderRegistry {
         switch kindIdentifier {
         case PanelKind.text:
             return TextPanelProvider.makeContent()
+        case PanelKind.markdown:
+            return MarkdownPanelProvider.makeContent()
         case PanelKind.image:
             return ImagePanelProvider.makeContent()
         default:
@@ -46,6 +55,8 @@ enum PanelProviderRegistry {
         switch kindIdentifier {
         case PanelKind.image:
             return ImagePanelProvider.minimumSize
+        case PanelKind.markdown:
+            return MarkdownPanelProvider.minimumSize
         default:
             return TextPanelProvider.minimumSize
         }
@@ -55,6 +66,8 @@ enum PanelProviderRegistry {
         switch kindIdentifier {
         case PanelKind.image:
             return ImagePanelProvider.defaultSize
+        case PanelKind.markdown:
+            return MarkdownPanelProvider.defaultSize
         default:
             return TextPanelProvider.defaultSize
         }
@@ -64,6 +77,8 @@ enum PanelProviderRegistry {
         switch kindIdentifier {
         case PanelKind.image:
             return ImagePanelProvider.payloadVersion
+        case PanelKind.markdown:
+            return MarkdownPanelProvider.payloadVersion
         default:
             return TextPanelProvider.payloadVersion
         }

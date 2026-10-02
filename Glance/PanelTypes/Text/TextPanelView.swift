@@ -71,6 +71,7 @@ final class TextPanelView: NSView, PanelContentControlling, NSTextViewDelegate {
 
     func additionalContextMenuItems() -> [NSMenuItem] { [] }
     func handlePaste() -> Bool { false }
+    func primaryEditMenuTitle() -> String? { "编辑" }
 
     func textDidChange(_ notification: Notification) {
         refreshPlaceholder()

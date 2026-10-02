@@ -53,6 +53,10 @@ final class PanelManager {
         createPanel(kindIdentifier: PanelKind.text)
     }
 
+    func createMarkdownPanel() {
+        createPanel(kindIdentifier: PanelKind.markdown)
+    }
+
     func createImagePanel() {
         createPanel(kindIdentifier: PanelKind.image)
     }

@@ -33,6 +33,7 @@ final class GlanceGlobalShortcutTests: XCTestCase {
             menu,
             allHidden: allHidden,
             onNewText: {},
+            onNewMarkdown: {},
             onNewImage: {},
             onToggleVisibility: {},
             onSettings: {},

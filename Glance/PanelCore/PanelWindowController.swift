@@ -148,7 +148,7 @@ final class PanelWindowController: NSWindowController, NSWindowDelegate {
 
     private func applyReadingMode() {
         interactionState = .reading
-        panelWindow.allowsKey = false
+        panelWindow.allowsKey = content.allowsKeyInReadingMode
         chrome.isInteractable = true
         content.exitEditing()
         removeClickOutsideMonitor()
@@ -264,8 +264,8 @@ final class PanelWindowController: NSWindowController, NSWindowDelegate {
 
     private func makeContextMenu() -> NSMenu {
         let menu = NSMenu()
-        if kindIdentifier == PanelKind.text {
-            let edit = NSMenuItem(title: "编辑", action: #selector(editClicked), keyEquivalent: "")
+        if let title = content.primaryEditMenuTitle() {
+            let edit = NSMenuItem(title: title, action: #selector(editClicked), keyEquivalent: "")
             edit.target = self
             edit.isEnabled = currentPolicy().allowsEdit
             menu.addItem(edit)
