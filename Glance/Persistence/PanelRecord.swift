@@ -1,13 +1,9 @@
-import AppKit
 import Foundation
 
 final class PanelRecord: Codable, Identifiable {
     var id: UUID
     var kindIdentifier: String
-    var x: Double
-    var y: Double
-    var width: Double
-    var height: Double
+    var frame: PanelFrame
     var displayIdentifier: String
     var isPinned: Bool
     var isLocked: Bool
@@ -23,7 +19,7 @@ final class PanelRecord: Codable, Identifiable {
     init(
         id: UUID = UUID(),
         kindIdentifier: String,
-        frame: NSRect,
+        frame: PanelFrame,
         displayIdentifier: String,
         payloadPath: String,
         payloadVersion: Int,
@@ -38,10 +34,7 @@ final class PanelRecord: Codable, Identifiable {
     ) {
         self.id = id
         self.kindIdentifier = kindIdentifier
-        self.x = frame.origin.x
-        self.y = frame.origin.y
-        self.width = frame.size.width
-        self.height = frame.size.height
+        self.frame = frame
         self.displayIdentifier = displayIdentifier
         self.isPinned = isPinned
         self.isLocked = isLocked
@@ -55,16 +48,6 @@ final class PanelRecord: Codable, Identifiable {
         self.updatedAt = updatedAt
     }
 
-    var frame: NSRect {
-        get { NSRect(x: x, y: y, width: width, height: height) }
-        set {
-            x = newValue.origin.x
-            y = newValue.origin.y
-            width = newValue.size.width
-            height = newValue.size.height
-        }
-    }
-
     enum CodingKeys: String, CodingKey {
         case id, kindIdentifier, x, y, width, height, displayIdentifier
         case isPinned, isLocked, isCollapsed, isPassThrough
@@ -76,10 +59,12 @@ final class PanelRecord: Codable, Identifiable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id = try container.decode(UUID.self, forKey: .id)
         kindIdentifier = try container.decode(String.self, forKey: .kindIdentifier)
-        x = try container.decode(Double.self, forKey: .x)
-        y = try container.decode(Double.self, forKey: .y)
-        width = try container.decode(Double.self, forKey: .width)
-        height = try container.decode(Double.self, forKey: .height)
+        frame = PanelFrame(
+            x: try container.decode(Double.self, forKey: .x),
+            y: try container.decode(Double.self, forKey: .y),
+            width: try container.decode(Double.self, forKey: .width),
+            height: try container.decode(Double.self, forKey: .height)
+        )
         displayIdentifier = try container.decode(String.self, forKey: .displayIdentifier)
         payloadPath = try container.decode(String.self, forKey: .payloadPath)
         createdAt = try container.decode(Date.self, forKey: .createdAt)
@@ -98,10 +83,10 @@ final class PanelRecord: Codable, Identifiable {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(id, forKey: .id)
         try container.encode(kindIdentifier, forKey: .kindIdentifier)
-        try container.encode(x, forKey: .x)
-        try container.encode(y, forKey: .y)
-        try container.encode(width, forKey: .width)
-        try container.encode(height, forKey: .height)
+        try container.encode(frame.x, forKey: .x)
+        try container.encode(frame.y, forKey: .y)
+        try container.encode(frame.width, forKey: .width)
+        try container.encode(frame.height, forKey: .height)
         try container.encode(displayIdentifier, forKey: .displayIdentifier)
         try container.encode(isPinned, forKey: .isPinned)
         try container.encode(isLocked, forKey: .isLocked)

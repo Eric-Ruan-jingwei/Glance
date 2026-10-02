@@ -1,4 +1,3 @@
-import AppKit
 import Foundation
 
 #if canImport(GlanceCore)
@@ -15,7 +14,7 @@ enum GlanceTestFixtures {
         PanelRecord(
             id: id,
             kindIdentifier: PanelKind.text,
-            frame: NSRect(x: 100, y: 200, width: 320, height: 220),
+            frame: PanelFrame(x: 100, y: 200, width: 320, height: 220),
             displayIdentifier: "1",
             payloadPath: "Panels/\(id.uuidString)",
             payloadVersion: 1,

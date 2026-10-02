@@ -1,36 +1,20 @@
-import AppKit
+import Foundation
 
 struct DisplaySnapshot: Equatable {
     var identifier: String
-    var visibleFrame: NSRect
+    var visibleFrame: PanelFrame
     var isMain: Bool
 }
 
 struct RecoveredFrame: Equatable {
-    var frame: NSRect
+    var frame: PanelFrame
     var displayIdentifier: String
     var migrated: Bool
 }
 
 enum PanelFrameRecovery {
-    static func currentDisplays() -> [DisplaySnapshot] {
-        let mainID = NSScreen.main.map { DisplayManager.identifier(for: $0) }
-        return NSScreen.screens.map { screen in
-            let identifier = DisplayManager.identifier(for: screen)
-            return DisplaySnapshot(
-                identifier: identifier,
-                visibleFrame: screen.visibleFrame,
-                isMain: identifier == mainID
-            )
-        }
-    }
-
-    static func recover(frame: NSRect, displayIdentifier: String) -> RecoveredFrame {
-        recover(frame: frame, displayIdentifier: displayIdentifier, displays: currentDisplays())
-    }
-
     static func recover(
-        frame: NSRect,
+        frame: PanelFrame,
         displayIdentifier: String,
         displays: [DisplaySnapshot]
     ) -> RecoveredFrame {
@@ -43,10 +27,8 @@ enum PanelFrameRecovery {
         var recovered = frame
         let migrated = original == nil
         if migrated {
-            recovered.origin = NSPoint(
-                x: screen.visibleFrame.maxX - recovered.width - GlanceConstants.spawnMargin,
-                y: screen.visibleFrame.maxY - recovered.height - GlanceConstants.spawnMargin
-            )
+            recovered.x = screen.visibleFrame.maxX - recovered.width - GlanceLayout.spawnMargin
+            recovered.y = screen.visibleFrame.maxY - recovered.height - GlanceLayout.spawnMargin
         }
 
         recovered = clamp(recovered, to: screen.visibleFrame)
@@ -57,19 +39,19 @@ enum PanelFrameRecovery {
         )
     }
 
-    static func clamp(_ frame: NSRect, to visible: NSRect) -> NSRect {
+    static func clamp(_ frame: PanelFrame, to visible: PanelFrame) -> PanelFrame {
         var result = frame
         if visible.width > 0 {
-            result.size.width = min(max(result.size.width, 80), visible.width)
+            result.width = min(max(result.width, 80), visible.width)
         }
         if visible.height > 0 {
-            result.size.height = min(max(result.size.height, 80), visible.height)
+            result.height = min(max(result.height, 80), visible.height)
         }
         if visible.width > 0 {
-            result.origin.x = min(max(result.origin.x, visible.minX), visible.maxX - result.width)
+            result.x = min(max(result.x, visible.minX), visible.maxX - result.width)
         }
         if visible.height > 0 {
-            result.origin.y = min(max(result.origin.y, visible.minY), visible.maxY - result.height)
+            result.y = min(max(result.y, visible.minY), visible.maxY - result.height)
         }
         return result
     }

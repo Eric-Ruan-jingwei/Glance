@@ -85,9 +85,9 @@ final class PanelRepositoryTests: XCTestCase {
         try withTempRepository { _, metadataURL in
             let id = UUID(uuidString: "0D74D7D4-33F4-4795-A657-D40F456187A7")!
             let older = GlanceTestFixtures.sampleRecord(id: id, updatedAt: Date(timeIntervalSince1970: 100))
-            older.x = 10
+            older.frame.x = 10
             let newer = GlanceTestFixtures.sampleRecord(id: id, updatedAt: Date(timeIntervalSince1970: 200))
-            newer.x = 99
+            newer.frame.x = 99
             let data = try PanelDatabaseCodec.encode(
                 PanelDatabase(schemaVersion: 1, panels: [older, newer])
             )
@@ -95,7 +95,7 @@ final class PanelRepositoryTests: XCTestCase {
             let repository = try PanelRepository(fileURL: metadataURL)
             let panels = try repository.all()
             XCTAssertEqual(panels.count, 1)
-            XCTAssertEqual(panels[0].x, 99)
+            XCTAssertEqual(panels[0].frame.x, 99)
         }
     }
 

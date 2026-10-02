@@ -1,4 +1,3 @@
-import AppKit
 import XCTest
 
 #if canImport(GlanceCore)
@@ -9,33 +8,55 @@ import XCTest
 
 final class PanelPlacementEngineTests: XCTestCase {
     private let engine = PanelPlacementEngine()
-    private let visible = NSRect(x: 0, y: 0, width: 1440, height: 900)
-    private let size = NSSize(width: 320, height: 220)
+    private let visible = PanelFrame(x: 0, y: 0, width: 1440, height: 900)
+    private let width: Double = 320
+    private let height: Double = 220
 
     func testDefaultTopRight() {
-        let frame = engine.frameForNewPanel(size: size, existingFrames: [], visibleFrame: visible)
-        XCTAssertEqual(frame.origin.x, visible.maxX - size.width - GlanceConstants.spawnMargin)
-        XCTAssertEqual(frame.origin.y, visible.maxY - size.height - GlanceConstants.spawnMargin)
-        XCTAssertEqual(frame.size, size)
+        let frame = engine.frameForNewPanel(
+            width: width,
+            height: height,
+            existingFrames: [],
+            visibleFrame: visible
+        )
+        XCTAssertEqual(frame.x, visible.maxX - width - GlanceLayout.spawnMargin)
+        XCTAssertEqual(frame.y, visible.maxY - height - GlanceLayout.spawnMargin)
+        XCTAssertEqual(frame.width, width)
+        XCTAssertEqual(frame.height, height)
     }
 
     func testCascadeOffset() {
-        let first = engine.frameForNewPanel(size: size, existingFrames: [], visibleFrame: visible)
-        let second = engine.frameForNewPanel(size: size, existingFrames: [first], visibleFrame: visible)
-        XCTAssertEqual(second.origin.x, first.origin.x - GlanceConstants.cascadeOffset)
-        XCTAssertEqual(second.origin.y, first.origin.y - GlanceConstants.cascadeOffset)
+        let first = engine.frameForNewPanel(
+            width: width,
+            height: height,
+            existingFrames: [],
+            visibleFrame: visible
+        )
+        let second = engine.frameForNewPanel(
+            width: width,
+            height: height,
+            existingFrames: [first],
+            visibleFrame: visible
+        )
+        XCTAssertEqual(second.x, first.x - GlanceLayout.cascadeOffset)
+        XCTAssertEqual(second.y, first.y - GlanceLayout.cascadeOffset)
     }
 
     func testClampWhenCascadeWouldLeaveScreen() {
         let crowding = (0..<40).map { index in
-            NSRect(
-                x: visible.maxX - size.width - GlanceConstants.spawnMargin - CGFloat(index) * GlanceConstants.cascadeOffset,
-                y: visible.maxY - size.height - GlanceConstants.spawnMargin - CGFloat(index) * GlanceConstants.cascadeOffset,
-                width: size.width,
-                height: size.height
+            PanelFrame(
+                x: visible.maxX - width - GlanceLayout.spawnMargin - Double(index) * GlanceLayout.cascadeOffset,
+                y: visible.maxY - height - GlanceLayout.spawnMargin - Double(index) * GlanceLayout.cascadeOffset,
+                width: width,
+                height: height
             )
         }
-        let frame = engine.frameForNewPanel(size: size, existingFrames: crowding, visibleFrame: visible)
+        let frame = engine.frameForNewPanel(
+            width: width,
+            height: height,
+            existingFrames: crowding,
+            visibleFrame: visible
+        )
         XCTAssertGreaterThanOrEqual(frame.minX, visible.minX)
         XCTAssertGreaterThanOrEqual(frame.minY, visible.minY)
         XCTAssertLessThanOrEqual(frame.maxX, visible.maxX)
@@ -43,15 +64,19 @@ final class PanelPlacementEngineTests: XCTestCase {
     }
 
     func testExistingFrameCollisionTriggersCascade() {
-        let origin = NSPoint(
-            x: visible.maxX - size.width - GlanceConstants.spawnMargin,
-            y: visible.maxY - size.height - GlanceConstants.spawnMargin
+        let first = PanelFrame(
+            x: visible.maxX - width - GlanceLayout.spawnMargin,
+            y: visible.maxY - height - GlanceLayout.spawnMargin,
+            width: width,
+            height: height
         )
         let frame = engine.frameForNewPanel(
-            size: size,
-            existingFrames: [NSRect(origin: origin, size: size)],
+            width: width,
+            height: height,
+            existingFrames: [first],
             visibleFrame: visible
         )
-        XCTAssertNotEqual(frame.origin, origin)
+        XCTAssertNotEqual(frame.x, first.x)
+        XCTAssertNotEqual(frame.y, first.y)
     }
 }

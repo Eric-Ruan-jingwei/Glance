@@ -1,4 +1,3 @@
-import AppKit
 import XCTest
 
 #if canImport(GlanceCore)
@@ -113,7 +112,7 @@ final class PanelRecordControlStateTests: XCTestCase {
         let record = PanelRecord(
             id: UUID(uuidString: "BBBBBBBB-BBBB-CCCC-DDDD-EEEEEEEEEEEE")!,
             kindIdentifier: PanelKind.image,
-            frame: NSRect(x: 40, y: 80, width: 200, height: 160),
+            frame: PanelFrame(x: 40, y: 80, width: 200, height: 160),
             displayIdentifier: "2",
             payloadPath: "Panels/BBBBBBBB-BBBB-CCCC-DDDD-EEEEEEEEEEEE",
             payloadVersion: 1,
@@ -173,7 +172,7 @@ final class PanelRecordControlStateTests: XCTestCase {
     func testInitClampsOpacityAboveOne() {
         let record = PanelRecord(
             kindIdentifier: PanelKind.text,
-            frame: NSRect(x: 0, y: 0, width: 320, height: 220),
+            frame: PanelFrame(x: 0, y: 0, width: 320, height: 220),
             displayIdentifier: "1",
             payloadPath: "Panels/x",
             payloadVersion: 1,

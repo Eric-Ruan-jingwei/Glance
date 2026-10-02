@@ -98,10 +98,7 @@ extension PanelRecord: Equatable {
     static func == (lhs: PanelRecord, rhs: PanelRecord) -> Bool {
         lhs.id == rhs.id
             && lhs.kindIdentifier == rhs.kindIdentifier
-            && lhs.x == rhs.x
-            && lhs.y == rhs.y
-            && lhs.width == rhs.width
-            && lhs.height == rhs.height
+            && lhs.frame == rhs.frame
             && lhs.displayIdentifier == rhs.displayIdentifier
             && lhs.isPinned == rhs.isPinned
             && lhs.isLocked == rhs.isLocked

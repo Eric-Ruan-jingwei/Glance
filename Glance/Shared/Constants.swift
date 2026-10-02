@@ -27,8 +27,8 @@ enum GlanceConstants {
     static let imageMaxEdge: CGFloat = 400
 
     static let cornerRadius: CGFloat = 11
-    static let spawnMargin: CGFloat = 20
-    static let cascadeOffset: CGFloat = 24
+    static let spawnMargin = CGFloat(GlanceLayout.spawnMargin)
+    static let cascadeOffset = CGFloat(GlanceLayout.cascadeOffset)
     static let resizeEdge: CGFloat = 7
 
     static let frameSaveDelay: TimeInterval = 0.25

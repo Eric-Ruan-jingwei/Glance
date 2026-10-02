@@ -96,7 +96,7 @@ final class PanelManager {
         let id = UUID()
         let size = PanelProviderRegistry.defaultSize(for: kindIdentifier)
         let screen = DisplayManager.screenContainingMouse()
-        let frame = placement.frameForNewPanel(
+        let nsFrame = placement.frameForNewPanel(
             size: size,
             existingFrames: windows.map(\.frame),
             on: screen
@@ -112,7 +112,7 @@ final class PanelManager {
         let record = PanelRecord(
             id: id,
             kindIdentifier: kindIdentifier,
-            frame: frame,
+            frame: PanelFrame(nsFrame),
             displayIdentifier: DisplayManager.identifier(for: screen),
             payloadPath: payloadPath,
             payloadVersion: PanelProviderRegistry.payloadVersion(for: kindIdentifier)

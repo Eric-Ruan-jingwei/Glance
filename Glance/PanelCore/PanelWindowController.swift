@@ -33,7 +33,7 @@ final class PanelWindowController: NSWindowController, NSWindowDelegate {
         self.opacity = PanelOpacity.clamp(record.opacity)
         self.content = PanelProviderRegistry.makeContent(kindIdentifier: record.kindIdentifier)
 
-        let window = PanelWindow(contentRect: record.frame)
+        let window = PanelWindow(contentRect: record.frame.nsRect)
         super.init(window: window)
 
         window.delegate = self
@@ -203,8 +203,8 @@ final class PanelWindowController: NSWindowController, NSWindowDelegate {
             frame: window.frame,
             displayIdentifier: DisplayManager.identifier(for: window.screen ?? DisplayManager.screenContainingMouse())
         )
-        if window.frame != recovered.frame {
-            window.setFrame(recovered.frame, display: true)
+        if window.frame != recovered.frame.nsRect {
+            window.setFrame(recovered.frame.nsRect, display: true)
             window.invalidateShadow()
         }
         mutateRecord { record in
