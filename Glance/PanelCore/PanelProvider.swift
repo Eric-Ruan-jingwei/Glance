@@ -44,6 +44,8 @@ enum PanelProviderRegistry {
             return TextPanelProvider.makeContent()
         case PanelKind.markdown:
             return MarkdownPanelProvider.makeContent()
+        case PanelKind.todo:
+            return TodoPanelProvider.makeContent()
         case PanelKind.image:
             return ImagePanelProvider.makeContent()
         default:
@@ -57,6 +59,8 @@ enum PanelProviderRegistry {
             return ImagePanelProvider.minimumSize
         case PanelKind.markdown:
             return MarkdownPanelProvider.minimumSize
+        case PanelKind.todo:
+            return TodoPanelProvider.minimumSize
         default:
             return TextPanelProvider.minimumSize
         }
@@ -68,6 +72,8 @@ enum PanelProviderRegistry {
             return ImagePanelProvider.defaultSize
         case PanelKind.markdown:
             return MarkdownPanelProvider.defaultSize
+        case PanelKind.todo:
+            return TodoPanelProvider.defaultSize
         default:
             return TextPanelProvider.defaultSize
         }
@@ -79,6 +85,8 @@ enum PanelProviderRegistry {
             return ImagePanelProvider.payloadVersion
         case PanelKind.markdown:
             return MarkdownPanelProvider.payloadVersion
+        case PanelKind.todo:
+            return TodoPanelProvider.payloadVersion
         default:
             return TextPanelProvider.payloadVersion
         }

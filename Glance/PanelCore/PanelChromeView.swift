@@ -5,7 +5,9 @@ final class PanelChromeView: NSView {
     var onCommitFrame: (() -> Void)?
     var onContextMenu: ((NSEvent) -> NSMenu)?
     var isInteractable: Bool = true
-    var allowsMove: Bool = true
+    var allowsMove: Bool = true {
+        didSet { applyHover() }
+    }
     var allowsResize: Bool = true
     var showsLockBadge: Bool = false {
         didSet { applyHover() }
@@ -17,6 +19,7 @@ final class PanelChromeView: NSView {
     private let effectView = NSVisualEffectView()
     let contentContainer = NSView()
     private let lockBadge = NSImageView()
+    private let dragGrip = NSView()
 
     private var isHovered = false
     private var trackingArea: NSTrackingArea?
@@ -51,6 +54,12 @@ final class PanelChromeView: NSView {
         lockBadge.isHidden = true
         addSubview(lockBadge)
 
+        dragGrip.wantsLayer = true
+        dragGrip.layer?.cornerRadius = 1.5
+        dragGrip.translatesAutoresizingMaskIntoConstraints = false
+        dragGrip.isHidden = true
+        addSubview(dragGrip)
+
         NSLayoutConstraint.activate([
             effectView.leadingAnchor.constraint(equalTo: leadingAnchor),
             effectView.trailingAnchor.constraint(equalTo: trailingAnchor),
@@ -63,7 +72,11 @@ final class PanelChromeView: NSView {
             lockBadge.topAnchor.constraint(equalTo: topAnchor, constant: 6),
             lockBadge.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -8),
             lockBadge.widthAnchor.constraint(equalToConstant: 11),
-            lockBadge.heightAnchor.constraint(equalToConstant: 11)
+            lockBadge.heightAnchor.constraint(equalToConstant: 11),
+            dragGrip.centerXAnchor.constraint(equalTo: centerXAnchor),
+            dragGrip.topAnchor.constraint(equalTo: topAnchor, constant: 5),
+            dragGrip.widthAnchor.constraint(equalToConstant: 22),
+            dragGrip.heightAnchor.constraint(equalToConstant: 3)
         ])
     }
 
@@ -110,20 +123,28 @@ final class PanelChromeView: NSView {
 
     override func resetCursorRects() {
         super.resetCursorRects()
-        guard isInteractable, allowsResize else { return }
+        guard isInteractable else { return }
         let t = GlanceConstants.resizeEdge
-        addCursorRect(NSRect(x: 0, y: t, width: t, height: bounds.height - 2 * t), cursor: .resizeLeftRight)
-        addCursorRect(NSRect(x: bounds.width - t, y: t, width: t, height: bounds.height - 2 * t), cursor: .resizeLeftRight)
-        addCursorRect(NSRect(x: t, y: bounds.height - t, width: bounds.width - 2 * t, height: t), cursor: .resizeUpDown)
-        addCursorRect(NSRect(x: t, y: 0, width: bounds.width - 2 * t, height: t), cursor: .resizeUpDown)
-        addCursorRect(NSRect(x: 0, y: bounds.height - t, width: t, height: t), cursor: .resizeLeftRight)
-        addCursorRect(NSRect(x: bounds.width - t, y: bounds.height - t, width: t, height: t), cursor: .resizeLeftRight)
-        addCursorRect(NSRect(x: 0, y: 0, width: t, height: t), cursor: .resizeLeftRight)
-        addCursorRect(NSRect(x: bounds.width - t, y: 0, width: t, height: t), cursor: .resizeLeftRight)
+        if allowsResize {
+            addCursorRect(NSRect(x: 0, y: t, width: t, height: bounds.height - 2 * t), cursor: .resizeLeftRight)
+            addCursorRect(NSRect(x: bounds.width - t, y: t, width: t, height: bounds.height - 2 * t), cursor: .resizeLeftRight)
+            addCursorRect(NSRect(x: t, y: bounds.height - t, width: bounds.width - 2 * t, height: t), cursor: .resizeUpDown)
+            addCursorRect(NSRect(x: t, y: 0, width: bounds.width - 2 * t, height: t), cursor: .resizeUpDown)
+            addCursorRect(NSRect(x: 0, y: bounds.height - t, width: t, height: t), cursor: .resizeLeftRight)
+            addCursorRect(NSRect(x: bounds.width - t, y: bounds.height - t, width: t, height: t), cursor: .resizeLeftRight)
+            addCursorRect(NSRect(x: 0, y: 0, width: t, height: t), cursor: .resizeLeftRight)
+            addCursorRect(NSRect(x: bounds.width - t, y: 0, width: t, height: t), cursor: .resizeLeftRight)
+        }
+        if allowsMove {
+            addCursorRect(dragStripRect, cursor: .openHand)
+        }
     }
 
     override func hitTest(_ point: NSPoint) -> NSView? {
         if isInteractable, allowsResize, !edges(at: point).isEmpty {
+            return self
+        }
+        if isInteractable, allowsMove, dragStripRect.contains(point) {
             return self
         }
         return super.hitTest(point)
@@ -195,10 +216,22 @@ final class PanelChromeView: NSView {
         return result
     }
 
+    private var dragStripRect: NSRect {
+        let t = GlanceConstants.resizeEdge
+        let height = GlanceConstants.panelDragStrip
+        return NSRect(
+            x: t,
+            y: bounds.height - t - height,
+            width: max(0, bounds.width - 2 * t),
+            height: height
+        )
+    }
+
     private func applyHover() {
         let showBorder = isHovered || showsTemporaryInteraction
         layer?.borderWidth = showBorder ? 1 : 0
         lockBadge.isHidden = !(showsLockBadge && isHovered)
+        dragGrip.isHidden = !(isHovered && allowsMove)
         applyBorderColor()
         window?.invalidateShadow()
         window?.resetCursorRects()
@@ -208,6 +241,7 @@ final class PanelChromeView: NSView {
     private func applyBorderColor() {
         layer?.borderColor = NSColor.labelColor.withAlphaComponent(0.16).cgColor
         layer?.cornerRadius = GlanceConstants.cornerRadius
+        dragGrip.layer?.backgroundColor = NSColor.labelColor.withAlphaComponent(0.28).cgColor
     }
 
     override func viewDidChangeEffectiveAppearance() {

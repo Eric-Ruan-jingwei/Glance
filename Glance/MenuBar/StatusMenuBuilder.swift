@@ -6,6 +6,7 @@ enum StatusMenuBuilder {
         allHidden: Bool,
         onNewText: @escaping () -> Void,
         onNewMarkdown: @escaping () -> Void,
+        onNewTodo: @escaping () -> Void,
         onNewImage: @escaping () -> Void,
         onToggleVisibility: @escaping () -> Void,
         onSettings: @escaping () -> Void,
@@ -15,6 +16,7 @@ enum StatusMenuBuilder {
 
         menu.addItem(actionItem("新建文字面板", onNewText))
         menu.addItem(actionItem("新建 Markdown 面板", onNewMarkdown))
+        menu.addItem(actionItem("新建待办面板", onNewTodo))
         menu.addItem(actionItem("新建图片面板", onNewImage))
         menu.addItem(.separator())
         menu.addItem(

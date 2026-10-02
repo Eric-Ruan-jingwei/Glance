@@ -34,6 +34,7 @@ final class GlanceGlobalShortcutTests: XCTestCase {
             allHidden: allHidden,
             onNewText: {},
             onNewMarkdown: {},
+            onNewTodo: {},
             onNewImage: {},
             onToggleVisibility: {},
             onSettings: {},

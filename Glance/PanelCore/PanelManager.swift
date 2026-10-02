@@ -57,6 +57,10 @@ final class PanelManager {
         createPanel(kindIdentifier: PanelKind.markdown)
     }
 
+    func createTodoPanel() {
+        createPanel(kindIdentifier: PanelKind.todo)
+    }
+
     func createImagePanel() {
         createPanel(kindIdentifier: PanelKind.image)
     }

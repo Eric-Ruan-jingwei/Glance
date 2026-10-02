@@ -57,6 +57,7 @@ final class MarkdownPanelProviderTests: XCTestCase {
             allHidden: false,
             onNewText: {},
             onNewMarkdown: {},
+            onNewTodo: {},
             onNewImage: {},
             onToggleVisibility: {},
             onSettings: {},
@@ -65,6 +66,7 @@ final class MarkdownPanelProviderTests: XCTestCase {
         let titles = menu.items.map(\.title)
         XCTAssertEqual(titles[0], "新建文字面板")
         XCTAssertEqual(titles[1], "新建 Markdown 面板")
-        XCTAssertEqual(titles[2], "新建图片面板")
+        XCTAssertEqual(titles[2], "新建待办面板")
+        XCTAssertEqual(titles[3], "新建图片面板")
     }
 }
