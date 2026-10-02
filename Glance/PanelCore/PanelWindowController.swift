@@ -12,6 +12,7 @@ final class PanelWindowController: NSWindowController, NSWindowDelegate {
     private var clickOutsideMonitor: Any?
     private var isPinned: Bool
     private var isPassThrough: Bool
+    private let payloadDirty = PayloadDirtyFlag()
 
     var panelWindow: PanelWindow {
         window as! PanelWindow
@@ -39,7 +40,10 @@ final class PanelWindowController: NSWindowController, NSWindowDelegate {
         }
         window.contentView = chrome
 
-        content.onPayloadChange = { [weak self] in self?.schedulePayloadSave() }
+        content.onPayloadChange = { [weak self] in
+            self?.payloadDirty.markUserEdit()
+            self?.schedulePayloadSave()
+        }
         content.onRequestEditing = { [weak self] in self?.enterEditing() }
         content.onRequestPreferredSize = { [weak self] size in
             self?.resizeToPreferred(size)
@@ -96,7 +100,6 @@ final class PanelWindowController: NSWindowController, NSWindowDelegate {
     private func applyPassThroughMode() {
         if interactionState == .editing {
             content.exitEditing()
-            persistPayloadNow()
         }
         interactionState = .passThrough
         isPassThrough = true
@@ -110,7 +113,7 @@ final class PanelWindowController: NSWindowController, NSWindowDelegate {
     }
 
     private func enterEditing() {
-        guard interactionState != .passThrough else { return }
+        guard PanelModeTransition.canBeginEditing(from: interactionState) else { return }
         interactionState = .editing
         panelWindow.allowsKey = true
         environment.interaction.update(window: panelWindow, passThrough: false)
@@ -118,6 +121,16 @@ final class PanelWindowController: NSWindowController, NSWindowDelegate {
         NSApp.activate(ignoringOtherApps: true)
         panelWindow.makeKeyAndOrderFront(nil)
         installClickOutsideMonitor()
+    }
+
+    private func leaveEditing() {
+        persistPayloadNow()
+        switch PanelModeTransition.stateAfterLeavingEditing(persistedPassThrough: isPassThrough) {
+        case .passThrough:
+            applyPassThroughMode()
+        case .reading, .editing:
+            applyReadingMode()
+        }
     }
 
     func recoverAndApplyFrame() {
@@ -140,8 +153,8 @@ final class PanelWindowController: NSWindowController, NSWindowDelegate {
         removeClickOutsideMonitor()
         clickOutsideMonitor = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] event in
             guard let self else { return event }
-            if event.window !== self.window {
-                self.applyReadingMode()
+            if event.window !== self.window, self.interactionState == .editing {
+                self.leaveEditing()
             }
             return event
         }
@@ -198,13 +211,18 @@ final class PanelWindowController: NSWindowController, NSWindowDelegate {
     }
 
     @objc private func passThroughClicked() {
-        if interactionState == .passThrough {
+        if isPassThrough {
             isPassThrough = false
+            if interactionState == .editing {
+                persistPayloadNow()
+                content.exitEditing()
+            }
             applyReadingMode()
             mutateRecord { record in
                 record.isPassThrough = false
             }
         } else {
+            persistPayloadNow()
             applyPassThroughMode()
             mutateRecord { record in
                 record.isPassThrough = true
@@ -259,8 +277,7 @@ final class PanelWindowController: NSWindowController, NSWindowDelegate {
 
     func windowDidResignKey(_ notification: Notification) {
         if interactionState == .editing {
-            applyReadingMode()
-            persistPayloadNow()
+            leaveEditing()
         }
     }
 
@@ -289,10 +306,14 @@ final class PanelWindowController: NSWindowController, NSWindowDelegate {
 
     private func persistPayloadNow() {
         do {
-            let dir = try environment.payloadStore.directory(for: recordID)
-            try content.savePayload(to: dir)
-            mutateRecord { record in
-                record.payloadPath = environment.payloadStore.relativePath(for: recordID)
+            let wrote = try PayloadPersistence.persistIfDirty(payloadDirty) {
+                let dir = try environment.payloadStore.directory(for: recordID)
+                try content.savePayload(to: dir)
+            }
+            if wrote {
+                mutateRecord { record in
+                    record.payloadPath = environment.payloadStore.relativePath(for: recordID)
+                }
             }
         } catch {
             NSLog("Glance persistence: failed to save payload: %@", error.localizedDescription)
@@ -302,9 +323,13 @@ final class PanelWindowController: NSWindowController, NSWindowDelegate {
     private func loadPayload() {
         do {
             let dir = try environment.payloadStore.directory(for: recordID)
-            content.loadPayload(from: dir)
+            try content.loadPayload(from: dir)
         } catch {
-            NSLog("Glance persistence: failed to load payload: %@", error.localizedDescription)
+            NSLog(
+                "Glance persistence: payload unreadable for %@: %@. Original files were left untouched.",
+                recordID.uuidString,
+                error.localizedDescription
+            )
         }
     }
 

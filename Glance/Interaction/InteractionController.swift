@@ -6,6 +6,8 @@ enum InteractionMode {
 }
 
 /// Owns click-through so it never leaks into individual panel views.
+/// While a panel is editing, the controller is told `passThrough: false` so
+/// releasing Option cannot ignore mouse events mid-session.
 @MainActor
 final class InteractionController {
     private struct Entry {

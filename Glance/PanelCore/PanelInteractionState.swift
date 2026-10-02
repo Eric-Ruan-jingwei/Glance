@@ -9,3 +9,18 @@ enum PanelInteractionState: Equatable {
         self == .editing
     }
 }
+
+enum PanelModeTransition {
+    static func canBeginEditing(from state: PanelInteractionState) -> Bool {
+        switch state {
+        case .reading, .passThrough:
+            return true
+        case .editing:
+            return false
+        }
+    }
+
+    static func stateAfterLeavingEditing(persistedPassThrough: Bool) -> PanelInteractionState {
+        persistedPassThrough ? .passThrough : .reading
+    }
+}
