@@ -2,6 +2,7 @@ import AppKit
 
 enum PanelKind {
     static let text = "com.glance.panel.text"
+    static let markdown = "com.glance.panel.markdown"
     static let image = "com.glance.panel.image"
 }
 
@@ -23,6 +24,8 @@ enum GlanceConstants {
 
     static let textDefaultSize = NSSize(width: 320, height: 220)
     static let textMinSize = NSSize(width: 180, height: 100)
+    static let markdownDefaultSize = NSSize(width: 420, height: 320)
+    static let markdownMinSize = NSSize(width: 220, height: 140)
     static let imageMinSize = NSSize(width: 100, height: 100)
     static let imageMaxEdge: CGFloat = 400
 
@@ -36,6 +39,7 @@ enum GlanceConstants {
 
     static let payloadVersionRTF = 1
     static let payloadVersionImage = 1
+    static let payloadVersionMarkdown = 1
 
     static let textBodyFont = NSFont.systemFont(ofSize: 13)
     static let textBodyColor = NSColor.labelColor
