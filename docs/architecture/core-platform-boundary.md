@@ -36,7 +36,7 @@ Dirty state
 Portable data contracts
 ```
 
-Examples in this tree: `PanelRecord`, `PanelFrame`, `PanelDatabase`, `PanelRepository`, `PanelInteractionPolicy`, `PanelInteractionState`, `PanelModeTransition`, `PanelOpacity`, `PayloadDirtyFlag`, `PanelPlacementEngine` (geometry), `PanelFrameRecovery` (geometry), `ApplicationDataLocation`, `PayloadStore`, `MarkdownPayloadFile`, `MarkdownDocument`, `TodoItem`, `TodoDocument`, `TodoMutation`, `TodoPayloadFile`.
+Examples in this tree: `PanelRecord`, `PanelFrame`, `PanelDatabase`, `PanelRepository`, `PanelInteractionPolicy`, `PanelInteractionState`, `PanelModeTransition`, `PanelOpacity`, `PayloadDirtyFlag`, `PanelPlacementEngine` (geometry), `PanelFrameRecovery` (geometry), `ApplicationDataLocation`, `PayloadStore`, `MarkdownPayloadFile`, `MarkdownDocument`, `TodoItem`, `TodoDocument`, `TodoMutation`, `TodoPayloadFile`, `QuickCaptureRequest`, `QuickCaptureKind`, `PanelInitialContent`, `PanelCreationSession`, `PanelRevealPolicy`.
 
 These types should stay on Foundation (or pure Swift). They must not depend on `NSRect`, `NSWindow`, or other AppKit types.
 
@@ -56,9 +56,12 @@ Native file chooser
 Pasteboard
 AppKit rendering
 Screen APIs
+Quick Capture window
 ```
 
-AppKit adapters convert `PanelFrame` ↔ `NSRect`. Carbon hotkeys, `SMAppService`, `NSPasteboard`, `NSScreen`, and SwiftUI settings windows stay here.
+AppKit adapters convert `PanelFrame` ↔ `NSRect`. Carbon hotkeys, `SMAppService`, `NSPasteboard`, `NSScreen`, SwiftUI settings windows, and the Quick Capture `NSPanel` stay here.
+
+Quick Capture itself is not persisted. `QuickCaptureRequest` describes the product intent (create text or a todo). The macOS window writes an initial payload, then inserts a `PanelRecord`, only after a successful submit.
 
 ## Future Windows
 

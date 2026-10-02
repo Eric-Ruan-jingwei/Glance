@@ -14,16 +14,18 @@ There is no Windows client yet. Shared data contracts are documented so a future
 - Always on top
 - Local-first
 - Text, Markdown, Todo, and images
+- Quick Capture from any app
 - No account
 - No cloud
 - Open source
 
-## V0.4 已支持
+## V0.5 已支持
 
 - Text panel
 - Markdown panel (rendered preview, double-click to edit raw UTF-8 `.md`)
 - Todo panel (interactive checklist with inline add/edit/complete/delete)
 - Image panel
+- Quick Capture (`⌥⌘Space`) — capture text or a Todo without first creating an empty panel
 - Always on top
 - Lock
 - Click-through
@@ -36,9 +38,13 @@ There is no Windows client yet. Shared data contracts are documented so a future
 
 The core loop is still: create a panel → put content in it → drag it where you want → it stays floating → quit and reopen, everything is still there.
 
+Quick Capture skips the empty-panel step: press `⌥⌘Space` from any app, type, press Enter.
+
 Status-item menu:
 
 ```text
+快速记录…              ⌥⌘Space
+────────────
 新建文字面板
 新建 Markdown 面板
 新建待办面板
@@ -52,6 +58,16 @@ Status-item menu:
 
 The Dock icon is hidden. There is no traditional main window.
 
+### Quick Capture
+
+`⌥⌘Space` opens a transient capture window on the display under the pointer. It is not a panel: it is not stored in `panels.json`, has no payload directory, and is discarded on close.
+
+- Default mode is **Text**. `⌘2` (or the 待办 segment) switches to **Todo**. `⌘1` returns to Text.
+- `Enter` creates one panel and closes capture. `Shift+Enter` inserts a newline in Text mode.
+- Empty or whitespace-only input does not create a panel.
+- `Escape` or a click outside capture closes it and drops the draft.
+- If Glance is globally hidden (`⌥⌘G`), capture still appears. A submitted panel is created but stays hidden until you show all panels again.
+
 ### Panel control
 
 Each panel can be pinned, locked, made click-through, and faded independently. Those flags are stored on the panel record and restored after relaunch.
@@ -64,7 +80,7 @@ Each panel can be pinned, locked, made click-through, and faded independently. T
 
 ### App settings
 
-Glance settings include launch at login (`SMAppService.mainApp`), the `⌥⌘G` shortcut (not customizable in V0.2), the local data folder, and the version from the app bundle.
+Glance settings include launch at login (`SMAppService.mainApp`), the `⌥⌘Space` and `⌥⌘G` shortcuts (not customizable), the local data folder, and the version from the app bundle.
 
 ## Download
 
