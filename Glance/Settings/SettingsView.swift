@@ -37,7 +37,7 @@ struct SettingsView: View {
                 HStack {
                     Text("隐藏 / 显示全部")
                     Spacer()
-                    Text("⌥⌘H")
+                    Text(GlanceConstants.hideShowShortcutDisplay)
                         .foregroundStyle(.secondary)
                         .font(.body.monospaced())
                 }

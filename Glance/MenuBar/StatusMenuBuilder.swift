@@ -19,7 +19,7 @@ enum StatusMenuBuilder {
             actionItem(
                 allHidden ? "显示全部" : "隐藏全部",
                 onToggleVisibility,
-                keyEquivalent: "h",
+                keyEquivalent: GlanceConstants.hideShowKeyEquivalent,
                 modifiers: [.option, .command]
             )
         )

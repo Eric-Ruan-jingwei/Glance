@@ -1,7 +1,7 @@
 import Carbon
 import Foundation
 
-/// Registers ⌥⌘H without Accessibility permission.
+/// Registers ⌥⌘G without Accessibility permission.
 final class ShortcutManager: @unchecked Sendable {
     var onToggleVisibility: (() -> Void)?
 
@@ -13,7 +13,7 @@ final class ShortcutManager: @unchecked Sendable {
 
         let hotKeyID = EventHotKeyID(signature: fourCharCode("GLNC"), id: 1)
         let hotKeyStatus = RegisterEventHotKey(
-            UInt32(kVK_ANSI_H),
+            UInt32(kVK_ANSI_G),
             UInt32(optionKey | cmdKey),
             hotKeyID,
             GetApplicationEventTarget(),
@@ -21,7 +21,10 @@ final class ShortcutManager: @unchecked Sendable {
             &hotKeyRef
         )
         if hotKeyStatus != noErr {
-            NSLog("Glance shortcuts: RegisterEventHotKey failed (%d)", hotKeyStatus)
+            NSLog(
+                "Glance global shortcut ⌥⌘G could not be registered (%d)",
+                hotKeyStatus
+            )
             return
         }
 

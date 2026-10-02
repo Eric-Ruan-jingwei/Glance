@@ -9,6 +9,8 @@ enum GlanceConstants {
     static let appName = "Glance"
     static let bundleIdentifier = "com.glance.app"
     static let slogan = "Pin what matters. Keep it in sight."
+    static let hideShowShortcutDisplay = "⌥⌘G"
+    static let hideShowKeyEquivalent = "g"
 
     static var versionDisplay: String {
         let short = (Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String)?

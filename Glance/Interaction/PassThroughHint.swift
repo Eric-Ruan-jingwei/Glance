@@ -2,6 +2,11 @@ import AppKit
 
 enum PassThroughHint {
     static let defaultsKey = "didShowPassThroughHint"
+    static let title = "按住 Option 可临时操作此面板"
+    static let body = """
+    开启点击穿透后，鼠标事件会传递给后面的窗口。
+    按住 Option 可临时操作面板；已锁定的面板仍不会被移动、缩放或编辑。
+    """
 
     static func showIfNeeded() {
         let defaults = UserDefaults.standard
@@ -9,8 +14,8 @@ enum PassThroughHint {
         defaults.set(true, forKey: defaultsKey)
         let alert = NSAlert()
         alert.alertStyle = .informational
-        alert.messageText = "按住 Option 可临时操作此面板"
-        alert.informativeText = "开启点击穿透后，面板会把鼠标事件交给下面的窗口。按住 Option 可以临时拖动、右键或编辑。"
+        alert.messageText = title
+        alert.informativeText = body
         alert.addButton(withTitle: "好")
         NSApp.activate(ignoringOtherApps: true)
         alert.runModal()

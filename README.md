@@ -38,7 +38,7 @@ Status-item menu:
 新建文字面板
 新建图片面板
 ────────────
-显示全部 / 隐藏全部    ⌥⌘H
+显示全部 / 隐藏全部    ⌥⌘G
 ────────────
 设置…
 退出
@@ -56,7 +56,7 @@ Each panel can be pinned, locked, made click-through, and faded independently. T
 
 ### App settings
 
-Glance settings include launch at login (`SMAppService.mainApp`), the ⌥⌘H shortcut (not customizable in V0.2), the local data folder, and the version from the app bundle.
+Glance settings include launch at login (`SMAppService.mainApp`), the ⌥⌘G shortcut (not customizable in V0.2), the local data folder, and the version from the app bundle.
 
 ## Requirements
 
