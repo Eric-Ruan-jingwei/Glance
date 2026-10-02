@@ -55,6 +55,7 @@ final class TodoPanelProviderTests: XCTestCase {
         StatusMenuBuilder.populate(
             menu,
             allHidden: false,
+            onQuickCapture: {},
             onNewText: {},
             onNewMarkdown: {},
             onNewTodo: {},
@@ -64,9 +65,10 @@ final class TodoPanelProviderTests: XCTestCase {
             onQuit: {}
         )
         let titles = menu.items.map(\.title)
-        XCTAssertEqual(titles[0], "新建文字面板")
-        XCTAssertEqual(titles[1], "新建 Markdown 面板")
-        XCTAssertEqual(titles[2], "新建待办面板")
-        XCTAssertEqual(titles[3], "新建图片面板")
+        XCTAssertEqual(titles[0], "快速记录…")
+        XCTAssertEqual(titles[2], "新建文字面板")
+        XCTAssertEqual(titles[3], "新建 Markdown 面板")
+        XCTAssertEqual(titles[4], "新建待办面板")
+        XCTAssertEqual(titles[5], "新建图片面板")
     }
 }

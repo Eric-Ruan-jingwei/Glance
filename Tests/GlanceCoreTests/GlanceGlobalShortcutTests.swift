@@ -15,9 +15,25 @@ final class GlanceGlobalShortcutTests: XCTestCase {
         XCTAssertFalse(GlanceConstants.hideShowShortcutDisplay.contains("H"))
     }
 
+    func testQuickCaptureShortcutIsOptionCommandSpace() {
+        XCTAssertEqual(GlanceConstants.quickCaptureKeyEquivalent, " ")
+        XCTAssertEqual(GlanceConstants.quickCaptureShortcutDisplay, "⌥⌘Space")
+        XCTAssertNotEqual(GlanceConstants.quickCaptureKeyEquivalent, GlanceConstants.hideShowKeyEquivalent)
+        XCTAssertNotEqual(GlanceHotKeyID.quickCapture, GlanceHotKeyID.hideShow)
+    }
+
     func testMenuBarVisibilityItemUsesOptionCommandG() {
         assertVisibilityShortcut(allHidden: false, title: "隐藏全部")
         assertVisibilityShortcut(allHidden: true, title: "显示全部")
+    }
+
+    func testMenuBarQuickCaptureItemUsesOptionCommandSpace() {
+        let menu = NSMenu()
+        populate(menu, allHidden: false)
+        let item = menu.items.first { $0.title == "快速记录…" }
+        XCTAssertEqual(item?.keyEquivalent, " ")
+        XCTAssertEqual(item?.keyEquivalentModifierMask, [.option, .command])
+        XCTAssertEqual(menu.items.first?.title, "快速记录…")
     }
 
     func testPassThroughHintMentionsLockLimit() {
@@ -29,9 +45,17 @@ final class GlanceGlobalShortcutTests: XCTestCase {
 
     private func assertVisibilityShortcut(allHidden: Bool, title: String) {
         let menu = NSMenu()
+        populate(menu, allHidden: allHidden)
+        let item = menu.items.first { $0.title == title }
+        XCTAssertEqual(item?.keyEquivalent, "g")
+        XCTAssertEqual(item?.keyEquivalentModifierMask, [.option, .command])
+    }
+
+    private func populate(_ menu: NSMenu, allHidden: Bool) {
         StatusMenuBuilder.populate(
             menu,
             allHidden: allHidden,
+            onQuickCapture: {},
             onNewText: {},
             onNewMarkdown: {},
             onNewTodo: {},
@@ -40,8 +64,5 @@ final class GlanceGlobalShortcutTests: XCTestCase {
             onSettings: {},
             onQuit: {}
         )
-        let item = menu.items.first { $0.title == title }
-        XCTAssertEqual(item?.keyEquivalent, "g")
-        XCTAssertEqual(item?.keyEquivalentModifierMask, [.option, .command])
     }
 }
