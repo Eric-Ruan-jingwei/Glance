@@ -197,4 +197,24 @@ enum TextPayloadFile {
         }
         return attributed
     }
+
+    static func writePlainText(_ string: String, to directory: URL) throws {
+        let attributed = NSAttributedString(
+            string: string,
+            attributes: [
+                .font: GlanceConstants.textBodyFont,
+                .foregroundColor: GlanceConstants.textBodyColor
+            ]
+        )
+        let url = directory.appendingPathComponent(fileName)
+        let range = NSRange(location: 0, length: attributed.length)
+        guard let data = attributed.rtf(from: range, documentAttributes: [:]) else {
+            throw PayloadStoreError.writeFailed(url, TextPayloadError.rtfEncodingFailed)
+        }
+        do {
+            try data.write(to: url, options: .atomic)
+        } catch {
+            throw PayloadStoreError.writeFailed(url, error)
+        }
+    }
 }

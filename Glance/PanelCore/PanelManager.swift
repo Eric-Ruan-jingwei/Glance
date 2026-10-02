@@ -2,6 +2,8 @@ import AppKit
 
 @MainActor
 final class PanelManager {
+    var onToggleQuickCapture: (() -> Void)?
+
     private let environment: AppEnvironment
     private var controllers: [UUID: PanelWindowController] = [:]
     private let placement = PanelPlacementEngine()
@@ -50,19 +52,32 @@ final class PanelManager {
     }
 
     func createTextPanel() {
-        createPanel(kindIdentifier: PanelKind.text)
+        _ = createPanel(kindIdentifier: PanelKind.text)
     }
 
     func createMarkdownPanel() {
-        createPanel(kindIdentifier: PanelKind.markdown)
+        _ = createPanel(kindIdentifier: PanelKind.markdown)
     }
 
     func createTodoPanel() {
-        createPanel(kindIdentifier: PanelKind.todo)
+        _ = createPanel(kindIdentifier: PanelKind.todo)
     }
 
     func createImagePanel() {
-        createPanel(kindIdentifier: PanelKind.image)
+        _ = createPanel(kindIdentifier: PanelKind.image)
+    }
+
+    @discardableResult
+    func createPanel(
+        from request: QuickCaptureRequest,
+        preferredScreen: NSScreen? = nil
+    ) -> Bool {
+        guard let initialContent = request.initialContent() else { return false }
+        return createPanel(
+            kindIdentifier: request.kindIdentifier,
+            initialContent: initialContent,
+            preferredScreen: preferredScreen
+        )
     }
 
     func deletePanel(id: UUID) {
@@ -96,27 +111,29 @@ final class PanelManager {
         environment.visibility.toggle(windows: windows)
     }
 
+    func toggleQuickCapture() {
+        onToggleQuickCapture?()
+    }
+
     var allHidden: Bool {
         environment.visibility.isConcealed
     }
 
-    private func createPanel(kindIdentifier: String) {
+    @discardableResult
+    func createPanel(
+        kindIdentifier: String,
+        initialContent: PanelInitialContent = .none,
+        preferredScreen: NSScreen? = nil
+    ) -> Bool {
         let id = UUID()
         let size = PanelProviderRegistry.defaultSize(for: kindIdentifier)
-        let screen = DisplayManager.screenContainingMouse()
+        let screen = preferredScreen ?? DisplayManager.screenContainingMouse()
         let nsFrame = placement.frameForNewPanel(
             size: size,
             existingFrames: windows.map(\.frame),
             on: screen
         )
         let payloadPath = environment.payloadStore.relativePath(for: id)
-        do {
-            _ = try environment.payloadStore.directory(for: id)
-        } catch {
-            NSLog("Glance persistence: %@", error.localizedDescription)
-            return
-        }
-
         let record = PanelRecord(
             id: id,
             kindIdentifier: kindIdentifier,
@@ -127,20 +144,33 @@ final class PanelManager {
         )
 
         do {
-            try environment.repository.insert(record)
+            try PanelCreationSession.materialize(
+                id: id,
+                store: environment.payloadStore,
+                writePayload: { directory in
+                    try PanelInitialPayloadWriter.write(initialContent, to: directory)
+                },
+                insert: {
+                    try environment.repository.insert(record)
+                }
+            )
             present(record: record)
+            return true
         } catch {
             NSLog("Glance: create panel failed: \(error.localizedDescription)")
+            return false
         }
     }
 
     private func present(record: PanelRecord) {
         let controller = PanelWindowController(record: record, environment: environment)
         controllers[record.id] = controller
-        if environment.visibility.isConcealed {
-            controller.conceal()
-        } else {
+        if PanelRevealPolicy.shouldPresentNewlyCreatedPanel(
+            isGloballyConcealed: environment.visibility.isConcealed
+        ) {
             controller.showFront()
+        } else {
+            controller.conceal()
         }
     }
 
