@@ -84,8 +84,9 @@ def render(size: int) -> bytes:
 
 def main() -> int:
     root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-    out_icns = os.path.join(root, "Resources", "AppIcon.icns")
-    os.makedirs(os.path.dirname(out_icns), exist_ok=True)
+    out_dir = os.path.join(root, "build", "generated")
+    os.makedirs(out_dir, exist_ok=True)
+    out_icns = os.path.join(out_dir, "AppIcon.icns")
 
     with tempfile.TemporaryDirectory() as tmp:
         iconset = os.path.join(tmp, "AppIcon.iconset")
@@ -124,7 +125,7 @@ def main() -> int:
         if result.returncode != 0:
             print(result.stderr, file=sys.stderr)
             # Fallback: keep a 1024 png next to the app if iconutil is missing
-            fallback = os.path.join(root, "Resources", "AppIcon.png")
+            fallback = os.path.join(out_dir, "AppIcon.png")
             write_png(fallback, 1024, cache[1024])
             print(f"iconutil failed; wrote {fallback}")
             return 0

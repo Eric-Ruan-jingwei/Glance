@@ -7,7 +7,7 @@ enum PanelKind {
 
 enum GlanceConstants {
     static let appName = "Glance"
-    static let version = "0.1.0"
+    static let version = "0.1.1"
     static let bundleIdentifier = "com.glance.app"
     static let slogan = "Pin what matters. Keep it in sight."
 
