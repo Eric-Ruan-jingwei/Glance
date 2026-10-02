@@ -58,13 +58,21 @@ open Glance.xcodeproj
 
 Then run the Glance scheme. The app is an agent (`LSUIElement`): look for the pin icon in the menu bar, not in the Dock.
 
+Foundation checks (no Xcode required):
+
+```bash
+./scripts/run-tests.sh
+```
+
 ## Data
 
 Everything lives on disk:
 
 ```text
 ~/Library/Application Support/Glance/
-├── Database/          Panel metadata (JSON)
+├── Database/
+│   ├── panels.json          schemaVersion envelope
+│   └── panels.backup.json
 └── Panels/
     └── {panel-id}/
         ├── content.rtf

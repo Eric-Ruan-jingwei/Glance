@@ -1,11 +1,10 @@
 import AppKit
 
-@main
 @MainActor
-enum GlanceMain {
+public enum GlanceMain {
     private static var delegate: AppDelegate?
 
-    static func main() {
+    public static func main() {
         let app = NSApplication.shared
         let delegate = AppDelegate()
         Self.delegate = delegate
