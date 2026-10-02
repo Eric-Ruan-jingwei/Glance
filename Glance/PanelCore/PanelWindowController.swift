@@ -11,6 +11,7 @@ final class PanelWindowController: NSWindowController, NSWindowDelegate {
     private var interactionState: PanelInteractionState = .reading
     private var clickOutsideMonitor: Any?
     private var isPinned: Bool
+    private var isPassThrough: Bool
 
     var panelWindow: PanelWindow {
         window as! PanelWindow
@@ -21,6 +22,7 @@ final class PanelWindowController: NSWindowController, NSWindowDelegate {
         self.kindIdentifier = record.kindIdentifier
         self.environment = environment
         self.isPinned = record.isPinned
+        self.isPassThrough = record.isPassThrough
         self.content = PanelProviderRegistry.makeContent(kindIdentifier: record.kindIdentifier)
 
         let window = PanelWindow(contentRect: record.frame)
@@ -31,7 +33,7 @@ final class PanelWindowController: NSWindowController, NSWindowDelegate {
         window.applyPinned(record.isPinned)
         chrome.minimumSize = content.minimumSize
         chrome.embed(content.view)
-        chrome.onCommitFrame = { [weak self] in self?.persistFrameNow() }
+        chrome.onCommitFrame = { [weak self] in self?.recoverAndApplyFrame() }
         chrome.onContextMenu = { [weak self] _ in
             self?.makeContextMenu() ?? NSMenu()
         }
@@ -44,7 +46,11 @@ final class PanelWindowController: NSWindowController, NSWindowDelegate {
         }
 
         loadPayload()
-        applyReadingMode()
+        if record.isPassThrough {
+            applyPassThroughMode()
+        } else {
+            applyReadingMode()
+        }
     }
 
     required init?(coder: NSCoder) {
@@ -63,7 +69,7 @@ final class PanelWindowController: NSWindowController, NSWindowDelegate {
     func persistAllNow() {
         environment.debouncer.flush(id: frameDebounceID)
         environment.debouncer.flush(id: payloadDebounceID)
-        persistFrameNow()
+        recoverAndApplyFrame()
         persistPayloadNow()
     }
 
@@ -81,6 +87,23 @@ final class PanelWindowController: NSWindowController, NSWindowDelegate {
         chrome.isInteractable = true
         content.exitEditing()
         removeClickOutsideMonitor()
+        environment.interaction.update(window: panelWindow, passThrough: false)
+        if panelWindow.isKeyWindow {
+            NSApp.deactivate()
+        }
+    }
+
+    private func applyPassThroughMode() {
+        if interactionState == .editing {
+            content.exitEditing()
+            persistPayloadNow()
+        }
+        interactionState = .passThrough
+        isPassThrough = true
+        panelWindow.allowsKey = false
+        chrome.isInteractable = true
+        removeClickOutsideMonitor()
+        environment.interaction.update(window: panelWindow, passThrough: true)
         if panelWindow.isKeyWindow {
             NSApp.deactivate()
         }
@@ -90,10 +113,27 @@ final class PanelWindowController: NSWindowController, NSWindowDelegate {
         guard interactionState != .passThrough else { return }
         interactionState = .editing
         panelWindow.allowsKey = true
+        environment.interaction.update(window: panelWindow, passThrough: false)
         content.enterEditing()
         NSApp.activate(ignoringOtherApps: true)
         panelWindow.makeKeyAndOrderFront(nil)
         installClickOutsideMonitor()
+    }
+
+    func recoverAndApplyFrame() {
+        guard let window else { return }
+        let recovered = PanelFrameRecovery.recover(
+            frame: window.frame,
+            displayIdentifier: DisplayManager.identifier(for: window.screen ?? DisplayManager.screenContainingMouse())
+        )
+        if window.frame != recovered.frame {
+            window.setFrame(recovered.frame, display: true)
+            window.invalidateShadow()
+        }
+        mutateRecord { record in
+            record.frame = recovered.frame
+            record.displayIdentifier = recovered.displayIdentifier
+        }
     }
 
     private func installClickOutsideMonitor() {
@@ -128,6 +168,11 @@ final class PanelWindowController: NSWindowController, NSWindowDelegate {
         pin.state = isPinned ? .on : .off
         menu.addItem(pin)
 
+        let passThrough = NSMenuItem(title: "点击穿透", action: #selector(passThroughClicked), keyEquivalent: "")
+        passThrough.target = self
+        passThrough.state = isPassThrough ? .on : .off
+        menu.addItem(passThrough)
+
         for item in content.additionalContextMenuItems() {
             menu.addItem(item)
         }
@@ -150,6 +195,21 @@ final class PanelWindowController: NSWindowController, NSWindowDelegate {
 
     @objc private func pinClicked() {
         applyPinned(!isPinned)
+    }
+
+    @objc private func passThroughClicked() {
+        if interactionState == .passThrough {
+            isPassThrough = false
+            applyReadingMode()
+            mutateRecord { record in
+                record.isPassThrough = false
+            }
+        } else {
+            applyPassThroughMode()
+            mutateRecord { record in
+                record.isPassThrough = true
+            }
+        }
     }
 
     @objc private func panelSettingsClicked() {
@@ -207,6 +267,9 @@ final class PanelWindowController: NSWindowController, NSWindowDelegate {
     func windowWillClose(_ notification: Notification) {
         persistAllNow()
         removeClickOutsideMonitor()
+        if let window {
+            environment.interaction.remove(window: window)
+        }
     }
 
     private var frameDebounceID: String { "frame-\(recordID.uuidString)" }
@@ -214,19 +277,7 @@ final class PanelWindowController: NSWindowController, NSWindowDelegate {
 
     private func scheduleFrameSave() {
         environment.debouncer.schedule(id: frameDebounceID, delay: GlanceConstants.frameSaveDelay) { [weak self] in
-            self?.persistFrameNow()
-        }
-    }
-
-    private func persistFrameNow() {
-        guard let window else { return }
-        let recovered = PanelFrameRecovery.recover(
-            frame: window.frame,
-            displayIdentifier: DisplayManager.identifier(for: window.screen ?? DisplayManager.screenContainingMouse())
-        )
-        mutateRecord { record in
-            record.frame = recovered.frame
-            record.displayIdentifier = recovered.displayIdentifier
+            self?.recoverAndApplyFrame()
         }
     }
 
@@ -239,18 +290,21 @@ final class PanelWindowController: NSWindowController, NSWindowDelegate {
     private func persistPayloadNow() {
         do {
             let dir = try environment.payloadStore.directory(for: recordID)
-            content.savePayload(to: dir)
+            try content.savePayload(to: dir)
             mutateRecord { record in
                 record.payloadPath = environment.payloadStore.relativePath(for: recordID)
             }
         } catch {
-            NSLog("Glance: failed to save payload: \(error.localizedDescription)")
+            NSLog("Glance persistence: failed to save payload: %@", error.localizedDescription)
         }
     }
 
     private func loadPayload() {
-        if let dir = try? environment.payloadStore.directory(for: recordID) {
+        do {
+            let dir = try environment.payloadStore.directory(for: recordID)
             content.loadPayload(from: dir)
+        } catch {
+            NSLog("Glance persistence: failed to load payload: %@", error.localizedDescription)
         }
     }
 
@@ -264,7 +318,7 @@ final class PanelWindowController: NSWindowController, NSWindowDelegate {
         let screen = window.screen ?? DisplayManager.screenContainingMouse()
         frame = PanelFrameRecovery.clamp(frame, to: screen.visibleFrame)
         window.setFrame(frame, display: true)
-        persistFrameNow()
+        recoverAndApplyFrame()
     }
 
     private func mutateRecord(_ body: (PanelRecord) -> Void) {
@@ -274,7 +328,7 @@ final class PanelWindowController: NSWindowController, NSWindowDelegate {
             environment.repository.touch(record)
             try environment.repository.save()
         } catch {
-            NSLog("Glance: failed to update record: \(error.localizedDescription)")
+            NSLog("Glance persistence: failed to update record: %@", error.localizedDescription)
         }
     }
 

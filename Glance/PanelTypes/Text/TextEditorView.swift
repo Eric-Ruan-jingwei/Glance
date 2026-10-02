@@ -24,7 +24,9 @@ final class GlanceTextView: NSTextView {
                 return
             }
             if let window {
-                PanelWindowDrag.move(window)
+                PanelWindowDrag.move(window) {
+                    (window.windowController as? PanelWindowController)?.recoverAndApplyFrame()
+                }
             }
             return
         }

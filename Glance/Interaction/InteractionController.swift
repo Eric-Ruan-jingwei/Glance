@@ -5,24 +5,101 @@ enum InteractionMode {
     case passThrough
 }
 
-/// Owns click-through behavior so it never leaks into individual panel views.
-/// V0.1 keeps the API; the menu is reserved for V0.2.
+/// Owns click-through so it never leaks into individual panel views.
 @MainActor
 final class InteractionController {
-    func apply(_ mode: InteractionMode, to window: NSWindow) {
+    private struct Entry {
+        weak var window: NSWindow?
+        var passThrough: Bool
+    }
+
+    private var entries: [ObjectIdentifier: Entry] = [:]
+    private var timer: Timer?
+    private var lastOption = false
+
+    func update(window: NSWindow, passThrough: Bool) {
+        entries[ObjectIdentifier(window)] = Entry(window: window, passThrough: passThrough)
+        prune()
+        refreshTimer()
+        apply(to: window, passThrough: passThrough)
+    }
+
+    func remove(window: NSWindow) {
+        entries[ObjectIdentifier(window)] = nil
+        window.ignoresMouseEvents = false
+        prune()
+        refreshTimer()
+    }
+
+    func shutdown() {
+        stopTimer()
+        for entry in entries.values {
+            entry.window?.ignoresMouseEvents = false
+        }
+        entries.removeAll()
+    }
+
+    private func prune() {
+        entries = entries.filter { $0.value.window != nil }
+    }
+
+    private var hasPassThrough: Bool {
+        entries.values.contains { entry in
+            entry.passThrough && entry.window != nil
+        }
+    }
+
+    private func refreshTimer() {
+        if hasPassThrough {
+            startTimer()
+        } else {
+            stopTimer()
+        }
+    }
+
+    private func startTimer() {
+        guard timer == nil else { return }
+        lastOption = ModifierKeyController.optionIsPressed
+        let timer = Timer(timeInterval: 0.05, repeats: true) { [weak self] _ in
+            DispatchQueue.main.async {
+                self?.pollModifier()
+            }
+        }
+        timer.tolerance = 0.02
+        RunLoop.main.add(timer, forMode: .common)
+        self.timer = timer
+    }
+
+    private func stopTimer() {
+        timer?.invalidate()
+        timer = nil
+    }
+
+    private func pollModifier() {
+        let option = ModifierKeyController.optionIsPressed
+        guard option != lastOption else { return }
+        lastOption = option
+        applyAll()
+    }
+
+    private func applyAll() {
+        prune()
+        for entry in entries.values {
+            guard let window = entry.window else { continue }
+            apply(to: window, mode: entry.passThrough ? .passThrough : .normal)
+        }
+    }
+
+    private func apply(to window: NSWindow, passThrough: Bool) {
+        apply(to: window, mode: passThrough ? .passThrough : .normal)
+    }
+
+    private func apply(to window: NSWindow, mode: InteractionMode) {
         switch mode {
         case .normal:
             window.ignoresMouseEvents = false
         case .passThrough:
-            window.ignoresMouseEvents = true
+            window.ignoresMouseEvents = !ModifierKeyController.optionIsPressed
         }
-    }
-
-    func temporaryOverrideIfNeeded(window: NSWindow, passThrough: Bool) {
-        guard passThrough else {
-            window.ignoresMouseEvents = false
-            return
-        }
-        window.ignoresMouseEvents = !ModifierKeyController.optionIsPressed
     }
 }

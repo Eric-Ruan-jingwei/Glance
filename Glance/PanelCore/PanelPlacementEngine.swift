@@ -6,10 +6,17 @@ struct PanelPlacementEngine {
         existingFrames: [NSRect],
         on screen: NSScreen
     ) -> NSRect {
-        let visible = screen.visibleFrame
+        frameForNewPanel(size: size, existingFrames: existingFrames, visibleFrame: screen.visibleFrame)
+    }
+
+    func frameForNewPanel(
+        size: NSSize,
+        existingFrames: [NSRect],
+        visibleFrame: NSRect
+    ) -> NSRect {
         var origin = NSPoint(
-            x: visible.maxX - size.width - GlanceConstants.spawnMargin,
-            y: visible.maxY - size.height - GlanceConstants.spawnMargin
+            x: visibleFrame.maxX - size.width - GlanceConstants.spawnMargin,
+            y: visibleFrame.maxY - size.height - GlanceConstants.spawnMargin
         )
 
         let offset = GlanceConstants.cascadeOffset
@@ -22,6 +29,6 @@ struct PanelPlacementEngine {
         }
 
         let proposed = NSRect(origin: origin, size: size)
-        return PanelFrameRecovery.clamp(proposed, to: visible)
+        return PanelFrameRecovery.clamp(proposed, to: visibleFrame)
     }
 }

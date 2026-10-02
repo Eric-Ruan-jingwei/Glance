@@ -33,7 +33,7 @@ final class PanelManager {
                     frame: record.frame,
                     displayIdentifier: record.displayIdentifier
                 )
-                if recovered.migrated {
+                if recovered.migrated || recovered.frame != record.frame {
                     record.frame = recovered.frame
                     record.displayIdentifier = recovered.displayIdentifier
                     environment.repository.touch(record)
@@ -42,7 +42,7 @@ final class PanelManager {
             }
             try environment.repository.save()
         } catch {
-            NSLog("Glance: restore failed: \(error.localizedDescription)")
+            NSLog("Glance persistence: restore save failed: %@", error.localizedDescription)
         }
     }
 
@@ -61,7 +61,11 @@ final class PanelManager {
             controller.persistAllNow()
             controller.window?.close()
         }
-        try? environment.repository.delete(id: id)
+        do {
+            try environment.repository.delete(id: id)
+        } catch {
+            NSLog("Glance persistence: failed to delete panel metadata: %@", error.localizedDescription)
+        }
         environment.payloadStore.delete(id: id)
     }
 
@@ -69,7 +73,11 @@ final class PanelManager {
         for controller in controllers.values {
             controller.persistAllNow()
         }
-        try? environment.repository.save()
+        do {
+            try environment.repository.save()
+        } catch {
+            NSLog("Glance persistence: failed to save metadata: %@", error.localizedDescription)
+        }
     }
 
     func toggleGlobalVisibility() {
@@ -90,7 +98,12 @@ final class PanelManager {
             on: screen
         )
         let payloadPath = environment.payloadStore.relativePath(for: id)
-        _ = try? environment.payloadStore.directory(for: id)
+        do {
+            _ = try environment.payloadStore.directory(for: id)
+        } catch {
+            NSLog("Glance persistence: %@", error.localizedDescription)
+            return
+        }
 
         let record = PanelRecord(
             id: id,
@@ -121,19 +134,13 @@ final class PanelManager {
 
     private func reclampVisiblePanels() {
         for controller in controllers.values {
-            guard let window = controller.window else { continue }
-            let recovered = PanelFrameRecovery.recover(
-                frame: window.frame,
-                displayIdentifier: DisplayManager.identifier(for: window.screen ?? DisplayManager.screenContainingMouse())
-            )
-            if window.frame != recovered.frame {
-                window.setFrame(recovered.frame, display: true)
-            }
+            controller.recoverAndApplyFrame()
         }
     }
 
     func shutdown() {
         persistAllNow()
+        environment.interaction.shutdown()
         if let screenObserver {
             NotificationCenter.default.removeObserver(screenObserver)
             self.screenObserver = nil

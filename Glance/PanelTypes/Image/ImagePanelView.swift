@@ -31,9 +31,9 @@ final class ImagePanelView: NSView, PanelContentControlling {
         }
     }
 
-    func savePayload(to directory: URL) {
+    func savePayload(to directory: URL) throws {
         guard let image = imageView.image else { return }
-        _ = try? media.writePNG(image, to: directory)
+        _ = try media.writePNG(image, to: directory)
     }
 
     func enterEditing() {}
@@ -92,7 +92,9 @@ final class ImagePanelView: NSView, PanelContentControlling {
 
     override func mouseDown(with event: NSEvent) {
         if let window {
-            PanelWindowDrag.move(window)
+            PanelWindowDrag.move(window) {
+                (window.windowController as? PanelWindowController)?.recoverAndApplyFrame()
+            }
         }
     }
 
