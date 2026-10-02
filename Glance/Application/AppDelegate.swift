@@ -33,6 +33,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             )
             statusBar.install()
             self.statusBar = statusBar
+            environment.shortcuts.onToggleVisibility = { [weak manager] in
+                manager?.toggleGlobalVisibility()
+            }
+            environment.shortcuts.registerDefaults()
             manager.restoreAll()
         } catch {
             presentStartupFailure(error)
