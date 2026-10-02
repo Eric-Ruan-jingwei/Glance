@@ -11,7 +11,7 @@ final class MediaStore {
         else {
             throw MediaStoreError.writeFailed
         }
-        try png.write(to: url)
+        try png.write(to: url, options: .atomic)
         return url
     }
 
@@ -65,5 +65,13 @@ enum MediaStoreError: LocalizedError {
 
     var errorDescription: String? {
         "无法将图片写入本地数据目录。"
+    }
+}
+
+enum TextPayloadError: LocalizedError {
+    case rtfEncodingFailed
+
+    var errorDescription: String? {
+        "无法将文字面板编码为 RTF。"
     }
 }

@@ -33,11 +33,16 @@ final class TextPanelView: NSView, PanelContentControlling, NSTextViewDelegate {
         refreshPlaceholder()
     }
 
-    func savePayload(to directory: URL) {
+    func savePayload(to directory: URL) throws {
         let range = NSRange(location: 0, length: textView.textStorage?.length ?? 0)
         let url = directory.appendingPathComponent("content.rtf")
-        if let data = textView.rtf(from: range) {
-            try? data.write(to: url)
+        guard let data = textView.rtf(from: range) else {
+            throw PayloadStoreError.writeFailed(url, TextPayloadError.rtfEncodingFailed)
+        }
+        do {
+            try data.write(to: url, options: .atomic)
+        } catch {
+            throw PayloadStoreError.writeFailed(url, error)
         }
     }
 

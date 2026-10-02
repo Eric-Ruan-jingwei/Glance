@@ -1,24 +1,29 @@
 import Foundation
 
+enum PanelDatabaseLoadOutcome: Equatable {
+    case missing
+    case loaded(migratedFromLegacy: Bool)
+    case recoveredFromBackup
+    case quarantinedCorruptAndEmpty
+}
+
 @MainActor
 final class PanelRepository {
     private var records: [UUID: PanelRecord] = [:]
     private let fileURL: URL
-    private let encoder: JSONEncoder = {
-        let encoder = JSONEncoder()
-        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-        encoder.dateEncodingStrategy = .iso8601
-        return encoder
-    }()
-    private let decoder: JSONDecoder = {
-        let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .iso8601
-        return decoder
-    }()
+    private let fileManager: FileManager
+    private(set) var lastLoadOutcome: PanelDatabaseLoadOutcome = .missing
 
-    init(fileURL: URL) throws {
+    var backupURL: URL {
+        fileURL.deletingLastPathComponent().appendingPathComponent("panels.backup.json")
+    }
+
+    init(fileURL: URL, fileManager: FileManager = .default) throws {
         self.fileURL = fileURL
-        try load()
+        self.fileManager = fileManager
+        let directory = fileURL.deletingLastPathComponent()
+        try fileManager.createDirectory(at: directory, withIntermediateDirectories: true)
+        loadRecovering()
     }
 
     func all() throws -> [PanelRecord] {
@@ -40,21 +45,103 @@ final class PanelRepository {
     }
 
     func save() throws {
-        let payload = records.values.sorted { $0.createdAt < $1.createdAt }
-        let data = try encoder.encode(payload)
+        let database = PanelDatabase(
+            schemaVersion: PanelDatabase.currentSchemaVersion,
+            panels: records.values.sorted { $0.createdAt < $1.createdAt }
+        )
+        let data = try PanelDatabaseCodec.encode(database)
         try data.write(to: fileURL, options: .atomic)
+        do {
+            try data.write(to: backupURL, options: .atomic)
+        } catch {
+            NSLog("Glance persistence: primary metadata saved but backup failed: %@", error.localizedDescription)
+        }
     }
 
     func touch(_ record: PanelRecord) {
         record.updatedAt = Date()
     }
 
-    private func load() throws {
-        let directory = fileURL.deletingLastPathComponent()
-        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        guard FileManager.default.fileExists(atPath: fileURL.path) else { return }
-        let data = try Data(contentsOf: fileURL)
-        let items = try decoder.decode([PanelRecord].self, from: data)
-        records = Dictionary(uniqueKeysWithValues: items.map { ($0.id, $0) })
+    private func loadRecovering() {
+        let primaryExisted = fileManager.fileExists(atPath: fileURL.path)
+
+        if primaryExisted {
+            if apply(dataAt: fileURL) {
+                if case .loaded(let migrated) = lastLoadOutcome, migrated {
+                    NSLog(
+                        "Glance persistence: migrated legacy panels.json array to schema %d",
+                        PanelDatabase.currentSchemaVersion
+                    )
+                    rewriteRecoveredMetadata()
+                }
+                return
+            }
+            quarantineCorruptFile(at: fileURL)
+        }
+
+        if fileManager.fileExists(atPath: backupURL.path), apply(dataAt: backupURL) {
+            lastLoadOutcome = .recoveredFromBackup
+            NSLog("Glance persistence: restored metadata from %@", backupURL.path)
+            rewriteRecoveredMetadata()
+            return
+        }
+
+        records = [:]
+        lastLoadOutcome = primaryExisted ? .quarantinedCorruptAndEmpty : .missing
+        if lastLoadOutcome == .quarantinedCorruptAndEmpty {
+            NSLog("Glance persistence: starting with empty database after corrupt metadata")
+        }
+    }
+
+    private func rewriteRecoveredMetadata() {
+        do {
+            try save()
+        } catch {
+            NSLog("Glance persistence: failed to rewrite recovered metadata: %@", error.localizedDescription)
+        }
+    }
+
+    private func apply(dataAt url: URL) -> Bool {
+        do {
+            let data = try Data(contentsOf: url)
+            let decoded = try PanelDatabaseCodec.decode(from: data)
+            let deduped = PanelDatabaseCodec.deduplicate(decoded.database.panels)
+            if deduped.duplicateCount > 0 {
+                NSLog(
+                    "Glance persistence: dropped %d duplicate panel UUID(s), keeping newest updatedAt",
+                    deduped.duplicateCount
+                )
+            }
+            records = Dictionary(uniqueKeysWithValues: deduped.panels.map { ($0.id, $0) })
+            lastLoadOutcome = .loaded(migratedFromLegacy: decoded.migratedFromLegacy)
+            return true
+        } catch {
+            NSLog("Glance persistence: could not decode %@: %@", url.lastPathComponent, error.localizedDescription)
+            return false
+        }
+    }
+
+    private func quarantineCorruptFile(at url: URL) {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = TimeZone(secondsFromGMT: 0)
+        formatter.dateFormat = "yyyyMMddHHmmss"
+        let name = "panels.corrupted-\(formatter.string(from: Date())).json"
+        let destination = url.deletingLastPathComponent().appendingPathComponent(name)
+        do {
+            if fileManager.fileExists(atPath: destination.path) {
+                try fileManager.removeItem(at: destination)
+            }
+            try fileManager.moveItem(at: url, to: destination)
+            NSLog("Glance persistence: preserved corrupt database at %@", destination.path)
+        } catch {
+            NSLog("Glance persistence: failed to preserve corrupt database: %@", error.localizedDescription)
+            do {
+                try fileManager.copyItem(at: url, to: destination)
+                NSLog("Glance persistence: copied corrupt database to %@", destination.path)
+            } catch {
+                NSLog("Glance persistence: failed to copy corrupt database: %@", error.localizedDescription)
+            }
+        }
     }
 }

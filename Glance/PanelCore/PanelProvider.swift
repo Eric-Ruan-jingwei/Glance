@@ -9,7 +9,7 @@ protocol PanelContentControlling: AnyObject {
     var onRequestPreferredSize: ((NSSize) -> Void)? { get set }
 
     func loadPayload(from directory: URL)
-    func savePayload(to directory: URL)
+    func savePayload(to directory: URL) throws
     func enterEditing()
     func exitEditing()
     func additionalContextMenuItems() -> [NSMenuItem]
@@ -94,7 +94,7 @@ final class UnknownPanelContentController: PanelContentControlling {
     }
 
     func loadPayload(from directory: URL) {}
-    func savePayload(to directory: URL) {}
+    func savePayload(to directory: URL) throws {}
     func enterEditing() {}
     func exitEditing() {}
     func additionalContextMenuItems() -> [NSMenuItem] { [] }
