@@ -41,3 +41,11 @@ jobs:
             -destination 'platform=macOS' \
             CODE_SIGNING_ALLOWED=NO \
             test
+
+      - name: Package smoke test
+        run: |
+          ./scripts/package-macos.sh
+          test -d dist/Glance.app
+          test -x dist/Glance.app/Contents/MacOS/Glance
+          test -f dist/Glance.app/Contents/Info.plist
+          test -f dist/Glance.app/Contents/Resources/AppIcon.icns
