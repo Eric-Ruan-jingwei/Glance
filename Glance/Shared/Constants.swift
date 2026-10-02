@@ -7,9 +7,17 @@ enum PanelKind {
 
 enum GlanceConstants {
     static let appName = "Glance"
-    static let version = "0.1.1"
     static let bundleIdentifier = "com.glance.app"
     static let slogan = "Pin what matters. Keep it in sight."
+
+    static var versionDisplay: String {
+        let short = (Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String)?
+            .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        if short.isEmpty {
+            return appName
+        }
+        return "\(appName) \(short)"
+    }
 
     static let textDefaultSize = NSSize(width: 320, height: 220)
     static let textMinSize = NSSize(width: 180, height: 100)

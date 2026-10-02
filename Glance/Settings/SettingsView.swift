@@ -2,7 +2,11 @@ import SwiftUI
 
 struct SettingsView: View {
     var dataFolderURL: URL
+    var versionText: String
     var onRevealData: () -> Void
+
+    @State private var launchAtLogin = LaunchAtLogin.isEnabled
+    @State private var launchError: String?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
@@ -19,21 +23,39 @@ struct SettingsView: View {
                 }
             }
 
-            Text("A lightweight, local-first floating panel app for macOS.")
-                .font(.body)
-                .foregroundStyle(.secondary)
-
-            VStack(alignment: .leading, spacing: 6) {
-                labeled("版本", GlanceConstants.version)
-                labeled("数据", dataFolderURL.path)
+            GroupBox("通用") {
+                Toggle("开机自动启动 Glance", isOn: launchBinding)
+                    .toggleStyle(.switch)
+                if let launchError {
+                    Text(launchError)
+                        .font(.caption)
+                        .foregroundStyle(.red)
+                }
             }
 
-            HStack {
-                Button("打开数据文件夹", action: onRevealData)
-                Spacer()
+            GroupBox("快捷键") {
+                HStack {
+                    Text("隐藏 / 显示全部")
+                    Spacer()
+                    Text("⌥⌘H")
+                        .foregroundStyle(.secondary)
+                        .font(.body.monospaced())
+                }
             }
 
-            Text("开机启动、点击穿透、透明度等能力会在 V0.2 加入。")
+            GroupBox("数据") {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("本地数据位置")
+                    Text(displayPath(dataFolderURL))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .textSelection(.enabled)
+                    Button("打开数据文件夹", action: onRevealData)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+
+            Text(versionText)
                 .font(.caption)
                 .foregroundStyle(.tertiary)
         }
@@ -41,14 +63,27 @@ struct SettingsView: View {
         .frame(width: 440)
     }
 
-    private func labeled(_ title: String, _ value: String) -> some View {
-        HStack(alignment: .top) {
-            Text(title)
-                .foregroundStyle(.secondary)
-                .frame(width: 48, alignment: .leading)
-            Text(value)
-                .textSelection(.enabled)
+    private var launchBinding: Binding<Bool> {
+        Binding(
+            get: { launchAtLogin },
+            set: { newValue in
+                do {
+                    try LaunchAtLogin.setEnabled(newValue)
+                    launchAtLogin = LaunchAtLogin.isEnabled
+                    launchError = nil
+                } catch {
+                    launchAtLogin = LaunchAtLogin.isEnabled
+                    launchError = error.localizedDescription
+                }
+            }
+        )
+    }
+
+    private func displayPath(_ url: URL) -> String {
+        let home = FileManager.default.homeDirectoryForCurrentUser.path
+        if url.path.hasPrefix(home) {
+            return "~" + url.path.dropFirst(home.count)
         }
-        .font(.callout)
+        return url.path
     }
 }
