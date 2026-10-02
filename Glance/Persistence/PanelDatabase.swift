@@ -7,8 +7,23 @@ struct PanelDatabase: Codable, Equatable {
     static let currentSchemaVersion = 1
 }
 
-enum PanelDatabaseLoadError: Error {
+enum PanelDatabaseError: Error, Equatable, LocalizedError {
     case unreadable
+    case unsupportedFutureSchema(Int)
+
+    var errorDescription: String? {
+        switch self {
+        case .unreadable:
+            return "panels.json is not a readable schema 0 array or schema 1 envelope"
+        case .unsupportedFutureSchema(let version):
+            return "panels.json uses unsupported schema \(version); this app supports schema \(PanelDatabase.currentSchemaVersion)"
+        }
+    }
+}
+
+/// Reads `schemaVersion` without requiring current `PanelRecord` fields.
+private struct PanelDatabaseSchemaPeek: Decodable {
+    var schemaVersion: Int
 }
 
 enum PanelDatabaseCodec {
@@ -26,12 +41,27 @@ enum PanelDatabaseCodec {
     }
 
     /// Accepts schema 1 envelopes and V0.1 raw arrays (schema 0).
+    /// Future envelopes are rejected without rewriting them as schema 1.
     static func decode(from data: Data, decoder: JSONDecoder = makeDecoder()) throws -> (database: PanelDatabase, migratedFromLegacy: Bool) {
-        if let envelope = try? decoder.decode(PanelDatabase.self, from: data) {
-            return (
-                PanelDatabase(schemaVersion: PanelDatabase.currentSchemaVersion, panels: envelope.panels),
-                false
-            )
+        if let peek = try? decoder.decode(PanelDatabaseSchemaPeek.self, from: data) {
+            switch peek.schemaVersion {
+            case PanelDatabase.currentSchemaVersion:
+                let envelope = try decoder.decode(PanelDatabase.self, from: data)
+                return (envelope, false)
+
+            case 0:
+                let envelope = try decoder.decode(PanelDatabase.self, from: data)
+                return (
+                    PanelDatabase(schemaVersion: PanelDatabase.currentSchemaVersion, panels: envelope.panels),
+                    true
+                )
+
+            case let version where version > PanelDatabase.currentSchemaVersion:
+                throw PanelDatabaseError.unsupportedFutureSchema(version)
+
+            default:
+                throw PanelDatabaseError.unreadable
+            }
         }
         if let panels = try? decoder.decode([PanelRecord].self, from: data) {
             return (
@@ -39,7 +69,7 @@ enum PanelDatabaseCodec {
                 true
             )
         }
-        throw PanelDatabaseLoadError.unreadable
+        throw PanelDatabaseError.unreadable
     }
 
     static func encode(_ database: PanelDatabase, encoder: JSONEncoder = makeEncoder()) throws -> Data {

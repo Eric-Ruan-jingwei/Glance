@@ -5,6 +5,13 @@ enum PanelDatabaseLoadOutcome: Equatable {
     case loaded(migratedFromLegacy: Bool)
     case recoveredFromBackup
     case quarantinedCorruptAndEmpty
+    case unsupportedFutureSchema(Int)
+}
+
+private enum PanelDatabaseApplyResult {
+    case ok(migratedFromLegacy: Bool)
+    case unsupportedFutureSchema(Int)
+    case unreadable
 }
 
 @MainActor
@@ -35,16 +42,26 @@ final class PanelRepository {
     }
 
     func insert(_ record: PanelRecord) throws {
+        try assertMetadataWritable()
         records[record.id] = record
         try save()
     }
 
     func delete(id: UUID) throws {
+        try assertMetadataWritable()
         records[id] = nil
         try save()
     }
 
     func save() throws {
+        if case .unsupportedFutureSchema(let version) = lastLoadOutcome {
+            NSLog(
+                "Glance persistence: refusing to write panels.json because it uses unsupported schema %d (this app writes schema %d)",
+                version,
+                PanelDatabase.currentSchemaVersion
+            )
+            return
+        }
         let database = PanelDatabase(
             schemaVersion: PanelDatabase.currentSchemaVersion,
             panels: records.values.sorted { $0.createdAt < $1.createdAt }
@@ -66,7 +83,8 @@ final class PanelRepository {
         let primaryExisted = fileManager.fileExists(atPath: fileURL.path)
 
         if primaryExisted {
-            if apply(dataAt: fileURL) {
+            switch apply(dataAt: fileURL) {
+            case .ok:
                 if case .loaded(let migrated) = lastLoadOutcome, migrated {
                     NSLog(
                         "Glance persistence: migrated legacy panels.json array to schema %d",
@@ -75,15 +93,25 @@ final class PanelRepository {
                     rewriteRecoveredMetadata()
                 }
                 return
+            case .unsupportedFutureSchema:
+                return
+            case .unreadable:
+                quarantineCorruptFile(at: fileURL)
             }
-            quarantineCorruptFile(at: fileURL)
         }
 
-        if fileManager.fileExists(atPath: backupURL.path), apply(dataAt: backupURL) {
-            lastLoadOutcome = .recoveredFromBackup
-            NSLog("Glance persistence: restored metadata from %@", backupURL.path)
-            rewriteRecoveredMetadata()
-            return
+        if fileManager.fileExists(atPath: backupURL.path) {
+            switch apply(dataAt: backupURL) {
+            case .ok:
+                lastLoadOutcome = .recoveredFromBackup
+                NSLog("Glance persistence: restored metadata from %@", backupURL.path)
+                rewriteRecoveredMetadata()
+                return
+            case .unsupportedFutureSchema:
+                return
+            case .unreadable:
+                break
+            }
         }
 
         records = [:]
@@ -101,7 +129,7 @@ final class PanelRepository {
         }
     }
 
-    private func apply(dataAt url: URL) -> Bool {
+    private func apply(dataAt url: URL) -> PanelDatabaseApplyResult {
         do {
             let data = try Data(contentsOf: url)
             let decoded = try PanelDatabaseCodec.decode(from: data)
@@ -114,10 +142,26 @@ final class PanelRepository {
             }
             records = Dictionary(uniqueKeysWithValues: deduped.panels.map { ($0.id, $0) })
             lastLoadOutcome = .loaded(migratedFromLegacy: decoded.migratedFromLegacy)
-            return true
+            return .ok(migratedFromLegacy: decoded.migratedFromLegacy)
+        } catch PanelDatabaseError.unsupportedFutureSchema(let version) {
+            records = [:]
+            lastLoadOutcome = .unsupportedFutureSchema(version)
+            NSLog(
+                "Glance persistence: %@ uses schema %d; this app supports schema %d. Leaving the file untouched and skipping write-back.",
+                url.lastPathComponent,
+                version,
+                PanelDatabase.currentSchemaVersion
+            )
+            return .unsupportedFutureSchema(version)
         } catch {
             NSLog("Glance persistence: could not decode %@: %@", url.lastPathComponent, error.localizedDescription)
-            return false
+            return .unreadable
+        }
+    }
+
+    private func assertMetadataWritable() throws {
+        if case .unsupportedFutureSchema(let version) = lastLoadOutcome {
+            throw PanelDatabaseError.unsupportedFutureSchema(version)
         }
     }
 
