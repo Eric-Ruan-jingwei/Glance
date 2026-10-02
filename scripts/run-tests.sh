@@ -1,4 +1,3 @@
 #!/bin/zsh
 set -euo pipefail
-cd "$(dirname "$0")/.."
-swift test
+exec "$(dirname "$0")/test-macos.sh" "$@"

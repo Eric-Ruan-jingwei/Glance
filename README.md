@@ -2,9 +2,11 @@
 
 **Pin what matters. Keep it in sight.**
 
-A lightweight, local-first floating panel app for macOS.
+A lightweight, local-first floating panel app for **macOS**.
 
 Glance is not another notes app. It is an always-on-top information layer: put the text or reference images you need to keep seeing on independent panels, pin them anywhere on screen, and they stay there while you work in the browser, editor, or chat.
+
+There is no Windows client yet. Shared data contracts are documented so a future Windows app can reuse them.
 
 ## Highlights
 
@@ -25,7 +27,7 @@ Glance is not another notes app. It is an always-on-top information layer: put t
 - Click-through
 - Option temporary interaction
 - Opacity
-- Global hide/show shortcut
+- Global hide/show shortcut (`⌥⌘G`)
 - Launch at login
 - Local persistence
 - Multi-display recovery
@@ -56,43 +58,36 @@ Each panel can be pinned, locked, made click-through, and faded independently. T
 
 ### App settings
 
-Glance settings include launch at login (`SMAppService.mainApp`), the ⌥⌘G shortcut (not customizable in V0.2), the local data folder, and the version from the app bundle.
+Glance settings include launch at login (`SMAppService.mainApp`), the `⌥⌘G` shortcut (not customizable in V0.2), the local data folder, and the version from the app bundle.
 
-## Requirements
+## Download
 
-- macOS 14 or later
-- To build from source: Xcode 15+ **or** the Command Line Tools (`swift`)
+Prebuilt releases are planned. Until then, build from source.
 
-## Build and run
+## Build from source
+
+Requires **macOS 14+** and either **Xcode** or the **Xcode Command Line Tools**.
 
 ```bash
+git clone https://github.com/Eric-Ruan-jingwei/Glance.git
 cd Glance
-chmod +x scripts/package-app.sh
-./scripts/package-app.sh
+./scripts/package-macos.sh
 open dist/Glance.app
 ```
 
-If you have Xcode:
+Glance is an agent (`LSUIElement`): look for the pin icon in the menu bar, not in the Dock.
+
+Optional:
 
 ```bash
+./scripts/build-macos.sh
+./scripts/test-macos.sh
 open Glance.xcodeproj
-```
-
-Then run the Glance scheme. The app is an agent (`LSUIElement`): look for the pin icon in the menu bar, not in the Dock.
-
-```bash
-swift test
-```
-
-or:
-
-```bash
-./scripts/run-tests.sh
 ```
 
 ## Data
 
-Everything lives on disk:
+Everything lives on disk. See [docs/architecture/data-format.md](docs/architecture/data-format.md) for the portable contract.
 
 ```text
 ~/Library/Application Support/Glance/
@@ -111,7 +106,7 @@ There is no save button. Moves, resizes, and text edits are debounced and flushe
 
 ## Architecture
 
-Windows are AppKit `NSPanel`s. SwiftUI is used for app settings and the small panel settings window. Panel metadata is stored as JSON so the project builds with either Xcode or Command Line Tools; payload files stay in Application Support.
+macOS UI is AppKit (`NSPanel`) plus SwiftUI settings. Product models and JSON persistence are shared Core types; AppKit adapters convert `PanelFrame` to `NSRect`. See [docs/architecture/core-platform-boundary.md](docs/architecture/core-platform-boundary.md).
 
 ## License
 

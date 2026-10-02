@@ -1,0 +1,77 @@
+# Data format
+
+This is the portable on-disk contract. It does not use Apple-only binary serialization (no SwiftData, no keyed archives, no Core Data).
+
+Default application data root (macOS):
+
+```text
+~/Library/Application Support/Glance/
+```
+
+Layout:
+
+```text
+Application data root
+├── Database/
+│   ├── panels.json
+│   └── panels.backup.json
+└── Panels/
+    └── {panel-id}/
+        ├── content.rtf
+        └── image.png
+```
+
+`{panel-id}` is the panel UUID string.
+
+Tests may override the root with `GLANCE_DATA_ROOT`. Production user data is never used as that override.
+
+## Metadata: JSON
+
+`Database/panels.json` is UTF-8 JSON.
+
+- Current envelope: `{ "schemaVersion": 1, "panels": [ ... ] }`
+- V0.1 raw arrays of panel objects are still accepted and rewritten as schema 1
+- Envelopes with `schemaVersion` greater than 1 are **rejected**. The file is left untouched; Glance does not quarantine it or write an empty schema 1 database over it
+
+Each panel object stores geometry as **flat** numbers, not a nested `frame` object:
+
+```text
+x, y, width, height
+```
+
+Other fields include `id`, `kindIdentifier`, `displayIdentifier`, `isPinned`, `isLocked`, `isCollapsed`, `isPassThrough`, `opacity`, `themeIdentifier`, `payloadPath`, `payloadVersion`, `createdAt`, `updatedAt`.
+
+Dates are ISO-8601. `payloadPath` is relative to the application data root, typically `Panels/{uuid}`.
+
+`panels.backup.json` is the previous successful write of the same envelope.
+
+## Text payload: RTF
+
+```text
+Panels/{panel-id}/content.rtf
+```
+
+Rich text for text panels. Missing file means an empty new panel. An existing unreadable file is left on disk and not overwritten.
+
+## Image payload: PNG
+
+```text
+Panels/{panel-id}/image.png
+```
+
+Copied into the panel directory. Deleting the original source file does not blank the panel. Unreadable existing files are not overwritten.
+
+## Kinds
+
+V0.2 panel `kindIdentifier` values:
+
+```text
+com.glance.panel.text
+com.glance.panel.image
+```
+
+Unknown kinds still restore as metadata so a newer client’s panels are not deleted by an older build.
+
+## Future clients
+
+Any future Windows (or other) client should read and write this JSON + RTF + PNG layout. Windowing, shortcuts, and tray code are platform-specific; the files are not.
