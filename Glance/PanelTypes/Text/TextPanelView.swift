@@ -24,10 +24,8 @@ final class TextPanelView: NSView, PanelContentControlling, NSTextViewDelegate {
         fatalError("init(coder:) has not been implemented")
     }
 
-    func loadPayload(from directory: URL) {
-        let url = directory.appendingPathComponent("content.rtf")
-        if let data = try? Data(contentsOf: url),
-           let attributed = NSAttributedString(rtf: data, documentAttributes: nil) {
+    func loadPayload(from directory: URL) throws {
+        if let attributed = try TextPayloadFile.readAttributedString(from: directory) {
             textView.textStorage?.setAttributedString(attributed)
         }
         refreshPlaceholder()
@@ -63,7 +61,6 @@ final class TextPanelView: NSView, PanelContentControlling, NSTextViewDelegate {
         formatBar.isHidden = true
         formatBarHeight.constant = 0
         refreshPlaceholder()
-        onPayloadChange?()
     }
 
     func additionalContextMenuItems() -> [NSMenuItem] { [] }
@@ -177,5 +174,20 @@ final class TextPanelView: NSView, PanelContentControlling, NSTextViewDelegate {
     private func refreshPlaceholder() {
         let empty = (textView.string.trimmingCharacters(in: .whitespacesAndNewlines)).isEmpty
         placeholder.isHidden = !empty || !textView.isReadingMode
+    }
+}
+
+enum TextPayloadFile {
+    static let fileName = "content.rtf"
+
+    /// `nil` means the file is absent (empty new panel). Existing unreadable files throw.
+    static func readAttributedString(from directory: URL) throws -> NSAttributedString? {
+        let url = directory.appendingPathComponent(fileName)
+        guard FileManager.default.fileExists(atPath: url.path) else { return nil }
+        let data = try Data(contentsOf: url)
+        guard let attributed = NSAttributedString(rtf: data, documentAttributes: nil) else {
+            throw PayloadLoadError.unreadable(url)
+        }
+        return attributed
     }
 }

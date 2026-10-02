@@ -70,6 +70,7 @@ final class GlanceTextView: NSTextView {
             textStorage?.addAttribute(.font, value: converted, range: range)
             typingAttributes[.font] = converted
         }
+        didChangeText()
     }
 
     func insertBullet() {

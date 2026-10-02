@@ -8,7 +8,7 @@ protocol PanelContentControlling: AnyObject {
     var onRequestEditing: (() -> Void)? { get set }
     var onRequestPreferredSize: ((NSSize) -> Void)? { get set }
 
-    func loadPayload(from directory: URL)
+    func loadPayload(from directory: URL) throws
     func savePayload(to directory: URL) throws
     func enterEditing()
     func exitEditing()
@@ -93,7 +93,7 @@ final class UnknownPanelContentController: PanelContentControlling {
         self.view = container
     }
 
-    func loadPayload(from directory: URL) {}
+    func loadPayload(from directory: URL) throws {}
     func savePayload(to directory: URL) throws {}
     func enterEditing() {}
     func exitEditing() {}

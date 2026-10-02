@@ -15,10 +15,13 @@ final class MediaStore {
         return url
     }
 
-    func loadImage(from directory: URL) -> NSImage? {
+    func loadImage(from directory: URL) throws -> NSImage? {
         let url = directory.appendingPathComponent("image.png")
         guard FileManager.default.fileExists(atPath: url.path) else { return nil }
-        return NSImage(contentsOf: url)
+        guard let image = NSImage(contentsOf: url) else {
+            throw PayloadLoadError.unreadable(url)
+        }
+        return image
     }
 
     func imageFromPasteboard(_ pasteboard: NSPasteboard = .general) -> NSImage? {

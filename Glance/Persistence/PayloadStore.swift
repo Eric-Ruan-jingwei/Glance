@@ -17,6 +17,17 @@ enum PayloadStoreError: LocalizedError {
     }
 }
 
+enum PayloadLoadError: LocalizedError {
+    case unreadable(URL)
+
+    var errorDescription: String? {
+        switch self {
+        case .unreadable(let url):
+            return "无法读取已有内容文件 \(url.path)，已保留原文件。"
+        }
+    }
+}
+
 final class PayloadStore {
     let applicationSupportRoot: URL
     let databaseDirectory: URL

@@ -23,8 +23,8 @@ final class ImagePanelView: NSView, PanelContentControlling {
         fatalError("init(coder:) has not been implemented")
     }
 
-    func loadPayload(from directory: URL) {
-        if let image = media.loadImage(from: directory) {
+    func loadPayload(from directory: URL) throws {
+        if let image = try media.loadImage(from: directory) {
             apply(image, resizePanel: false)
         } else {
             apply(nil, resizePanel: false)
