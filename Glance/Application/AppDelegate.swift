@@ -20,6 +20,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var panelManager: PanelManager?
     private var statusBar: StatusBarController?
     private var settingsWindow: SettingsWindowController?
+    private var quickCapture: QuickCaptureWindowController?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         do {
@@ -33,8 +34,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             )
             statusBar.install()
             self.statusBar = statusBar
+            let capture = QuickCaptureWindowController()
+            capture.onSubmit = { [weak manager] request, screen in
+                manager?.createPanel(from: request, preferredScreen: screen) ?? false
+            }
+            self.quickCapture = capture
+            manager.onToggleQuickCapture = { [weak capture] in
+                capture?.toggle()
+            }
             environment.shortcuts.onToggleVisibility = { [weak manager] in
                 manager?.toggleGlobalVisibility()
+            }
+            environment.shortcuts.onQuickCapture = { [weak capture] in
+                capture?.toggle()
             }
             environment.shortcuts.registerDefaults()
             manager.restoreAll()

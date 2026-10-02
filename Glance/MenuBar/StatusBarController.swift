@@ -29,6 +29,7 @@ final class StatusBarController: NSObject, NSMenuDelegate {
         StatusMenuBuilder.populate(
             menu,
             allHidden: manager.allHidden,
+            onQuickCapture: { [weak self] in self?.manager.toggleQuickCapture() },
             onNewText: { [weak self] in self?.manager.createTextPanel() },
             onNewMarkdown: { [weak self] in self?.manager.createMarkdownPanel() },
             onNewTodo: { [weak self] in self?.manager.createTodoPanel() },

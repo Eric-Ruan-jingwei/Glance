@@ -13,6 +13,8 @@ enum GlanceConstants {
     static let slogan = "Pin what matters. Keep it in sight."
     static let hideShowShortcutDisplay = "⌥⌘G"
     static let hideShowKeyEquivalent = "g"
+    static let quickCaptureShortcutDisplay = "⌥⌘Space"
+    static let quickCaptureKeyEquivalent = " "
 
     static var versionDisplay: String {
         let short = (Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String)?
@@ -37,6 +39,7 @@ enum GlanceConstants {
     static let cascadeOffset = CGFloat(GlanceLayout.cascadeOffset)
     static let resizeEdge: CGFloat = 7
     static let panelDragStrip: CGFloat = 10
+    static let quickCaptureSize = NSSize(width: 520, height: 168)
 
     static let frameSaveDelay: TimeInterval = 0.25
     static let textSaveDelay: TimeInterval = 0.4

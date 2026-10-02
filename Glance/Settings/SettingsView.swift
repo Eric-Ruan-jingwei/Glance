@@ -34,12 +34,21 @@ struct SettingsView: View {
             }
 
             GroupBox("快捷键") {
-                HStack {
-                    Text("隐藏 / 显示全部")
-                    Spacer()
-                    Text(GlanceConstants.hideShowShortcutDisplay)
-                        .foregroundStyle(.secondary)
-                        .font(.body.monospaced())
+                VStack(spacing: 8) {
+                    HStack {
+                        Text("快速记录")
+                        Spacer()
+                        Text(GlanceConstants.quickCaptureShortcutDisplay)
+                            .foregroundStyle(.secondary)
+                            .font(.body.monospaced())
+                    }
+                    HStack {
+                        Text("隐藏 / 显示全部")
+                        Spacer()
+                        Text(GlanceConstants.hideShowShortcutDisplay)
+                            .foregroundStyle(.secondary)
+                            .font(.body.monospaced())
+                    }
                 }
             }
 

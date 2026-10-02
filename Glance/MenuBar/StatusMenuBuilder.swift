@@ -4,6 +4,7 @@ enum StatusMenuBuilder {
     static func populate(
         _ menu: NSMenu,
         allHidden: Bool,
+        onQuickCapture: @escaping () -> Void,
         onNewText: @escaping () -> Void,
         onNewMarkdown: @escaping () -> Void,
         onNewTodo: @escaping () -> Void,
@@ -14,6 +15,15 @@ enum StatusMenuBuilder {
     ) {
         menu.removeAllItems()
 
+        menu.addItem(
+            actionItem(
+                "快速记录…",
+                onQuickCapture,
+                keyEquivalent: GlanceConstants.quickCaptureKeyEquivalent,
+                modifiers: [.option, .command]
+            )
+        )
+        menu.addItem(.separator())
         menu.addItem(actionItem("新建文字面板", onNewText))
         menu.addItem(actionItem("新建 Markdown 面板", onNewMarkdown))
         menu.addItem(actionItem("新建待办面板", onNewTodo))
