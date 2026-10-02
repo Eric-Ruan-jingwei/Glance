@@ -2,6 +2,8 @@ import AppKit
 
 final class GlanceTextView: NSTextView {
     var isReadingMode = true
+    var allowsMove = true
+    var allowsContentMutation = true
     var onBeginEditing: (() -> Void)?
     var onRequestEndEditing: (() -> Void)?
     var onChecklistToggled: (() -> Void)?
@@ -17,13 +19,15 @@ final class GlanceTextView: NSTextView {
     override func mouseDown(with event: NSEvent) {
         if isReadingMode {
             if event.clickCount >= 2 {
-                onBeginEditing?()
+                if allowsContentMutation {
+                    onBeginEditing?()
+                }
                 return
             }
-            if toggleChecklist(at: event) {
+            if allowsContentMutation, toggleChecklist(at: event) {
                 return
             }
-            if let window {
+            if allowsMove, let window {
                 PanelWindowDrag.move(window) {
                     (window.windowController as? PanelWindowController)?.recoverAndApplyFrame()
                 }

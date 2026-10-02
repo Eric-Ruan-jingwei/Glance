@@ -7,6 +7,8 @@ protocol PanelContentControlling: AnyObject {
     var onPayloadChange: (() -> Void)? { get set }
     var onRequestEditing: (() -> Void)? { get set }
     var onRequestPreferredSize: ((NSSize) -> Void)? { get set }
+    var allowsMove: Bool { get set }
+    var allowsContentMutation: Bool { get set }
 
     func loadPayload(from directory: URL) throws
     func savePayload(to directory: URL) throws
@@ -75,6 +77,8 @@ final class UnknownPanelContentController: PanelContentControlling {
     var onPayloadChange: (() -> Void)?
     var onRequestEditing: (() -> Void)?
     var onRequestPreferredSize: ((NSSize) -> Void)?
+    var allowsMove: Bool = true
+    var allowsContentMutation: Bool = true
 
     init(kindIdentifier: String) {
         let label = NSTextField(wrappingLabelWithString: "未知面板类型\n\(kindIdentifier)")

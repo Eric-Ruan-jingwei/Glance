@@ -10,6 +10,9 @@ final class PanelManager {
     init(environment: AppEnvironment) {
         self.environment = environment
         environment.panelManager = self
+        environment.interaction.onModifierChanged = { [weak self] in
+            self?.refreshInteractionChrome()
+        }
         screenObserver = NotificationCenter.default.addObserver(
             forName: NSApplication.didChangeScreenParametersNotification,
             object: nil,
@@ -57,6 +60,7 @@ final class PanelManager {
     func deletePanel(id: UUID) {
         environment.debouncer.cancel(id: "frame-\(id.uuidString)")
         environment.debouncer.cancel(id: "payload-\(id.uuidString)")
+        environment.debouncer.cancel(id: "opacity-\(id.uuidString)")
         if let controller = controllers.removeValue(forKey: id) {
             controller.persistAllNow()
             controller.window?.close()
@@ -138,8 +142,15 @@ final class PanelManager {
         }
     }
 
+    func refreshInteractionChrome() {
+        for controller in controllers.values {
+            controller.refreshInteractionChrome()
+        }
+    }
+
     func shutdown() {
         persistAllNow()
+        environment.shortcuts.unregister()
         environment.interaction.shutdown()
         if let screenObserver {
             NotificationCenter.default.removeObserver(screenObserver)

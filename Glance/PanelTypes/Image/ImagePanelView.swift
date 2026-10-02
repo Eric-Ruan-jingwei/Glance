@@ -8,6 +8,8 @@ final class ImagePanelView: NSView, PanelContentControlling {
     var onPayloadChange: (() -> Void)?
     var onRequestEditing: (() -> Void)?
     var onRequestPreferredSize: ((NSSize) -> Void)?
+    var allowsMove = true
+    var allowsContentMutation = true
 
     private let imageView = NSImageView()
     private let placeholder = NSTextField(wrappingLabelWithString: "拖入、粘贴或右键选择图片")
@@ -49,6 +51,7 @@ final class ImagePanelView: NSView, PanelContentControlling {
     }
 
     func handlePaste() -> Bool {
+        guard allowsContentMutation else { return false }
         guard let image = media.imageFromPasteboard() else { return false }
         apply(image, resizePanel: true)
         onPayloadChange?()
@@ -91,18 +94,18 @@ final class ImagePanelView: NSView, PanelContentControlling {
     }
 
     override func mouseDown(with event: NSEvent) {
-        if let window {
-            PanelWindowDrag.move(window) {
-                (window.windowController as? PanelWindowController)?.recoverAndApplyFrame()
-            }
+        guard allowsMove, let window else { return }
+        PanelWindowDrag.move(window) {
+            (window.windowController as? PanelWindowController)?.recoverAndApplyFrame()
         }
     }
 
     override func draggingEntered(_ sender: any NSDraggingInfo) -> NSDragOperation {
-        .copy
+        allowsContentMutation ? .copy : []
     }
 
     override func performDragOperation(_ sender: any NSDraggingInfo) -> Bool {
+        guard allowsContentMutation else { return false }
         let pb = sender.draggingPasteboard
         if let image = media.imageFromPasteboard(pb) {
             apply(image, resizePanel: true)
@@ -128,6 +131,7 @@ final class ImagePanelView: NSView, PanelContentControlling {
     }
 
     @objc private func replaceImage() {
+        guard allowsContentMutation else { return }
         NSApp.activate(ignoringOtherApps: true)
         guard let url = media.chooseImageFile(), let image = media.image(fromFileURL: url) else { return }
         apply(image, resizePanel: true)

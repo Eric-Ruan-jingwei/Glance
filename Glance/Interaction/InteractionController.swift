@@ -18,6 +18,7 @@ final class InteractionController {
     private var entries: [ObjectIdentifier: Entry] = [:]
     private var timer: Timer?
     private var lastOption = false
+    var onModifierChanged: (() -> Void)?
 
     func update(window: NSWindow, passThrough: Bool) {
         entries[ObjectIdentifier(window)] = Entry(window: window, passThrough: passThrough)
@@ -82,6 +83,7 @@ final class InteractionController {
         guard option != lastOption else { return }
         lastOption = option
         applyAll()
+        onModifierChanged?()
     }
 
     private func applyAll() {

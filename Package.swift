@@ -20,6 +20,10 @@ let package = Package(
                 "Assets.xcassets",
                 "AppIcon.icns",
                 "Application/AppEntry.swift"
+            ],
+            linkerSettings: [
+                .linkedFramework("Carbon"),
+                .linkedFramework("ServiceManagement")
             ]
         ),
         .executableTarget(

@@ -47,7 +47,7 @@ final class PanelRecord: Codable, Identifiable {
         self.isLocked = isLocked
         self.isCollapsed = isCollapsed
         self.isPassThrough = isPassThrough
-        self.opacity = opacity
+        self.opacity = PanelOpacity.clamp(opacity)
         self.themeIdentifier = themeIdentifier
         self.payloadPath = payloadPath
         self.payloadVersion = payloadVersion
@@ -89,7 +89,7 @@ final class PanelRecord: Codable, Identifiable {
         isLocked = try container.decodeIfPresent(Bool.self, forKey: .isLocked) ?? false
         isCollapsed = try container.decodeIfPresent(Bool.self, forKey: .isCollapsed) ?? false
         isPassThrough = try container.decodeIfPresent(Bool.self, forKey: .isPassThrough) ?? false
-        opacity = try container.decodeIfPresent(Double.self, forKey: .opacity) ?? 1
+        opacity = PanelOpacity.clamp(try container.decodeIfPresent(Double.self, forKey: .opacity) ?? 1)
         themeIdentifier = try container.decodeIfPresent(String.self, forKey: .themeIdentifier) ?? "system"
         payloadVersion = try container.decodeIfPresent(Int.self, forKey: .payloadVersion) ?? 1
     }

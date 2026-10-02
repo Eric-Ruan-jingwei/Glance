@@ -5,9 +5,18 @@ final class PanelChromeView: NSView {
     var onCommitFrame: (() -> Void)?
     var onContextMenu: ((NSEvent) -> NSMenu)?
     var isInteractable: Bool = true
+    var allowsMove: Bool = true
+    var allowsResize: Bool = true
+    var showsLockBadge: Bool = false {
+        didSet { applyHover() }
+    }
+    var showsTemporaryInteraction: Bool = false {
+        didSet { applyHover() }
+    }
 
     private let effectView = NSVisualEffectView()
     let contentContainer = NSView()
+    private let lockBadge = NSImageView()
 
     private var isHovered = false
     private var trackingArea: NSTrackingArea?
@@ -35,6 +44,13 @@ final class PanelChromeView: NSView {
         addSubview(effectView)
         effectView.addSubview(contentContainer)
 
+        lockBadge.image = NSImage(systemSymbolName: "lock.fill", accessibilityDescription: "已锁定")
+        lockBadge.contentTintColor = NSColor.secondaryLabelColor
+        lockBadge.imageScaling = .scaleProportionallyDown
+        lockBadge.translatesAutoresizingMaskIntoConstraints = false
+        lockBadge.isHidden = true
+        addSubview(lockBadge)
+
         NSLayoutConstraint.activate([
             effectView.leadingAnchor.constraint(equalTo: leadingAnchor),
             effectView.trailingAnchor.constraint(equalTo: trailingAnchor),
@@ -43,7 +59,11 @@ final class PanelChromeView: NSView {
             contentContainer.leadingAnchor.constraint(equalTo: effectView.leadingAnchor),
             contentContainer.trailingAnchor.constraint(equalTo: effectView.trailingAnchor),
             contentContainer.topAnchor.constraint(equalTo: effectView.topAnchor),
-            contentContainer.bottomAnchor.constraint(equalTo: effectView.bottomAnchor)
+            contentContainer.bottomAnchor.constraint(equalTo: effectView.bottomAnchor),
+            lockBadge.topAnchor.constraint(equalTo: topAnchor, constant: 6),
+            lockBadge.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -8),
+            lockBadge.widthAnchor.constraint(equalToConstant: 11),
+            lockBadge.heightAnchor.constraint(equalToConstant: 11)
         ])
     }
 
@@ -90,7 +110,7 @@ final class PanelChromeView: NSView {
 
     override func resetCursorRects() {
         super.resetCursorRects()
-        guard isInteractable else { return }
+        guard isInteractable, allowsResize else { return }
         let t = GlanceConstants.resizeEdge
         addCursorRect(NSRect(x: 0, y: t, width: t, height: bounds.height - 2 * t), cursor: .resizeLeftRight)
         addCursorRect(NSRect(x: bounds.width - t, y: t, width: t, height: bounds.height - 2 * t), cursor: .resizeLeftRight)
@@ -103,7 +123,7 @@ final class PanelChromeView: NSView {
     }
 
     override func hitTest(_ point: NSPoint) -> NSView? {
-        if isInteractable && !edges(at: point).isEmpty {
+        if isInteractable, allowsResize, !edges(at: point).isEmpty {
             return self
         }
         return super.hitTest(point)
@@ -114,17 +134,18 @@ final class PanelChromeView: NSView {
         if event.type == .rightMouseDown { return }
         let local = convert(event.locationInWindow, from: nil)
         let edges = edges(at: local)
-        if !edges.isEmpty {
+        if allowsResize, !edges.isEmpty {
             activeEdges = edges
             dragStartFrame = window.frame
             dragStartMouse = NSEvent.mouseLocation
             return
         }
+        guard allowsMove else { return }
         PanelWindowDrag.move(window, onFinish: onCommitFrame)
     }
 
     override func mouseDragged(with event: NSEvent) {
-        guard isInteractable, let window, !activeEdges.isEmpty else { return }
+        guard isInteractable, allowsResize, let window, !activeEdges.isEmpty else { return }
         let mouse = NSEvent.mouseLocation
         let dx = mouse.x - dragStartMouse.x
         let dy = mouse.y - dragStartMouse.y
@@ -175,7 +196,9 @@ final class PanelChromeView: NSView {
     }
 
     private func applyHover() {
-        layer?.borderWidth = isHovered ? 1 : 0
+        let showBorder = isHovered || showsTemporaryInteraction
+        layer?.borderWidth = showBorder ? 1 : 0
+        lockBadge.isHidden = !(showsLockBadge && isHovered)
         applyBorderColor()
         window?.invalidateShadow()
         window?.resetCursorRects()

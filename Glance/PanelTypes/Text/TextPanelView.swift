@@ -7,6 +7,12 @@ final class TextPanelView: NSView, PanelContentControlling, NSTextViewDelegate {
     var onPayloadChange: (() -> Void)?
     var onRequestEditing: (() -> Void)?
     var onRequestPreferredSize: ((NSSize) -> Void)?
+    var allowsMove = true {
+        didSet { textView.allowsMove = allowsMove }
+    }
+    var allowsContentMutation = true {
+        didSet { textView.allowsContentMutation = allowsContentMutation }
+    }
 
     private let formatBar = NSStackView()
     private let scrollView = NSScrollView()

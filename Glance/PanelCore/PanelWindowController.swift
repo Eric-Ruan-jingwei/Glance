@@ -1,4 +1,5 @@
 import AppKit
+import SwiftUI
 
 @MainActor
 final class PanelWindowController: NSWindowController, NSWindowDelegate {
@@ -11,8 +12,12 @@ final class PanelWindowController: NSWindowController, NSWindowDelegate {
     private var interactionState: PanelInteractionState = .reading
     private var clickOutsideMonitor: Any?
     private var isPinned: Bool
+    private var isLocked: Bool
     private var isPassThrough: Bool
+    private var opacity: Double
     private let payloadDirty = PayloadDirtyFlag()
+    private var settingsModel: PanelSettingsModel?
+    private var settingsWindowController: PanelSettingsWindowController?
 
     var panelWindow: PanelWindow {
         window as! PanelWindow
@@ -23,7 +28,9 @@ final class PanelWindowController: NSWindowController, NSWindowDelegate {
         self.kindIdentifier = record.kindIdentifier
         self.environment = environment
         self.isPinned = record.isPinned
+        self.isLocked = record.isLocked
         self.isPassThrough = record.isPassThrough
+        self.opacity = PanelOpacity.clamp(record.opacity)
         self.content = PanelProviderRegistry.makeContent(kindIdentifier: record.kindIdentifier)
 
         let window = PanelWindow(contentRect: record.frame)
@@ -32,6 +39,7 @@ final class PanelWindowController: NSWindowController, NSWindowDelegate {
         window.delegate = self
         window.minSize = content.minimumSize
         window.applyPinned(record.isPinned)
+        window.alphaValue = CGFloat(opacity)
         chrome.minimumSize = content.minimumSize
         chrome.embed(content.view)
         chrome.onCommitFrame = { [weak self] in self?.recoverAndApplyFrame() }
@@ -55,6 +63,7 @@ final class PanelWindowController: NSWindowController, NSWindowDelegate {
         } else {
             applyReadingMode()
         }
+        applyPolicyToViews()
     }
 
     required init?(coder: NSCoder) {
@@ -73,16 +82,68 @@ final class PanelWindowController: NSWindowController, NSWindowDelegate {
     func persistAllNow() {
         environment.debouncer.flush(id: frameDebounceID)
         environment.debouncer.flush(id: payloadDebounceID)
+        environment.debouncer.flush(id: opacityDebounceID)
         recoverAndApplyFrame()
         persistPayloadNow()
+        persistOpacity()
     }
 
-    func applyPinned(_ pinned: Bool) {
+    func setPinned(_ pinned: Bool) {
         isPinned = pinned
         panelWindow.applyPinned(pinned)
         mutateRecord { record in
             record.isPinned = pinned
         }
+        syncSettingsModel()
+    }
+
+    func setLocked(_ locked: Bool) {
+        if locked, interactionState == .editing {
+            leaveEditing()
+        }
+        isLocked = locked
+        mutateRecord { record in
+            record.isLocked = locked
+        }
+        applyPolicyToViews()
+        syncSettingsModel()
+    }
+
+    func setPassThrough(_ enabled: Bool) {
+        if enabled {
+            persistPayloadNow()
+            applyPassThroughMode()
+            mutateRecord { record in
+                record.isPassThrough = true
+            }
+            PassThroughHint.showIfNeeded()
+        } else {
+            isPassThrough = false
+            if interactionState == .editing {
+                persistPayloadNow()
+                content.exitEditing()
+            }
+            applyReadingMode()
+            mutateRecord { record in
+                record.isPassThrough = false
+            }
+        }
+        applyPolicyToViews()
+        syncSettingsModel()
+    }
+
+    func setOpacity(_ value: Double) {
+        let clamped = PanelOpacity.clamp(value)
+        opacity = clamped
+        panelWindow.alphaValue = CGFloat(clamped)
+        settingsModel?.opacity = clamped
+        environment.debouncer.schedule(id: opacityDebounceID, delay: GlanceConstants.frameSaveDelay) { [weak self] in
+            self?.persistOpacity()
+        }
+    }
+
+    func refreshInteractionChrome() {
+        applyPolicyToViews()
     }
 
     private func applyReadingMode() {
@@ -95,6 +156,7 @@ final class PanelWindowController: NSWindowController, NSWindowDelegate {
         if panelWindow.isKeyWindow {
             NSApp.deactivate()
         }
+        applyPolicyToViews()
     }
 
     private func applyPassThroughMode() {
@@ -110,10 +172,11 @@ final class PanelWindowController: NSWindowController, NSWindowDelegate {
         if panelWindow.isKeyWindow {
             NSApp.deactivate()
         }
+        applyPolicyToViews()
     }
 
     private func enterEditing() {
-        guard PanelModeTransition.canBeginEditing(from: interactionState) else { return }
+        guard currentPolicy().allowsEdit else { return }
         interactionState = .editing
         panelWindow.allowsKey = true
         environment.interaction.update(window: panelWindow, passThrough: false)
@@ -121,6 +184,7 @@ final class PanelWindowController: NSWindowController, NSWindowDelegate {
         NSApp.activate(ignoringOtherApps: true)
         panelWindow.makeKeyAndOrderFront(nil)
         installClickOutsideMonitor()
+        applyPolicyToViews()
     }
 
     private func leaveEditing() {
@@ -149,6 +213,37 @@ final class PanelWindowController: NSWindowController, NSWindowDelegate {
         }
     }
 
+    private func currentPolicy() -> PanelInteractionPolicy {
+        PanelInteractionPolicy(
+            isLocked: isLocked,
+            isPassThrough: isPassThrough,
+            isOptionPressed: ModifierKeyController.optionIsPressed,
+            interactionState: interactionState
+        )
+    }
+
+    private func applyPolicyToViews() {
+        let policy = currentPolicy()
+        chrome.allowsMove = policy.allowsMove
+        chrome.allowsResize = policy.allowsResize
+        chrome.showsLockBadge = isLocked
+        chrome.showsTemporaryInteraction = isPassThrough
+            && interactionState != .editing
+            && ModifierKeyController.optionIsPressed
+        chrome.isInteractable = true
+        panelWindow.isMovable = policy.allowsMove
+        content.allowsMove = policy.allowsMove
+        content.allowsContentMutation = policy.allowsContentMutation
+    }
+
+    private func syncSettingsModel() {
+        guard let settingsModel else { return }
+        settingsModel.isPinned = isPinned
+        settingsModel.isLocked = isLocked
+        settingsModel.isPassThrough = isPassThrough
+        settingsModel.opacity = opacity
+    }
+
     private func installClickOutsideMonitor() {
         removeClickOutsideMonitor()
         clickOutsideMonitor = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] event in
@@ -172,6 +267,7 @@ final class PanelWindowController: NSWindowController, NSWindowDelegate {
         if kindIdentifier == PanelKind.text {
             let edit = NSMenuItem(title: "编辑", action: #selector(editClicked), keyEquivalent: "")
             edit.target = self
+            edit.isEnabled = currentPolicy().allowsEdit
             menu.addItem(edit)
             menu.addItem(.separator())
         }
@@ -181,13 +277,20 @@ final class PanelWindowController: NSWindowController, NSWindowDelegate {
         pin.state = isPinned ? .on : .off
         menu.addItem(pin)
 
+        let lock = NSMenuItem(title: "锁定", action: #selector(lockClicked), keyEquivalent: "")
+        lock.target = self
+        lock.state = isLocked ? .on : .off
+        menu.addItem(lock)
+
         let passThrough = NSMenuItem(title: "点击穿透", action: #selector(passThroughClicked), keyEquivalent: "")
         passThrough.target = self
         passThrough.state = isPassThrough ? .on : .off
         menu.addItem(passThrough)
 
-        for item in content.additionalContextMenuItems() {
-            menu.addItem(item)
+        if currentPolicy().allowsContentMutation {
+            for item in content.additionalContextMenuItems() {
+                menu.addItem(item)
+            }
         }
 
         menu.addItem(.separator())
@@ -207,50 +310,59 @@ final class PanelWindowController: NSWindowController, NSWindowDelegate {
     }
 
     @objc private func pinClicked() {
-        applyPinned(!isPinned)
+        setPinned(!isPinned)
+    }
+
+    @objc private func lockClicked() {
+        setLocked(!isLocked)
     }
 
     @objc private func passThroughClicked() {
-        if isPassThrough {
-            isPassThrough = false
-            if interactionState == .editing {
-                persistPayloadNow()
-                content.exitEditing()
-            }
-            applyReadingMode()
-            mutateRecord { record in
-                record.isPassThrough = false
-            }
-        } else {
-            persistPayloadNow()
-            applyPassThroughMode()
-            mutateRecord { record in
-                record.isPassThrough = true
-            }
-        }
+        setPassThrough(!isPassThrough)
     }
 
     @objc private func panelSettingsClicked() {
-        guard let record = try? environment.repository.record(id: recordID) else { return }
-        let alert = NSAlert()
-        alert.messageText = "面板设置"
-        alert.informativeText = """
-        类型：\(kindIdentifier)
-        显示器：\(record.displayIdentifier)
-        创建时间：\(record.createdAt.formatted(date: .abbreviated, time: .shortened))
-        内容目录：\(record.payloadPath)
-
-        颜色、透明度等高级选项将在 V0.2 提供。
-        """
-        alert.addButton(withTitle: "打开内容文件夹")
-        alert.addButton(withTitle: "关闭")
-        NSApp.activate(ignoringOtherApps: true)
-        let response = alert.runModal()
-        if response == .alertFirstButtonReturn {
-            if let dir = try? environment.payloadStore.directory(for: recordID) {
-                NSWorkspace.shared.open(dir)
-            }
+        if let settingsWindowController {
+            syncSettingsModel()
+            settingsWindowController.bringForward()
+            return
         }
+
+        let model = PanelSettingsModel(
+            isPinned: isPinned,
+            isLocked: isLocked,
+            isPassThrough: isPassThrough,
+            opacity: opacity
+        )
+        settingsModel = model
+        let view = PanelSettingsView(
+            model: model,
+            onPinned: { [weak self] value in self?.setPinned(value) },
+            onLocked: { [weak self] value in self?.setLocked(value) },
+            onPassThrough: { [weak self] value in self?.setPassThrough(value) },
+            onOpacity: { [weak self] value in self?.setOpacity(value) },
+            onOpenFolder: { [weak self] in self?.openPayloadFolder() },
+            onDelete: { [weak self] in self?.deleteClicked() }
+        )
+        let controller = PanelSettingsWindowController(model: model, view: view)
+        controller.onClose = { [weak self] in
+            self?.settingsWindowController = nil
+            self?.settingsModel = nil
+        }
+        settingsWindowController = controller
+        controller.bringForward()
+    }
+
+    private func openPayloadFolder() {
+        if let dir = try? environment.payloadStore.directory(for: recordID) {
+            NSWorkspace.shared.open(dir)
+        }
+    }
+
+    private func closeSettingsIfNeeded() {
+        settingsWindowController?.close()
+        settingsWindowController = nil
+        settingsModel = nil
     }
 
     @objc private func deleteClicked() {
@@ -262,6 +374,7 @@ final class PanelWindowController: NSWindowController, NSWindowDelegate {
         alert.addButton(withTitle: "取消")
         NSApp.activate(ignoringOtherApps: true)
         if alert.runModal() == .alertFirstButtonReturn {
+            closeSettingsIfNeeded()
             environment.panelManager?.deletePanel(id: recordID)
         }
     }
@@ -284,6 +397,7 @@ final class PanelWindowController: NSWindowController, NSWindowDelegate {
     func windowWillClose(_ notification: Notification) {
         persistAllNow()
         removeClickOutsideMonitor()
+        closeSettingsIfNeeded()
         if let window {
             environment.interaction.remove(window: window)
         }
@@ -291,6 +405,7 @@ final class PanelWindowController: NSWindowController, NSWindowDelegate {
 
     private var frameDebounceID: String { "frame-\(recordID.uuidString)" }
     private var payloadDebounceID: String { "payload-\(recordID.uuidString)" }
+    private var opacityDebounceID: String { "opacity-\(recordID.uuidString)" }
 
     private func scheduleFrameSave() {
         environment.debouncer.schedule(id: frameDebounceID, delay: GlanceConstants.frameSaveDelay) { [weak self] in
@@ -301,6 +416,12 @@ final class PanelWindowController: NSWindowController, NSWindowDelegate {
     private func schedulePayloadSave() {
         environment.debouncer.schedule(id: payloadDebounceID, delay: GlanceConstants.textSaveDelay) { [weak self] in
             self?.persistPayloadNow()
+        }
+    }
+
+    private func persistOpacity() {
+        mutateRecord { record in
+            record.opacity = opacity
         }
     }
 
@@ -334,6 +455,7 @@ final class PanelWindowController: NSWindowController, NSWindowDelegate {
     }
 
     private func resizeToPreferred(_ size: NSSize) {
+        guard currentPolicy().allowsResize else { return }
         guard let window else { return }
         var frame = window.frame
         frame.size = NSSize(
