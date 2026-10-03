@@ -80,6 +80,10 @@ final class TodoPanelView: NSView, PanelContentControlling {
     func additionalContextMenuItems() -> [NSMenuItem] { [] }
     func handlePaste() -> Bool { false }
 
+    var automaticDisplayTitle: String? {
+        PanelSummaryText.todoTitle(items: document.items).title
+    }
+
     private func setup() {
         translatesAutoresizingMaskIntoConstraints = false
 

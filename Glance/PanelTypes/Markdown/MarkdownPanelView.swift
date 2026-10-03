@@ -68,6 +68,10 @@ final class MarkdownPanelView: NSView, PanelContentControlling, NSTextViewDelega
     func additionalContextMenuItems() -> [NSMenuItem] { [] }
     func handlePaste() -> Bool { false }
 
+    var automaticDisplayTitle: String? {
+        PanelSummaryText.markdownTitle(from: source)
+    }
+
     func textDidChange(_ notification: Notification) {
         guard !isApplyingContent, isEditing else { return }
         source = textView.string

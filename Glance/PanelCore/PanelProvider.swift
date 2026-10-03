@@ -19,12 +19,15 @@ protocol PanelContentControlling: AnyObject {
     func additionalContextMenuItems() -> [NSMenuItem]
     func handlePaste() -> Bool
     func primaryEditMenuTitle() -> String?
+    /// In-memory automatic title. Must not read payload files.
+    var automaticDisplayTitle: String? { get }
 }
 
 extension PanelContentControlling {
     var allowsKeyInReadingMode: Bool { false }
     func primaryEditMenuTitle() -> String? { nil }
     func flushPendingUserChanges() -> Bool { false }
+    var automaticDisplayTitle: String? { nil }
 }
 
 protocol PanelProviding {

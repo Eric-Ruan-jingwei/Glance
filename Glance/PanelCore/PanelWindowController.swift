@@ -54,7 +54,6 @@ final class PanelWindowController: NSWindowController, NSWindowDelegate {
         }
         chrome.isPinned = record.isPinned
         window.contentView = chrome
-        refreshChromeTitle()
         collectionObserver = NotificationCenter.default.addObserver(
             forName: .glancePanelCollectionDidChange,
             object: nil,
@@ -68,6 +67,7 @@ final class PanelWindowController: NSWindowController, NSWindowDelegate {
         content.onPayloadChange = { [weak self] in
             self?.payloadDirty.markUserEdit()
             self?.schedulePayloadSave()
+            self?.scheduleChromeTitleRefresh()
         }
         content.onRequestEditing = { [weak self] in self?.enterEditing() }
         content.onRequestPreferredSize = { [weak self] size in
@@ -75,6 +75,7 @@ final class PanelWindowController: NSWindowController, NSWindowDelegate {
         }
 
         loadPayload()
+        refreshChromeTitle()
         if record.isPassThrough {
             applyPassThroughMode()
         } else {
@@ -106,6 +107,7 @@ final class PanelWindowController: NSWindowController, NSWindowDelegate {
         absorbPendingUserChanges()
         environment.debouncer.flush(id: frameDebounceID)
         environment.debouncer.flush(id: payloadDebounceID)
+        environment.debouncer.flush(id: titleDebounceID)
         environment.debouncer.flush(id: opacityDebounceID)
         recoverAndApplyFrame()
         persistPayloadNow()
@@ -534,6 +536,7 @@ final class PanelWindowController: NSWindowController, NSWindowDelegate {
 
     private var frameDebounceID: String { "frame-\(recordID.uuidString)" }
     private var payloadDebounceID: String { "payload-\(recordID.uuidString)" }
+    private var titleDebounceID: String { "title-\(recordID.uuidString)" }
     private var opacityDebounceID: String { "opacity-\(recordID.uuidString)" }
 
     private func scheduleFrameSave() {
@@ -545,6 +548,12 @@ final class PanelWindowController: NSWindowController, NSWindowDelegate {
     private func schedulePayloadSave() {
         environment.debouncer.schedule(id: payloadDebounceID, delay: GlanceConstants.textSaveDelay) { [weak self] in
             self?.persistPayloadNow()
+        }
+    }
+
+    private func scheduleChromeTitleRefresh() {
+        environment.debouncer.schedule(id: titleDebounceID, delay: GlanceConstants.textSaveDelay) { [weak self] in
+            self?.refreshChromeTitle()
         }
     }
 
@@ -572,6 +581,7 @@ final class PanelWindowController: NSWindowController, NSWindowDelegate {
                 }
                 environment.panelManager?.notifyPanelsDidChange()
             }
+            refreshChromeTitle()
         } catch {
             NSLog("Glance persistence: failed to save payload: %@", error.localizedDescription)
         }
@@ -618,11 +628,13 @@ final class PanelWindowController: NSWindowController, NSWindowDelegate {
 
     private func refreshChromeTitle() {
         let custom = (try? environment.repository.record(id: recordID))?.customTitle
-        if let title = PanelTitle.normalize(custom) {
-            chrome.titleText = title
-        } else {
-            chrome.titleText = PanelSummaryKindLabel.displayName(for: kindIdentifier)
-        }
+        let title = PanelChromeTitle.resolved(
+            customTitle: custom,
+            automaticTitle: content.automaticDisplayTitle,
+            kindIdentifier: kindIdentifier
+        )
+        chrome.titleText = title
+        window?.title = title
     }
 
     private func mutateRecord(_ body: (PanelRecord) -> Void) {

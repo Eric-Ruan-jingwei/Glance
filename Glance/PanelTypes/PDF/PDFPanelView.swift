@@ -14,6 +14,7 @@ final class PDFPanelView: NSView, PanelContentControlling {
 
     private(set) var isShowingError = false
     private(set) var loadedPageCount = 0
+    private var cachedDisplayName: String?
 
     private let pdfView = PDFView()
     private let placeholder = GlanceMessagePlaceholder()
@@ -29,12 +30,17 @@ final class PDFPanelView: NSView, PanelContentControlling {
     }
 
     func loadPayload(from directory: URL) throws {
+        cachedDisplayName = nil
         let documentURL = PDFPayloadFile.documentURL(in: directory)
         guard FileManager.default.fileExists(atPath: documentURL.path) else {
             showMissing()
             return
         }
+        if let metadata = try? PDFPayloadFile.readMetadata(from: directory) {
+            cachedDisplayName = metadata.displayName
+        }
         guard let document = PDFDocument(url: documentURL), document.pageCount > 0, !document.isLocked else {
+            cachedDisplayName = nil
             showUnreadable()
             return
         }
@@ -47,6 +53,10 @@ final class PDFPanelView: NSView, PanelContentControlling {
     func exitEditing() {}
     func additionalContextMenuItems() -> [NSMenuItem] { [] }
     func handlePaste() -> Bool { false }
+
+    var automaticDisplayTitle: String? {
+        cachedDisplayName.map(PanelSummaryText.pdfTitle(from:))
+    }
 
     private func setup() {
         pdfView.displayMode = .singlePageContinuous
