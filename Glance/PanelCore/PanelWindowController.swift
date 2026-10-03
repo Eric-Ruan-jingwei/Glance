@@ -338,6 +338,15 @@ final class PanelWindowController: NSWindowController, NSWindowDelegate {
         )
 
         menu.addItem(.separator())
+        let hide = NSMenuItem(
+            title: PanelVisibilityMenu.hideThisPanel,
+            action: #selector(hidePanelClicked),
+            keyEquivalent: ""
+        )
+        hide.target = self
+        menu.addItem(hide)
+
+        menu.addItem(.separator())
         let settings = NSMenuItem(title: "面板设置…", action: #selector(panelSettingsClicked), keyEquivalent: "")
         settings.target = self
         menu.addItem(settings)
@@ -363,6 +372,10 @@ final class PanelWindowController: NSWindowController, NSWindowDelegate {
 
     @objc private func passThroughClicked() {
         setPassThrough(!isPassThrough)
+    }
+
+    @objc private func hidePanelClicked() {
+        environment.panelManager?.hidePanel(id: recordID)
     }
 
     @objc private func layoutPresetClicked(_ sender: NSMenuItem) {

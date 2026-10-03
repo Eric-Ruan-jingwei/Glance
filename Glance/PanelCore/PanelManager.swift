@@ -141,7 +141,8 @@ final class PanelManager {
     }
 
     func toggleGlobalVisibility() {
-        environment.visibility.toggle(windows: windows)
+        environment.visibility.toggle()
+        applyEffectiveVisibilityToAll()
     }
 
     func toggleQuickCapture() {
@@ -222,6 +223,22 @@ final class PanelManager {
         notifyPanelsDidChange()
     }
 
+    @discardableResult
+    func hidePanel(id: UUID) -> Bool {
+        setPanelHidden(true, id: id)
+    }
+
+    @discardableResult
+    func showPanel(id: UUID) -> Bool {
+        setPanelHidden(false, id: id)
+    }
+
+    @discardableResult
+    func togglePanelVisibility(id: UUID) -> Bool {
+        let hidden = (try? environment.repository.record(id: id))?.isHidden ?? false
+        return setPanelHidden(!hidden, id: id)
+    }
+
     private func presentPDFImportAlert(_ error: Error) {
         let alert = NSAlert()
         alert.alertStyle = .warning
@@ -238,12 +255,46 @@ final class PanelManager {
     private func present(record: PanelRecord) {
         let controller = PanelWindowController(record: record, environment: environment)
         controllers[record.id] = controller
-        if PanelRevealPolicy.shouldPresentNewlyCreatedPanel(
-            isGloballyConcealed: environment.visibility.isConcealed
+        applyEffectiveVisibility(id: record.id)
+    }
+
+    private func setPanelHidden(_ hidden: Bool, id: UUID) -> Bool {
+        do {
+            guard let record = try environment.repository.record(id: id) else { return false }
+            let controller = controllers[id]
+            try PanelVisibilityMutation.commit(
+                hidden: hidden,
+                record: record,
+                globallyConcealed: environment.visibility.isConcealed,
+                touch: { environment.repository.touch($0) },
+                persist: { try environment.repository.save() },
+                present: { controller?.showFront() },
+                conceal: { controller?.conceal() }
+            )
+            notifyPanelsDidChange()
+            return true
+        } catch {
+            NSLog("Glance persistence: failed to update panel visibility: %@", error.localizedDescription)
+            return false
+        }
+    }
+
+    private func applyEffectiveVisibility(id: UUID) {
+        guard let controller = controllers[id] else { return }
+        let hidden = (try? environment.repository.record(id: id))?.isHidden ?? false
+        if PanelVisibilityPolicy.shouldPresent(
+            panelHidden: hidden,
+            globallyConcealed: environment.visibility.isConcealed
         ) {
             controller.showFront()
         } else {
             controller.conceal()
+        }
+    }
+
+    private func applyEffectiveVisibilityToAll() {
+        for id in controllers.keys {
+            applyEffectiveVisibility(id: id)
         }
     }
 
@@ -279,9 +330,13 @@ final class PanelManager {
     }
 
     func revealPanel(id: UUID) {
-        guard let controller = controllers[id] else { return }
-        controller.showFront()
-        controller.window?.makeKey()
+        guard showPanel(id: id) else { return }
+        let hidden = (try? environment.repository.record(id: id))?.isHidden ?? true
+        guard PanelVisibilityPolicy.shouldPresent(
+            panelHidden: hidden,
+            globallyConcealed: environment.visibility.isConcealed
+        ) else { return }
+        controllers[id]?.window?.makeKey()
         NSApp.activate(ignoringOtherApps: true)
     }
 

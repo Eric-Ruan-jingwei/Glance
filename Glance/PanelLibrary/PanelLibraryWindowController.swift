@@ -8,6 +8,7 @@ final class PanelLibraryWindowController: NSWindowController, NSWindowDelegate {
         let model = PanelLibraryModel()
         model.loadSummaries = { panelManager.panelSummaries() }
         model.reveal = { panelManager.revealPanel(id: $0) }
+        model.hide = { _ = panelManager.hidePanel(id: $0) }
         model.delete = { panelManager.deletePanel(id: $0) }
         model.openFolder = { panelManager.openPayloadFolder(id: $0) }
         let hosting = NSHostingController(rootView: PanelLibraryView(model: model))

@@ -13,6 +13,7 @@ enum PanelSummaryBuilder {
             isLocked: record.isLocked,
             isPassThrough: record.isPassThrough,
             isPinned: record.isPinned,
+            isHidden: record.isHidden,
             isUnreadable: false
         )
         switch record.kindIdentifier {

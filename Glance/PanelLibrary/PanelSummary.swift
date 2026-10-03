@@ -15,6 +15,7 @@ struct PanelSummary: Identifiable, Equatable {
     var isLocked: Bool
     var isPassThrough: Bool
     var isPinned: Bool
+    var isHidden: Bool
     var isUnreadable: Bool
 }
 

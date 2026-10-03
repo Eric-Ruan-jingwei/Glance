@@ -9,6 +9,7 @@ final class PanelLibraryModel: ObservableObject {
 
     var loadSummaries: () -> [PanelSummary] = { [] }
     var reveal: (UUID) -> Void = { _ in }
+    var hide: (UUID) -> Void = { _ in }
     var delete: (UUID) -> Bool = { _ in false }
     var openFolder: (UUID) -> Void = { _ in }
 
@@ -32,6 +33,10 @@ final class PanelLibraryModel: ObservableObject {
 
     func revealPanel(_ id: UUID) {
         reveal(id)
+    }
+
+    func hidePanel(_ id: UUID) {
+        hide(id)
     }
 
     func confirmDelete(_ id: UUID) {

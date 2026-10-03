@@ -28,6 +28,7 @@ struct PanelLibraryView: View {
                     PanelLibraryRow(
                         summary: summary,
                         onReveal: { model.revealPanel(summary.id) },
+                        onHide: { model.hidePanel(summary.id) },
                         onDelete: { model.confirmDelete(summary.id) },
                         onOpenFolder: { model.openPayloadFolder(summary.id) }
                     )
@@ -63,6 +64,7 @@ struct PanelLibraryView: View {
 private struct PanelLibraryRow: View {
     let summary: PanelSummary
     let onReveal: () -> Void
+    let onHide: () -> Void
     let onDelete: () -> Void
     let onOpenFolder: () -> Void
 
@@ -82,6 +84,9 @@ private struct PanelLibraryRow: View {
                         .foregroundStyle(.secondary)
                         .font(.caption)
                         .lineLimit(1)
+                    Image(systemName: PanelVisibilityMenu.symbolName(isHidden: summary.isHidden))
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
                     if summary.isLocked {
                         Image(systemName: "lock.fill")
                             .font(.caption2)
@@ -100,10 +105,10 @@ private struct PanelLibraryRow: View {
                 }
             }
             Spacer(minLength: 8)
-            Button("显示", action: onReveal)
+            Button(PanelVisibilityMenu.libraryActionTitle(isHidden: summary.isHidden), action: primaryAction)
                 .controlSize(.small)
             Menu {
-                Button("显示", action: onReveal)
+                Button(PanelVisibilityMenu.libraryActionTitle(isHidden: summary.isHidden), action: primaryAction)
                 Button("打开数据文件夹", action: onOpenFolder)
                 Divider()
                 Button("删除", role: .destructive, action: onDelete)
@@ -115,6 +120,14 @@ private struct PanelLibraryRow: View {
             .buttonStyle(.borderless)
         }
         .padding(.vertical, 4)
+    }
+
+    private func primaryAction() {
+        if summary.isHidden {
+            onReveal()
+        } else {
+            onHide()
+        }
     }
 
     private var symbolName: String {
