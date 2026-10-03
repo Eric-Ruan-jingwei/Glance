@@ -133,6 +133,19 @@ final class GuideTests: XCTestCase {
         }
     }
 
+    func testInactiveGlobalSearchShowsUnsetStateInsteadOfConfiguredShortcut() {
+        let item = GuideShortcutCatalog.item(id: "globalSearch")
+        let resolution: (ShortcutAction) -> GuideShortcutResolution = { action in
+            action == .globalSearch ? .inactive : .active(ShortcutDefaults.shortcut(for: action))
+        }
+        XCTAssertEqual(item?.tokens(resolvedBy: resolution).map(\.display), ["未生效"])
+        XCTAssertEqual(item?.resolvedDetail(resolvedBy: resolution), GuideShortcutItem.inactiveShortcutDetail)
+        let label = item?.accessibilityLabel(resolvedBy: resolution) ?? ""
+        XCTAssertTrue(label.contains("未生效"))
+        XCTAssertTrue(label.contains("快捷键与已有设置冲突，可在设置中重新指定。"))
+        XCTAssertFalse(label.contains("K"))
+    }
+
     func testCatalogLocksPanelAndQuickCaptureOperations() {
         let provider = ShortcutDefaults.shortcut(for:)
         let option = GuideShortcutCatalog.item(id: "optionPassThrough")

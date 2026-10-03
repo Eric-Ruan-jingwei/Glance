@@ -2,7 +2,7 @@ import SwiftUI
 
 struct GuideGettingStartedPage: View {
     var step: Int
-    var shortcutProvider: (ShortcutAction) -> GlanceShortcut
+    var shortcutProvider: (ShortcutAction) -> GuideShortcutResolution
 
     var body: some View {
         switch step {
@@ -123,7 +123,7 @@ struct GuideGettingStartedPage: View {
 }
 
 struct GuideGettingStartedView: View {
-    var shortcutProvider: (ShortcutAction) -> GlanceShortcut
+    var shortcutProvider: (ShortcutAction) -> GuideShortcutResolution
     var paginated: Bool
     var step: Int = 0
 

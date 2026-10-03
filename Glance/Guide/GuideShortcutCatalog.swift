@@ -56,16 +56,32 @@ enum GuideShortcutSource: Equatable {
     case modifierGesture(GuideKeycap)
 }
 
+enum GuideShortcutResolution: Equatable {
+    case active(GlanceShortcut)
+    case inactive
+}
+
 struct GuideShortcutItem: Equatable, Identifiable {
+    static let inactiveShortcutDetail = "快捷键与已有设置冲突，可在设置中重新指定。"
+
     var id: String
     var title: String
     var detail: String?
     var source: GuideShortcutSource
 
     func tokens(using provider: (ShortcutAction) -> GlanceShortcut) -> [GuideKeycap] {
+        tokens(resolvedBy: { action in .active(provider(action)) })
+    }
+
+    func tokens(resolvedBy resolution: (ShortcutAction) -> GuideShortcutResolution) -> [GuideKeycap] {
         switch source {
         case .dynamic(let action):
-            return GuideKeycap.tokens(from: provider(action))
+            switch resolution(action) {
+            case .active(let shortcut):
+                return GuideKeycap.tokens(from: shortcut)
+            case .inactive:
+                return [.gesture("未生效")]
+            }
         case .keys(let keys):
             return keys
         case .mouseGesture(let label):
@@ -75,16 +91,39 @@ struct GuideShortcutItem: Equatable, Identifiable {
         }
     }
 
+    func resolvedDetail(using provider: (ShortcutAction) -> GlanceShortcut) -> String? {
+        resolvedDetail(resolvedBy: { action in .active(provider(action)) })
+    }
+
+    func resolvedDetail(resolvedBy resolution: (ShortcutAction) -> GuideShortcutResolution) -> String? {
+        if case .dynamic(let action) = source, case .inactive = resolution(action) {
+            return Self.inactiveShortcutDetail
+        }
+        return detail
+    }
+
     func accessibilityLabel(using provider: (ShortcutAction) -> GlanceShortcut) -> String {
-        let spoken = tokens(using: provider).map(\.spoken).joined(separator: " ")
+        accessibilityLabel(resolvedBy: { action in .active(provider(action)) })
+    }
+
+    func accessibilityLabel(resolvedBy resolution: (ShortcutAction) -> GuideShortcutResolution) -> String {
         var parts = [title]
-        if let detail, !detail.isEmpty {
+        if let detail = resolvedDetail(resolvedBy: resolution), !detail.isEmpty {
             parts.append(detail)
         }
         switch source {
+        case .dynamic(let action):
+            switch resolution(action) {
+            case .inactive:
+                parts.append("未生效")
+            case .active(let shortcut):
+                parts.append("快捷键 \(ShortcutDisplayFormatter.spoken(shortcut))")
+            }
         case .mouseGesture:
+            let spoken = tokens(resolvedBy: resolution).map(\.spoken).joined(separator: " ")
             parts.append(spoken)
         default:
+            let spoken = tokens(resolvedBy: resolution).map(\.spoken).joined(separator: " ")
             parts.append("快捷键 \(spoken)")
         }
         return parts.joined(separator: "，")

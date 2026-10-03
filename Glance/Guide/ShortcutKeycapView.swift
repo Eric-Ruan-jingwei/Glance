@@ -37,14 +37,14 @@ struct ShortcutDisplayView: View {
 
 struct ShortcutRow: View {
     var item: GuideShortcutItem
-    var shortcutProvider: (ShortcutAction) -> GlanceShortcut
+    var shortcutProvider: (ShortcutAction) -> GuideShortcutResolution
 
     var body: some View {
         HStack(alignment: .center, spacing: GlanceTheme.Space.md) {
             VStack(alignment: .leading, spacing: 2) {
                 Text(item.title)
                     .font(.body)
-                if let detail = item.detail, !detail.isEmpty {
+                if let detail = item.resolvedDetail(resolvedBy: shortcutProvider), !detail.isEmpty {
                     Text(detail)
                         .font(.caption)
                         .foregroundStyle(.secondary)
@@ -52,11 +52,11 @@ struct ShortcutRow: View {
                 }
             }
             Spacer(minLength: GlanceTheme.Space.sm)
-            ShortcutDisplayView(tokens: item.tokens(using: shortcutProvider))
+            ShortcutDisplayView(tokens: item.tokens(resolvedBy: shortcutProvider))
         }
         .padding(.vertical, 6)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(item.accessibilityLabel(using: shortcutProvider))
+        .accessibilityLabel(item.accessibilityLabel(resolvedBy: shortcutProvider))
     }
 }
 

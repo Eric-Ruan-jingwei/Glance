@@ -95,7 +95,10 @@ struct GuideView: View {
         }
     }
 
-    private func shortcutProvider(_ action: ShortcutAction) -> GlanceShortcut {
-        shortcuts.shortcut(for: action)
+    private func shortcutProvider(_ action: ShortcutAction) -> GuideShortcutResolution {
+        if let active = shortcuts.activeShortcut(for: action) {
+            return .active(active)
+        }
+        return .inactive
     }
 }

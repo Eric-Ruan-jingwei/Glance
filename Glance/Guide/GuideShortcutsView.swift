@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct GuideShortcutsView: View {
-    var shortcutProvider: (ShortcutAction) -> GlanceShortcut
+    var shortcutProvider: (ShortcutAction) -> GuideShortcutResolution
     var onOpenSettings: () -> Void
 
     var body: some View {
