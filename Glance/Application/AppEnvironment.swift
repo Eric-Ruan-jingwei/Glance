@@ -11,6 +11,7 @@ final class AppEnvironment {
     let shortcuts: ShortcutManager
     let shortcutStore: ShortcutStore
     let shortcutCoordinator: ShortcutCoordinator
+    let workspacePreferences: WorkspacePreferenceStore
 
     weak var panelManager: PanelManager?
 
@@ -35,5 +36,6 @@ final class AppEnvironment {
         self.shortcuts = shortcuts
         self.shortcutStore = store
         self.shortcutCoordinator = ShortcutCoordinator(store: store, manager: shortcuts)
+        self.workspacePreferences = WorkspacePreferenceStore()
     }
 }

@@ -8,10 +8,12 @@ final class PanelManager {
     private var controllers: [UUID: PanelWindowController] = [:]
     private let placement = PanelPlacementEngine()
     private var screenObserver: NSObjectProtocol?
+    private(set) var activeWorkspaceID: String = WorkspaceRecord.defaultID
 
     init(environment: AppEnvironment) {
         self.environment = environment
         environment.panelManager = self
+        resolveActiveWorkspace(persistFallback: true)
         environment.interaction.onModifierChanged = { [weak self] in
             self?.refreshInteractionChrome()
         }
@@ -21,7 +23,7 @@ final class PanelManager {
             queue: .main
         ) { [weak self] _ in
             Task { @MainActor in
-                self?.reclampVisiblePanels()
+                self?.reclampPanels()
             }
         }
     }
@@ -168,6 +170,68 @@ final class PanelManager {
         environment.visibility.isConcealed
     }
 
+    func workspaces() -> [WorkspaceRecord] {
+        (try? environment.repository.allWorkspaces()) ?? [WorkspaceRecord.makeDefault()]
+    }
+
+    func workspaceMenuItems() -> [WorkspaceMenuItem] {
+        WorkspaceMenuModel.items(workspaces: workspaces(), activeID: activeWorkspaceID)
+    }
+
+    @discardableResult
+    func switchWorkspace(id: String) -> Bool {
+        let available = environment.repository.availableWorkspaceIDs()
+        guard available.contains(id) else { return false }
+        environment.workspacePreferences.setActiveWorkspaceID(id)
+        activeWorkspaceID = id
+        applyEffectiveVisibilityToAll()
+        notifyWorkspaceDidChange()
+        return true
+    }
+
+    @discardableResult
+    func createWorkspace(name: String) throws -> WorkspaceRecord {
+        let record = try environment.repository.createWorkspace(name: name)
+        _ = switchWorkspace(id: record.id)
+        notifyPanelsDidChange()
+        return record
+    }
+
+    func renameWorkspace(id: String, name: String) throws {
+        try environment.repository.renameWorkspace(id: id, name: name)
+        notifyWorkspaceDidChange()
+        notifyPanelsDidChange()
+    }
+
+    func deleteWorkspace(id: String) throws {
+        let deletingActive = id == activeWorkspaceID
+        try environment.repository.deleteWorkspace(id: id)
+        if deletingActive {
+            environment.workspacePreferences.setActiveWorkspaceID(WorkspaceRecord.defaultID)
+            activeWorkspaceID = WorkspaceRecord.defaultID
+        }
+        applyEffectiveVisibilityToAll()
+        notifyWorkspaceDidChange()
+        notifyPanelsDidChange()
+    }
+
+    @discardableResult
+    func movePanel(id: UUID, toWorkspaceID: String) -> Bool {
+        do {
+            guard let record = try environment.repository.record(id: id) else { return false }
+            let previousID = record.workspaceID
+            try environment.repository.movePanel(id: id, toWorkspaceID: toWorkspaceID)
+            if record.workspaceID != previousID {
+                applyEffectiveVisibility(id: id)
+                notifyPanelsDidChange()
+            }
+            return true
+        } catch {
+            NSLog("Glance persistence: failed to move panel: %@", error.localizedDescription)
+            return false
+        }
+    }
+
     @discardableResult
     func createPanel(
         kindIdentifier: String,
@@ -198,7 +262,7 @@ final class PanelManager {
         let screen = preferredScreen ?? DisplayManager.screenContainingMouse()
         let nsFrame = placement.frameForNewPanel(
             size: size,
-            existingFrames: windows.map(\.frame),
+            existingFrames: framesForPlacement(),
             on: screen
         )
         let payloadPath = environment.payloadStore.relativePath(for: id)
@@ -208,7 +272,8 @@ final class PanelManager {
             frame: PanelFrame(nsFrame),
             displayIdentifier: DisplayManager.identifier(for: screen),
             payloadPath: payloadPath,
-            payloadVersion: PanelProviderRegistry.payloadVersion(for: kindIdentifier)
+            payloadVersion: PanelProviderRegistry.payloadVersion(for: kindIdentifier),
+            workspaceID: workspaceIDForNewPanel()
         )
 
         try PanelCreationSession.materialize(
@@ -266,6 +331,7 @@ final class PanelManager {
                 hidden: hidden,
                 record: record,
                 globallyConcealed: environment.visibility.isConcealed,
+                activeWorkspaceID: activeWorkspaceID,
                 touch: { environment.repository.touch($0) },
                 persist: { try environment.repository.save() },
                 present: { controller?.showFront() },
@@ -281,9 +347,13 @@ final class PanelManager {
 
     private func applyEffectiveVisibility(id: UUID) {
         guard let controller = controllers[id] else { return }
-        let hidden = (try? environment.repository.record(id: id))?.isHidden ?? false
+        let record = try? environment.repository.record(id: id)
+        let hidden = record?.isHidden ?? false
+        let workspaceID = record?.workspaceID ?? WorkspaceRecord.defaultID
         if PanelVisibilityPolicy.shouldPresent(
             panelHidden: hidden,
+            panelWorkspaceID: workspaceID,
+            activeWorkspaceID: activeWorkspaceID,
             globallyConcealed: environment.visibility.isConcealed
         ) {
             controller.showFront()
@@ -298,7 +368,7 @@ final class PanelManager {
         }
     }
 
-    private func reclampVisiblePanels() {
+    private func reclampPanels() {
         for controller in controllers.values {
             controller.recoverAndApplyFrame()
         }
@@ -331,9 +401,13 @@ final class PanelManager {
 
     func revealPanel(id: UUID) {
         guard showPanel(id: id) else { return }
-        let hidden = (try? environment.repository.record(id: id))?.isHidden ?? true
+        let record = try? environment.repository.record(id: id)
+        let hidden = record?.isHidden ?? true
+        let workspaceID = record?.workspaceID ?? WorkspaceRecord.defaultID
         guard PanelVisibilityPolicy.shouldPresent(
             panelHidden: hidden,
+            panelWorkspaceID: workspaceID,
+            activeWorkspaceID: activeWorkspaceID,
             globallyConcealed: environment.visibility.isConcealed
         ) else { return }
         controllers[id]?.window?.makeKey()
@@ -346,7 +420,50 @@ final class PanelManager {
         NSWorkspace.shared.activateFileViewerSelecting([directory])
     }
 
+    func promptCreateWorkspace() {
+        guard let raw = WorkspaceNamePrompt.runModal(
+            title: "新建工作区",
+            message: "输入工作区名称。"
+        ) else { return }
+        do {
+            _ = try createWorkspace(name: raw)
+        } catch {
+            WorkspaceNamePrompt.presentError(error)
+        }
+    }
+
     func notifyPanelsDidChange() {
         NotificationCenter.default.post(name: .glancePanelCollectionDidChange, object: nil)
+    }
+
+    func notifyWorkspaceDidChange() {
+        NotificationCenter.default.post(name: .glanceWorkspaceDidChange, object: nil)
+    }
+
+    private func resolveActiveWorkspace(persistFallback: Bool) {
+        let available = environment.repository.availableWorkspaceIDs()
+        let resolved = ActiveWorkspaceResolver.resolve(
+            storedID: environment.workspacePreferences.activeWorkspaceID(),
+            availableIDs: available
+        )
+        activeWorkspaceID = resolved
+        if persistFallback, environment.workspacePreferences.activeWorkspaceID() != resolved {
+            environment.workspacePreferences.setActiveWorkspaceID(resolved)
+        }
+    }
+
+    private func workspaceIDForNewPanel() -> String {
+        WorkspaceMembership.idForNewPanel(
+            activeID: activeWorkspaceID,
+            availableIDs: environment.repository.availableWorkspaceIDs()
+        )
+    }
+
+    private func framesForPlacement() -> [NSRect] {
+        controllers.compactMap { id, controller in
+            guard let record = try? environment.repository.record(id: id) else { return nil }
+            guard record.workspaceID == activeWorkspaceID else { return nil }
+            return controller.window?.frame
+        }
     }
 }

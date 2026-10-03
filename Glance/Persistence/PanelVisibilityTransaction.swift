@@ -28,6 +28,7 @@ enum PanelVisibilityMutation {
         hidden: Bool,
         record: PanelRecord,
         globallyConcealed: Bool,
+        activeWorkspaceID: String,
         touch: (PanelRecord) -> Void,
         persist: () throws -> Void,
         present: () -> Void,
@@ -41,6 +42,8 @@ enum PanelVisibilityMutation {
         )
         if PanelVisibilityPolicy.shouldPresent(
             panelHidden: record.isHidden,
+            panelWorkspaceID: record.workspaceID,
+            activeWorkspaceID: activeWorkspaceID,
             globallyConcealed: globallyConcealed
         ) {
             present()
