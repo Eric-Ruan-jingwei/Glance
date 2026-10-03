@@ -95,7 +95,7 @@ final class ImagePanelView: NSView, PanelContentControlling {
 
     override func mouseDown(with event: NSEvent) {
         guard allowsMove, let window else { return }
-        PanelWindowDrag.moveThenFinishInteractive(window)
+        PanelWindowDrag.moveThenFinishInteractive(window, with: event)
     }
 
     override func draggingEntered(_ sender: any NSDraggingInfo) -> NSDragOperation {

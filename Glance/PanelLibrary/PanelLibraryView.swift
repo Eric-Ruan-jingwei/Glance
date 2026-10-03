@@ -134,6 +134,7 @@ struct PanelLibraryView: View {
         HStack(spacing: 8) {
             Text("已选择 \(model.selectedPanelIDs.count) 个")
                 .font(.callout.weight(.medium))
+                .accessibilityLabel("已选择 \(model.selectedPanelIDs.count) 个面板")
             Button("隐藏") { model.batchHide() }
                 .disabled(!model.canBatchHide)
             Button("显示") { model.batchShow() }
@@ -193,6 +194,7 @@ private struct PanelLibraryRow: View {
                 .font(.title3)
                 .foregroundStyle(summary.isUnreadable ? Color.orange : Color.secondary)
                 .frame(width: 28)
+                .accessibilityLabel(kindAccessibilityLabel)
             VStack(alignment: .leading, spacing: 3) {
                 Text(summary.title)
                     .font(.body.weight(.medium))
@@ -206,10 +208,12 @@ private struct PanelLibraryRow: View {
                     Image(systemName: PanelVisibilityMenu.symbolName(isHidden: summary.isHidden))
                         .font(.caption2)
                         .foregroundStyle(.secondary)
+                        .accessibilityLabel(summary.isHidden ? "已隐藏" : "已显示")
                     if summary.isLocked {
                         Image(systemName: "lock.fill")
                             .font(.caption2)
                             .foregroundStyle(.secondary)
+                            .accessibilityLabel("已锁定")
                     }
                     if summary.isPassThrough {
                         Text("穿透")
@@ -220,6 +224,7 @@ private struct PanelLibraryRow: View {
                         Image(systemName: "pin.fill")
                             .font(.caption2)
                             .foregroundStyle(.secondary)
+                            .accessibilityLabel("已固定")
                     }
                 }
                 if !summary.tags.isEmpty {
@@ -262,6 +267,7 @@ private struct PanelLibraryRow: View {
             } label: {
                 Image(systemName: "ellipsis.circle")
             }
+            .accessibilityLabel("更多操作")
             .menuIndicator(.hidden)
             .fixedSize()
             .buttonStyle(.borderless)
@@ -291,6 +297,11 @@ private struct PanelLibraryRow: View {
         case "com.glance.panel.pdf": return "doc.richtext"
         default: return "square.dashed"
         }
+    }
+
+    private var kindAccessibilityLabel: String {
+        if summary.isUnreadable { return "无法读取内容" }
+        return PanelSummaryKindLabel.displayName(for: summary.kindIdentifier)
     }
 
     private var metaLine: String {

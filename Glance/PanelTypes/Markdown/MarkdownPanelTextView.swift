@@ -29,7 +29,7 @@ final class MarkdownPanelTextView: NSTextView {
                 return
             }
             if allowsMove, let window {
-                PanelWindowDrag.moveThenFinishInteractive(window)
+                PanelWindowDrag.moveThenFinishInteractive(window, with: event)
             }
             return
         }

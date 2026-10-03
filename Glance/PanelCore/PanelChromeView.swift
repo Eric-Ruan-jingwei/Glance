@@ -59,6 +59,7 @@ final class PanelChromeView: NSView {
         dragGrip.layer?.cornerRadius = 1.5
         dragGrip.translatesAutoresizingMaskIntoConstraints = false
         dragGrip.isHidden = true
+        dragGrip.setAccessibilityElement(false)
         addSubview(dragGrip)
 
         NSLayoutConstraint.activate([
@@ -163,7 +164,7 @@ final class PanelChromeView: NSView {
             return
         }
         guard allowsMove else { return }
-        PanelWindowDrag.move(window, onFinish: onFinishMove ?? onCommitFrame)
+        PanelWindowDrag.move(window, with: event, onFinish: onFinishMove ?? onCommitFrame)
     }
 
     override func mouseDragged(with event: NSEvent) {

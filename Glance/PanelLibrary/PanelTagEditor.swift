@@ -220,6 +220,9 @@ struct PanelTagChip: View {
         .padding(.vertical, 3)
         .background(Color.secondary.opacity(0.14))
         .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(onRemove == nil ? "标签：\(text)" : "移除标签：\(text)")
+        .accessibilityAddTraits(onRemove == nil ? [] : .isButton)
     }
 }
 

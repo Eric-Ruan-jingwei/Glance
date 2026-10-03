@@ -54,7 +54,7 @@
       <EnvironmentVariables>
          <EnvironmentVariable
             key = "GLANCE_DATA_ROOT"
-            value = "/tmp/GlanceTests"
+            value = "/tmp/GlanceXcodeTests"
             isEnabled = "YES">
          </EnvironmentVariable>
       </EnvironmentVariables>

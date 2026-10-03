@@ -23,7 +23,14 @@ final class AppEnvironment {
 
     private init() throws {
         let environment = ProcessInfo.processInfo.environment
-        let root = ApplicationDataLocation.resolve(environment: environment)
+        var root = ApplicationDataLocation.resolve(environment: environment)
+        if environment[ApplicationDataLocation.environmentKey] != nil,
+           environment["XCTestConfigurationFilePath"] != nil {
+            root = root.appendingPathComponent(
+                "run-\(ProcessInfo.processInfo.processIdentifier)-\(UUID().uuidString)",
+                isDirectory: true
+            )
+        }
         try ApplicationDataLocation.prepare(root, environment: environment)
         if environment[ApplicationDataLocation.environmentKey] != nil {
             NSLog("Glance: using isolated data root %@", root.path)

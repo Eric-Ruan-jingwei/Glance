@@ -16,6 +16,7 @@ struct SettingsView: View {
                 Image(systemName: "pin.fill")
                     .font(.system(size: 28, weight: .semibold))
                     .foregroundStyle(.primary)
+                    .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Glance")
                         .font(.title2.weight(.semibold))

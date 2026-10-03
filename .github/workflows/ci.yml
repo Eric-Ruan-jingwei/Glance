@@ -9,7 +9,7 @@ jobs:
     name: Build and test
     runs-on: macos-latest
     env:
-      GLANCE_DATA_ROOT: /tmp/GlanceTests
+      GLANCE_DATA_ROOT: /tmp/GlanceCI-${{ github.run_id }}-${{ github.run_attempt }}
     steps:
       - name: Checkout
         uses: actions/checkout@v5
