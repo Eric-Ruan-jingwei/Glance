@@ -1,4 +1,5 @@
 import AppKit
+import CoreText
 
 final class GlanceTextView: NSTextView {
     var isReadingMode = true
@@ -7,6 +8,41 @@ final class GlanceTextView: NSTextView {
     var onBeginEditing: (() -> Void)?
     var onRequestEndEditing: (() -> Void)?
     var onChecklistToggled: (() -> Void)?
+
+    convenience init(usingTextLayoutManager _: Bool) {
+        let storage = NSTextStorage()
+        let layoutManager = GlanceCenteredStrikethroughLayoutManager()
+        let container = NSTextContainer()
+        storage.addLayoutManager(layoutManager)
+        layoutManager.addTextContainer(container)
+        self.init(frame: .zero, textContainer: container)
+    }
+
+    override init(frame frameRect: NSRect, textContainer container: NSTextContainer?) {
+        super.init(frame: frameRect, textContainer: container)
+        installCenteredStrikethroughLayoutManager()
+    }
+
+    required init?(coder: NSCoder) {
+        super.init(coder: coder)
+        installCenteredStrikethroughLayoutManager()
+    }
+
+    private func installCenteredStrikethroughLayoutManager() {
+        guard let textStorage, let textContainer else { return }
+        guard !(layoutManager is GlanceCenteredStrikethroughLayoutManager) else { return }
+        let replacement = GlanceCenteredStrikethroughLayoutManager()
+        if let old = layoutManager {
+            if let index = old.textContainers.firstIndex(of: textContainer) {
+                old.removeTextContainer(at: index)
+            }
+            textStorage.removeLayoutManager(old)
+        }
+        textStorage.addLayoutManager(replacement)
+        if textContainer.layoutManager !== replacement {
+            replacement.addTextContainer(textContainer)
+        }
+    }
 
     override func rightMouseDown(with event: NSEvent) {
         if let chrome = window?.contentView as? PanelChromeView {
@@ -374,5 +410,60 @@ enum TextChecklistToggle {
 
     static func isCompleted(usesCheckedGlyph: Bool, contentHasStrikethrough: Bool) -> Bool {
         usesCheckedGlyph || contentHasStrikethrough
+    }
+}
+
+enum TextChecklistStrike {
+    static func centerAboveBaseline(in attributed: NSAttributedString, fallbackFont: NSFont) -> CGFloat {
+        guard attributed.length > 0 else { return fallbackFont.capHeight / 2 }
+        let line = CTLineCreateWithAttributedString(attributed)
+        let bounds = CTLineGetBoundsWithOptions(line, [.useGlyphPathBounds])
+        if bounds.height > 0.4 {
+            return bounds.midY
+        }
+        return fallbackFont.capHeight / 2
+    }
+
+    static func thickness(style: NSUnderlineStyle) -> CGFloat {
+        style.contains(.thick) ? 1.5 : 1
+    }
+}
+
+final class GlanceCenteredStrikethroughLayoutManager: NSLayoutManager {
+    override func strikethroughGlyphRange(
+        _ glyphRange: NSRange,
+        strikethroughType strikethroughVal: NSUnderlineStyle,
+        lineFragmentRect lineRect: NSRect,
+        lineFragmentGlyphRange lineGlyphRange: NSRange,
+        containerOrigin: NSPoint
+    ) {
+        guard glyphRange.length > 0,
+              let container = textContainer(forGlyphAt: glyphRange.location, effectiveRange: nil),
+              let textStorage
+        else { return }
+
+        let charRange = characterRange(forGlyphRange: glyphRange, actualGlyphRange: nil)
+        guard charRange.length > 0, NSMaxRange(charRange) <= textStorage.length else { return }
+
+        let font = (textStorage.attribute(.font, at: charRange.location, effectiveRange: nil) as? NSFont)
+            ?? GlanceConstants.textBodyFont
+        let color = (textStorage.attribute(.strikethroughColor, at: charRange.location, effectiveRange: nil) as? NSColor)
+            ?? (textStorage.attribute(.foregroundColor, at: charRange.location, effectiveRange: nil) as? NSColor)
+            ?? NSColor.secondaryLabelColor
+        let attributed = textStorage.attributedSubstring(from: charRange)
+        let bounds = boundingRect(forGlyphRange: glyphRange, in: container)
+        let glyphOrigin = location(forGlyphAt: glyphRange.location)
+        let y = containerOrigin.y + lineRect.minY + glyphOrigin.y
+            - TextChecklistStrike.centerAboveBaseline(in: attributed, fallbackFont: font)
+
+        NSGraphicsContext.saveGraphicsState()
+        color.setStroke()
+        let path = NSBezierPath()
+        path.lineWidth = TextChecklistStrike.thickness(style: strikethroughVal)
+        path.lineCapStyle = .butt
+        path.move(to: NSPoint(x: containerOrigin.x + bounds.minX, y: y))
+        path.line(to: NSPoint(x: containerOrigin.x + bounds.maxX, y: y))
+        path.stroke()
+        NSGraphicsContext.restoreGraphicsState()
     }
 }

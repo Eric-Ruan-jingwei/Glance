@@ -41,6 +41,17 @@ final class TextChecklistToggleTests: XCTestCase {
         XCTAssertEqual(point, NSPoint(x: 5, y: 4))
     }
 
+    func testStrikeCenterUsesInkMidpoint() {
+        let font = GlanceConstants.textBodyFont
+        let digits = NSAttributedString(string: "1111", attributes: [.font: font])
+        XCTAssertEqual(
+            TextChecklistStrike.centerAboveBaseline(in: digits, fallbackFont: font),
+            font.capHeight / 2,
+            accuracy: 0.2
+        )
+        XCTAssertEqual(TextChecklistStrike.thickness(style: .thick), 1.5)
+    }
+
     func testHitSlopIncludesPaddingAroundGlyph() {
         let bounds = NSRect(x: 10, y: 10, width: 12, height: 14)
         XCTAssertTrue(
@@ -138,6 +149,11 @@ final class TextChecklistClickTests: XCTestCase {
         XCTAssertEqual(TextChecklistToggle.markSize, GlanceConstants.textBodyFont.pointSize)
         XCTAssertTrue(view.string.hasPrefix("○"))
         XCTAssertEqual(foregroundColor(in: view, at: 0), GlanceConstants.textBodyColor)
+    }
+
+    func testTextViewDrawsCenteredStrikethrough() {
+        let view = GlanceTextView(usingTextLayoutManager: false)
+        XCTAssertTrue(view.layoutManager is GlanceCenteredStrikethroughLayoutManager)
     }
 
     private func makeChecklistView(reading: Bool, text: String) throws -> GlanceTextView {
