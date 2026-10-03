@@ -86,6 +86,10 @@ final class PanelLibraryModel: ObservableObject {
         return .none
     }
 
+    var showsBatchToolbar: Bool {
+        emptyKind == .none && !selectedPanelIDs.isEmpty
+    }
+
     var selectedSummaries: [PanelSummary] {
         let ids = selectedPanelIDs
         return visible.filter { ids.contains($0.id) }

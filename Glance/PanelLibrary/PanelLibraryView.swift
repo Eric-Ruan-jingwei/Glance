@@ -113,13 +113,12 @@ struct PanelLibraryView: View {
                             }
                         }
                         .listStyle(.inset)
+                        .safeAreaInset(edge: .top, spacing: 0) {
+                            if model.showsBatchToolbar {
+                                batchToolbar
+                            }
+                        }
                     }
-                }
-                .overlay(alignment: .top) {
-                    batchToolbar
-                        .opacity(model.selectedPanelIDs.isEmpty ? 0 : 1)
-                        .allowsHitTesting(!model.selectedPanelIDs.isEmpty)
-                        .accessibilityHidden(model.selectedPanelIDs.isEmpty)
                 }
                 .navigationTitle("Glance")
                 .searchable(text: $model.query, placement: .toolbar, prompt: "搜索面板")
