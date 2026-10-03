@@ -30,6 +30,10 @@ There is no Windows client yet. Shared data contracts are documented so a future
 - No cloud
 - Open source
 
+## V0.16.1
+
+Improved VoiceOver actions for removable and suggested tags.
+
 ## V0.16
 
 Product hardening for the existing 1.0 feature set. No new panel types, no schema change.
