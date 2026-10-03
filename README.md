@@ -20,7 +20,7 @@ There is no Windows client yet. Shared data contracts are documented so a future
 - No cloud
 - Open source
 
-## V0.6 已支持
+## V0.7 已支持
 
 - Text panel
 - Markdown panel (rendered preview, double-click to edit raw UTF-8 `.md`)
@@ -28,6 +28,8 @@ There is no Windows client yet. Shared data contracts are documented so a future
 - Image panel
 - Quick Capture (`⌥⌘J`) — capture text or a Todo without first creating an empty panel
 - Panel Manager — browse, search, reveal, and delete existing panels from one place
+- Panel edge snapping
+- Panel layout presets
 - Always on top
 - Lock
 - Click-through
@@ -77,6 +79,19 @@ The Dock icon is hidden. There is no traditional main window.
 `管理面板…` opens a regular macOS window (not a floating panel). It is not stored in `panels.json`. Browse panels, filter by type, search titles, bring a panel forward, or delete it with the same confirmation as the panel menu. Titles are derived from existing payload content; there is no separate rename field.
 
 If all floating panels are hidden with `⌥⌘G`, the manager stays visible. Revealing one panel from the manager shows only that panel and does not turn Show All back on.
+
+### Layout
+
+Drag a panel near a screen edge and release to snap it into place. Size stays the same; only position changes. Corners snap when the panel is close to two edges at once. Hold Control while releasing to bypass snapping for that drag.
+
+Right-click a panel:
+
+```text
+布局
+→ 左上角 / 右上角 / 左下角 / 右下角 / 居中
+```
+
+Presets use the current display’s visible frame (avoiding the Dock and menu bar). Locked panels cannot be moved, so the layout menu is disabled.
 
 ### Panel control
 

@@ -110,6 +110,10 @@ A successful submit creates a normal Text or Todo panel using the existing paylo
 
 The Panel Manager / Library window is a derived view of existing metadata and payloads. It is **not** stored in `panels.json` and does not add a `title` field. Summaries are rebuilt at runtime.
 
+## Panel snap and layout
+
+Edge snap and layout presets are interaction-only. They write the resulting `x` / `y` / `width` / `height` and do not add `isSnapped`, `layoutPreset`, or similar fields. `schemaVersion` remains `1`.
+
 ## Future clients
 
 Any future Windows (or other) client should read and write this JSON + RTF + Markdown + Todo JSON + PNG layout. Windowing, shortcuts, and tray code are platform-specific; the files are not.
