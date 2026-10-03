@@ -172,7 +172,7 @@ Unknown kinds still restore as metadata so a newer client’s panels are not del
 
 Quick Capture is a transient input window. It is **not** stored in `panels.json`, has no `PanelRecord`, and has no payload directory. Closing it discards the draft.
 
-A successful submit creates a normal Text or Todo panel using the existing payload files (`content.rtf` or `todo.json`). New panels always have `isHidden = false`, `customTitle = nil`, `tags = []`, and `workspaceID` equal to the current active workspace (or `default` if that id is missing). `schemaVersion` remains `5`.
+A successful **Create Panel** action still uses existing panel creation (`QuickCaptureRequest` for text, image/PDF import for supported files). Saving a Snippet, Link, or File Shelf item goes through those domain APIs and does not write `panels.json`. `schemaVersion` remains `5`.
 
 ## Panel Library
 

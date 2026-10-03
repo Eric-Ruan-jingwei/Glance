@@ -88,7 +88,7 @@ NSWindow orderOut / orderFront
 
 AppKit adapters convert `PanelFrame` ↔ `NSRect`. Carbon hotkeys, `SMAppService`, `NSPasteboard`, `NSScreen`, SwiftUI settings windows, and the Quick Capture `NSPanel` stay here.
 
-Quick Capture itself is not persisted. `QuickCaptureRequest` describes the product intent (create text or a todo). The macOS window writes an initial payload, then inserts a `PanelRecord`, only after a successful submit.
+Quick Capture itself is not persisted. The window classifies text, http(s) URLs, and local file URLs, then calls existing Snippet, Link, File Shelf, or Panel APIs. `QuickCaptureRequest` remains the Text-panel creation intent. Closing capture discards the draft.
 
 Clipboard Capture is also not persisted as a separate object. `ClipboardCaptureContent` is a one-shot intent. `MacClipboardReader` reads `NSPasteboard` only when the user invokes the command. Capture priority is valid image → valid text → unsupported.
 

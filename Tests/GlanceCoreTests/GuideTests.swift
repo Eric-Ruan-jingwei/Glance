@@ -156,19 +156,27 @@ final class GuideTests: XCTestCase {
         XCTAssertEqual(control?.tokens(using: provider).map(\.spoken), ["Control"])
         XCTAssertTrue(control?.detail?.contains("暂时关闭边缘吸附") == true)
         XCTAssertEqual(
-            GuideShortcutCatalog.item(id: "qcText")?.tokens(using: provider).map(\.display),
-            ["⌘", "1"]
+            GuideShortcutCatalog.item(id: "qcPrevious")?.tokens(using: provider).map(\.display),
+            ["↑"]
         )
         XCTAssertEqual(
-            GuideShortcutCatalog.item(id: "qcTodo")?.tokens(using: provider).map(\.display),
-            ["⌘", "2"]
+            GuideShortcutCatalog.item(id: "qcNext")?.tokens(using: provider).map(\.display),
+            ["↓"]
         )
         XCTAssertEqual(
             GuideShortcutCatalog.item(id: "qcCreate")?.tokens(using: provider).map(\.display),
             ["↩"]
         )
+        XCTAssertEqual(
+            GuideShortcutCatalog.item(id: "qcCreate")?.title,
+            "执行当前动作"
+        )
+        XCTAssertEqual(
+            GuideShortcutCatalog.item(id: "qcCommandReturn")?.tokens(using: provider).map(\.display),
+            ["⌘", "↩"]
+        )
         XCTAssertEqual(newline?.tokens(using: provider).map(\.display), ["⇧", "↩"])
-        XCTAssertEqual(newline?.detail, "文字模式下换行")
+        XCTAssertEqual(newline?.detail, "输入文字时换行")
         XCTAssertEqual(GuideShortcutCatalog.item(id: "qcCancel")?.title, "取消 Quick Capture")
         XCTAssertEqual(
             GuideShortcutCatalog.item(id: "qcCancel")?.tokens(using: provider).map(\.display),

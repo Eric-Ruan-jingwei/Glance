@@ -2,14 +2,18 @@ import AppKit
 
 @MainActor
 final class QuickCaptureWindowController: NSWindowController, NSTextViewDelegate {
-    var onSubmit: (QuickCaptureRequest, NSScreen?) -> Bool = { _, _ in false }
+    var makeDestinations: (NSScreen?) -> QuickCaptureDestinations = { _ in .unavailable }
+    var readPasteboard: () -> QuickCaptureContent = { QuickCapturePasteboard.content() }
 
+    let model = QuickCaptureModel()
     private let textView: QuickCaptureTextView
-    private let modeControl = NSSegmentedControl()
-    private let errorLabel = NSTextField(labelWithString: "无法创建面板")
-    private var kind: QuickCaptureKind = .text
+    private let detectedLabel = NSTextField(labelWithString: "")
+    private let actionStack = NSStackView()
+    private let errorLabel = NSTextField(labelWithString: "")
     private var localMouseMonitor: Any?
+    private var keyMonitor: Any?
     private var resignObserver: NSObjectProtocol?
+    private var isApplyingModel = false
 
     var isCaptureVisible: Bool {
         window?.isVisible == true
@@ -48,6 +52,7 @@ final class QuickCaptureWindowController: NSWindowController, NSTextViewDelegate
 
     func present() {
         resetDraft()
+        applyPrefillIfNeeded()
         positionOnWorkingScreen()
         NSApp.activate(ignoringOtherApps: true)
         window?.makeKeyAndOrderFront(nil)
@@ -59,15 +64,10 @@ final class QuickCaptureWindowController: NSWindowController, NSTextViewDelegate
         dismiss(activatePreviousApp: true)
     }
 
-    func setKind(_ kind: QuickCaptureKind) {
-        self.kind = kind
-        modeControl.selectedSegment = kind == .text ? 0 : 1
-        window?.makeFirstResponder(textView)
-    }
-
     func textDidChange(_ notification: Notification) {
-        refreshPlaceholder()
-        clearError()
+        guard !isApplyingModel else { return }
+        model.setText(textView.string)
+        refreshChrome()
     }
 
     fileprivate func handleReturnKey(_ event: NSEvent) -> Bool {
@@ -76,21 +76,32 @@ final class QuickCaptureWindowController: NSWindowController, NSTextViewDelegate
         return true
     }
 
+    fileprivate func handleArrowKey(delta: Int) {
+        guard !textView.hasMarkedText() else { return }
+        model.moveAction(delta)
+        refreshChrome()
+    }
+
+    fileprivate func acceptDroppedFiles(_ urls: [URL]) {
+        let files = QuickCaptureClassifier.uniquedFileURLs(urls)
+        guard !files.isEmpty else { return }
+        model.setFiles(files)
+        syncEditorFromModel()
+        refreshChrome()
+    }
+
     fileprivate func submit() {
-        let request = QuickCaptureRequest(kind: kind, text: textView.string)
-        guard request.isValid else {
-            NSSound.beep()
-            errorLabel.stringValue = "先输入内容"
-            errorLabel.isHidden = false
-            return
+        if !isApplyingModel {
+            model.setText(textView.string)
         }
         let screen = window?.screen ?? DisplayManager.screenContainingMouse()
-        if onSubmit(request, screen) {
+        if model.submit(using: makeDestinations(screen)) {
             dismiss(activatePreviousApp: true)
-        } else {
-            errorLabel.stringValue = "无法创建面板"
-            errorLabel.isHidden = false
+            return
         }
+        NSSound.beep()
+        refreshChrome()
+        window?.makeFirstResponder(textView)
     }
 
     private func dismiss(activatePreviousApp: Bool) {
@@ -103,18 +114,93 @@ final class QuickCaptureWindowController: NSWindowController, NSTextViewDelegate
     }
 
     private func resetDraft() {
-        textView.string = ""
-        setKind(.text)
-        clearError()
-        refreshPlaceholder()
+        model.reset()
+        syncEditorFromModel()
+        refreshChrome()
     }
 
-    private func clearError() {
-        errorLabel.isHidden = true
+    private func applyPrefillIfNeeded() {
+        guard model.content == .empty else { return }
+        let prefill = readPasteboard()
+        guard prefill != .empty else { return }
+        model.applyPrefill(prefill)
+        syncEditorFromModel()
+        refreshChrome()
+    }
+
+    private func syncEditorFromModel() {
+        isApplyingModel = true
+        textView.string = model.text
+        isApplyingModel = false
+        refreshPlaceholder()
     }
 
     private func refreshPlaceholder() {
         textView.needsDisplay = true
+    }
+
+    private func refreshChrome() {
+        let content = model.content
+        detectedLabel.stringValue = QuickCaptureCopy.detectedTitle(for: content)
+        detectedLabel.isHidden = detectedLabel.stringValue.isEmpty
+        errorLabel.stringValue = model.error ?? ""
+        errorLabel.isHidden = model.error == nil
+        rebuildActionButtons()
+        textView.allowsNewline = { [weak self] in self?.model.allowsNewline ?? true }
+        refreshPlaceholder()
+    }
+
+    private func rebuildActionButtons() {
+        actionStack.arrangedSubviews.forEach { $0.removeFromSuperview() }
+        for action in model.actions {
+            let button = NSButton(title: action.title, target: self, action: #selector(actionClicked(_:)))
+            button.bezelStyle = .recessed
+            button.setButtonType(.momentaryPushIn)
+            button.isBordered = false
+            button.alignment = .left
+            button.font = GlanceTheme.Typography.body
+            button.identifier = NSUserInterfaceItemIdentifier(actionTitleKey(action))
+            button.setAccessibilityLabel(action.title)
+            button.setAccessibilityRole(.button)
+            let selected = model.selectedAction == action
+            button.contentTintColor = selected ? .controlAccentColor : .labelColor
+            button.attributedTitle = NSAttributedString(
+                string: selected ? "●  \(action.title)" : "○  \(action.title)",
+                attributes: [
+                    .font: GlanceTheme.Typography.body as Any,
+                    .foregroundColor: selected ? NSColor.controlAccentColor : NSColor.labelColor
+                ]
+            )
+            if selected {
+                button.setAccessibilityValue("已选择")
+            }
+            actionStack.addArrangedSubview(button)
+        }
+        actionStack.isHidden = model.actions.isEmpty
+    }
+
+    private func actionTitleKey(_ action: QuickCaptureAction) -> String {
+        switch action {
+        case .saveSnippet: return "saveSnippet"
+        case .saveLink: return "saveLink"
+        case .addToFileShelf: return "addToFileShelf"
+        case .createPanel: return "createPanel"
+        }
+    }
+
+    @objc private func actionClicked(_ sender: NSButton) {
+        guard let identifier = sender.identifier?.rawValue else { return }
+        let action: QuickCaptureAction?
+        switch identifier {
+        case "saveSnippet": action = .saveSnippet
+        case "saveLink": action = .saveLink
+        case "addToFileShelf": action = .addToFileShelf
+        case "createPanel": action = .createPanel
+        default: action = nil
+        }
+        guard let action else { return }
+        model.select(action)
+        submit()
     }
 
     private func positionOnWorkingScreen() {
@@ -135,6 +221,9 @@ final class QuickCaptureWindowController: NSWindowController, NSTextViewDelegate
             self?.handlePossibleOutsideClick(event)
             return event
         }
+        keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            self?.handleKey(event)
+        }
         resignObserver = NotificationCenter.default.addObserver(
             forName: NSApplication.didResignActiveNotification,
             object: NSApp,
@@ -151,16 +240,43 @@ final class QuickCaptureWindowController: NSWindowController, NSTextViewDelegate
             NSEvent.removeMonitor(localMouseMonitor)
             self.localMouseMonitor = nil
         }
+        if let keyMonitor {
+            NSEvent.removeMonitor(keyMonitor)
+            self.keyMonitor = nil
+        }
         if let resignObserver {
             NotificationCenter.default.removeObserver(resignObserver)
             self.resignObserver = nil
         }
     }
 
+    private func handleKey(_ event: NSEvent) -> NSEvent? {
+        guard isCaptureVisible else { return event }
+        let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+        switch QuickCaptureKeyPolicy.intent(
+            keyCode: event.keyCode,
+            command: flags.contains(.command),
+            shift: flags.contains(.shift),
+            isComposing: textView.hasMarkedText(),
+            allowsNewline: model.allowsNewline
+        ) {
+        case .moveAction(let delta):
+            handleArrowKey(delta: delta)
+            return nil
+        case .submit:
+            if flags.contains(.command) {
+                submit()
+                return nil
+            }
+            return event
+        case .insertNewline, .confirmComposition, .none:
+            return event
+        }
+    }
+
     private func handlePossibleOutsideClick(_ event: NSEvent) {
         guard isCaptureVisible, let capture = window else { return }
         guard let eventWindow = event.window, eventWindow !== capture else { return }
-        // Leave IME candidate / menu popups alone.
         if eventWindow.level.rawValue >= NSWindow.Level.popUpMenu.rawValue {
             return
         }
@@ -180,7 +296,9 @@ final class QuickCaptureWindowController: NSWindowController, NSTextViewDelegate
         effect.layer?.masksToBounds = true
         effect.translatesAutoresizingMaskIntoConstraints = false
 
-        let border = NSView()
+        let border = QuickCaptureDropView()
+        border.onDropFiles = { [weak self] urls in self?.acceptDroppedFiles(urls) }
+        border.registerForDraggedTypes([.fileURL])
         border.wantsLayer = true
         border.layer?.cornerRadius = GlanceTheme.Radius.panel
         border.layer?.cornerCurve = .continuous
@@ -191,7 +309,8 @@ final class QuickCaptureWindowController: NSWindowController, NSTextViewDelegate
 
         textView.delegate = self
         textView.onSubmit = { [weak self] in self?.submit() }
-        textView.allowsNewline = { [weak self] in self?.kind == .text }
+        textView.onPasteFiles = { [weak self] urls in self?.acceptDroppedFiles(urls) }
+        textView.allowsNewline = { [weak self] in self?.model.allowsNewline ?? true }
         textView.minSize = NSSize(width: 0, height: 80)
         textView.maxSize = NSSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)
         textView.isVerticallyResizable = true
@@ -209,6 +328,7 @@ final class QuickCaptureWindowController: NSWindowController, NSTextViewDelegate
         textView.insertionPointColor = .labelColor
         textView.textContainer?.lineFragmentPadding = 0
         textView.textContainerInset = NSSize(width: 0, height: GlanceTheme.Space.xxs)
+        textView.registerForDraggedTypes([.fileURL])
         textView.placeholderString = GlanceEmptyCopy.quickCapturePlaceholder
         textView.setAccessibilityPlaceholderValue(GlanceEmptyCopy.quickCapturePlaceholder)
         textView.isAutomaticQuoteSubstitutionEnabled = false
@@ -228,22 +348,25 @@ final class QuickCaptureWindowController: NSWindowController, NSTextViewDelegate
         scroll.documentView = textView
         scroll.translatesAutoresizingMaskIntoConstraints = false
 
-        modeControl.segmentCount = 2
-        modeControl.setLabel("文字", forSegment: 0)
-        modeControl.setLabel("待办", forSegment: 1)
-        modeControl.selectedSegment = 0
-        modeControl.segmentStyle = .rounded
-        modeControl.target = self
-        modeControl.action = #selector(modeChanged)
-        modeControl.translatesAutoresizingMaskIntoConstraints = false
+        detectedLabel.textColor = .secondaryLabelColor
+        detectedLabel.font = GlanceTheme.Typography.tertiary
+        detectedLabel.setAccessibilityRole(.staticText)
+        detectedLabel.translatesAutoresizingMaskIntoConstraints = false
+
+        actionStack.orientation = .vertical
+        actionStack.alignment = .leading
+        actionStack.spacing = GlanceTheme.Space.xxs
+        actionStack.translatesAutoresizingMaskIntoConstraints = false
 
         errorLabel.textColor = .secondaryLabelColor
         errorLabel.font = GlanceTheme.Typography.tertiary
         errorLabel.isHidden = true
+        errorLabel.setAccessibilityRole(.staticText)
         errorLabel.translatesAutoresizingMaskIntoConstraints = false
 
         effect.addSubview(scroll)
-        effect.addSubview(modeControl)
+        effect.addSubview(detectedLabel)
+        effect.addSubview(actionStack)
         effect.addSubview(errorLabel)
         window.contentView = border
 
@@ -256,21 +379,45 @@ final class QuickCaptureWindowController: NSWindowController, NSTextViewDelegate
             scroll.leadingAnchor.constraint(equalTo: effect.leadingAnchor, constant: GlanceTheme.Space.lg),
             scroll.trailingAnchor.constraint(equalTo: effect.trailingAnchor, constant: -GlanceTheme.Space.lg),
             scroll.topAnchor.constraint(equalTo: effect.topAnchor, constant: GlanceTheme.Space.md),
-            scroll.heightAnchor.constraint(equalToConstant: 88),
+            scroll.heightAnchor.constraint(equalToConstant: 72),
 
-            modeControl.leadingAnchor.constraint(equalTo: effect.leadingAnchor, constant: GlanceTheme.Space.lg),
-            modeControl.topAnchor.constraint(equalTo: scroll.bottomAnchor, constant: GlanceTheme.Space.md),
-            modeControl.bottomAnchor.constraint(equalTo: effect.bottomAnchor, constant: -GlanceTheme.Space.md),
+            detectedLabel.leadingAnchor.constraint(equalTo: effect.leadingAnchor, constant: GlanceTheme.Space.lg),
+            detectedLabel.trailingAnchor.constraint(lessThanOrEqualTo: effect.trailingAnchor, constant: -GlanceTheme.Space.lg),
+            detectedLabel.topAnchor.constraint(equalTo: scroll.bottomAnchor, constant: GlanceTheme.Space.sm),
 
-            errorLabel.leadingAnchor.constraint(equalTo: modeControl.trailingAnchor, constant: GlanceTheme.Space.md),
-            errorLabel.centerYAnchor.constraint(equalTo: modeControl.centerYAnchor),
-            errorLabel.trailingAnchor.constraint(lessThanOrEqualTo: effect.trailingAnchor, constant: -GlanceTheme.Space.lg)
+            actionStack.leadingAnchor.constraint(equalTo: effect.leadingAnchor, constant: GlanceTheme.Space.lg),
+            actionStack.trailingAnchor.constraint(equalTo: effect.trailingAnchor, constant: -GlanceTheme.Space.lg),
+            actionStack.topAnchor.constraint(equalTo: detectedLabel.bottomAnchor, constant: GlanceTheme.Space.xs),
+
+            errorLabel.leadingAnchor.constraint(equalTo: effect.leadingAnchor, constant: GlanceTheme.Space.lg),
+            errorLabel.trailingAnchor.constraint(lessThanOrEqualTo: effect.trailingAnchor, constant: -GlanceTheme.Space.lg),
+            errorLabel.topAnchor.constraint(equalTo: actionStack.bottomAnchor, constant: GlanceTheme.Space.xs),
+            errorLabel.bottomAnchor.constraint(equalTo: effect.bottomAnchor, constant: -GlanceTheme.Space.md)
         ])
+        refreshChrome()
+    }
+}
+
+final class QuickCaptureDropView: NSView {
+    var onDropFiles: ([URL]) -> Void = { _ in }
+
+    override func draggingEntered(_ sender: any NSDraggingInfo) -> NSDragOperation {
+        QuickCapturePasteboard.fileURLs(from: sender.draggingPasteboard).isEmpty ? [] : .copy
     }
 
-    @objc private func modeChanged() {
-        kind = modeControl.selectedSegment == 1 ? .todo : .text
-        window?.makeFirstResponder(textView)
+    override func draggingUpdated(_ sender: any NSDraggingInfo) -> NSDragOperation {
+        draggingEntered(sender)
+    }
+
+    override func prepareForDragOperation(_ sender: any NSDraggingInfo) -> Bool {
+        !QuickCapturePasteboard.fileURLs(from: sender.draggingPasteboard).isEmpty
+    }
+
+    override func performDragOperation(_ sender: any NSDraggingInfo) -> Bool {
+        let urls = QuickCapturePasteboard.fileURLs(from: sender.draggingPasteboard)
+        guard !urls.isEmpty else { return false }
+        onDropFiles(urls)
+        return true
     }
 }
 
@@ -306,19 +453,6 @@ final class QuickCapturePanel: NSPanel {
     }
 
     override func performKeyEquivalent(with event: NSEvent) -> Bool {
-        let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
-        if flags == .command, let character = event.charactersIgnoringModifiers {
-            switch character {
-            case "1":
-                (windowController as? QuickCaptureWindowController)?.setKind(.text)
-                return true
-            case "2":
-                (windowController as? QuickCaptureWindowController)?.setKind(.todo)
-                return true
-            default:
-                break
-            }
-        }
         if QuickCaptureReturn.isReturnKey(event) {
             return (windowController as? QuickCaptureWindowController)?.handleReturnKey(event) ?? false
         }
@@ -367,6 +501,7 @@ enum QuickCaptureReturn {
 
 final class QuickCaptureTextView: NSTextView {
     var onSubmit: () -> Void = {}
+    var onPasteFiles: ([URL]) -> Void = { _ in }
     var allowsNewline: () -> Bool = { true }
     var placeholderString = GlanceEmptyCopy.quickCapturePlaceholder
     private var isHandlingReturn = false
@@ -397,6 +532,34 @@ final class QuickCaptureTextView: NSTextView {
         needsDisplay = true
     }
 
+    override func paste(_ sender: Any?) {
+        let files = QuickCapturePasteboard.fileURLs(from: .general)
+        if !files.isEmpty {
+            onPasteFiles(files)
+            return
+        }
+        super.paste(sender)
+    }
+
+    override func draggingEntered(_ sender: any NSDraggingInfo) -> NSDragOperation {
+        QuickCapturePasteboard.fileURLs(from: sender.draggingPasteboard).isEmpty
+            ? super.draggingEntered(sender)
+            : .copy
+    }
+
+    override func draggingUpdated(_ sender: any NSDraggingInfo) -> NSDragOperation {
+        draggingEntered(sender)
+    }
+
+    override func performDragOperation(_ sender: any NSDraggingInfo) -> Bool {
+        let urls = QuickCapturePasteboard.fileURLs(from: sender.draggingPasteboard)
+        if !urls.isEmpty {
+            onPasteFiles(urls)
+            return true
+        }
+        return super.performDragOperation(sender)
+    }
+
     private func drawPlaceholderIfNeeded() {
         guard QuickCapturePlaceholderLayout.shouldDraw(text: string, isComposing: hasMarkedText()) else {
             return
@@ -423,9 +586,12 @@ final class QuickCaptureTextView: NSTextView {
     }
 
     func handleReturn(_ event: NSEvent) {
-        switch QuickCaptureReturn.action(
+        let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+        switch QuickCaptureKeyPolicy.intent(
+            keyCode: event.keyCode,
+            command: flags.contains(.command),
+            shift: flags.contains(.shift),
             isComposing: hasMarkedText(),
-            shift: event.modifierFlags.contains(.shift),
             allowsNewline: allowsNewline()
         ) {
         case .confirmComposition:
@@ -436,6 +602,8 @@ final class QuickCaptureTextView: NSTextView {
             insertNewline(nil)
         case .submit:
             onSubmit()
+        case .moveAction, .none:
+            break
         }
     }
 

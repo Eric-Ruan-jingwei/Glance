@@ -59,8 +59,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, GlanceWindowHost {
             statusBar.install()
             self.statusBar = statusBar
             let capture = QuickCaptureWindowController()
-            capture.onSubmit = { [weak manager] request, screen in
-                manager?.createPanel(from: request, preferredScreen: screen) ?? false
+            capture.makeDestinations = { [weak environment, weak manager] screen in
+                guard let environment, let manager else { return .unavailable }
+                return .live(environment: environment, panelManager: manager, screen: screen)
             }
             self.quickCapture = capture
             manager.onToggleQuickCapture = { [weak capture] in

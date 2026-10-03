@@ -86,7 +86,7 @@ enum GlanceConstants {
     static let cascadeOffset = CGFloat(GlanceLayout.cascadeOffset)
     static let resizeEdge: CGFloat = 7
     static let panelDragStrip: CGFloat = GlanceTheme.Size.panelChromeHeight
-    static let quickCaptureSize = NSSize(width: 520, height: 168)
+    static let quickCaptureSize = NSSize(width: 520, height: 248)
     static let clipboardHistorySize = NSSize(width: 520, height: 420)
     static let fileShelfSize = NSSize(width: 560, height: 440)
     static let snippetLibrarySize = NSSize(width: 560, height: 460)

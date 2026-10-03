@@ -275,27 +275,33 @@ enum GuideShortcutCatalog {
 
     static let quickCapture: [GuideShortcutItem] = [
         GuideShortcutItem(
-            id: "qcText",
-            title: "文字模式",
+            id: "qcPrevious",
+            title: "上一个动作",
             detail: nil,
-            source: .keys([.command, .character("1")])
+            source: .keys([.character("↑")])
         ),
         GuideShortcutItem(
-            id: "qcTodo",
-            title: "待办模式",
+            id: "qcNext",
+            title: "下一个动作",
             detail: nil,
-            source: .keys([.command, .character("2")])
+            source: .keys([.character("↓")])
         ),
         GuideShortcutItem(
             id: "qcCreate",
-            title: "创建",
+            title: "执行当前动作",
             detail: nil,
             source: .keys([.enter])
         ),
         GuideShortcutItem(
+            id: "qcCommandReturn",
+            title: "执行当前动作",
+            detail: nil,
+            source: .keys([.command, .enter])
+        ),
+        GuideShortcutItem(
             id: "qcNewline",
             title: "换行",
-            detail: "文字模式下换行",
+            detail: "输入文字时换行",
             source: .keys([.shift, .enter])
         ),
         GuideShortcutItem(

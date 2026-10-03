@@ -102,17 +102,28 @@ final class QuickCaptureReturnTests: XCTestCase {
         XCTAssertEqual(submitted, 1)
     }
 
-    func testCapturePanelConsumesReturnAsKeyEquivalent() {
+    func testCaptureWindowReturnRunsDefaultAction() {
         let controller = QuickCaptureWindowController()
-        var submitted = false
-        controller.onSubmit = { request, _ in
-            submitted = request.isValid
-            return true
+        var saved: String?
+        controller.readPasteboard = { .empty }
+        controller.makeDestinations = { _ in
+            QuickCaptureDestinations(
+                saveSnippet: { text in
+                    saved = text
+                    return .succeeded
+                },
+                saveLink: { _ in .failed("link") },
+                addToFileShelf: { _ in .failed("files") },
+                createTextPanel: { _ in false },
+                createImagePanel: { _ in false },
+                createPDFPanel: { _ in false }
+            )
         }
         controller.present()
         defer { controller.cancel() }
         let view = controller.window?.initialFirstResponder as? QuickCaptureTextView
         view?.string = "from guide"
+        controller.textDidChange(Notification(name: NSText.didChangeNotification, object: view))
         let event = NSEvent.keyEvent(
             with: .keyDown,
             location: .zero,
@@ -126,7 +137,8 @@ final class QuickCaptureReturnTests: XCTestCase {
             keyCode: 36
         )
         XCTAssertEqual(controller.window?.performKeyEquivalent(with: try XCTUnwrap(event)), true)
-        XCTAssertTrue(submitted)
+        XCTAssertEqual(saved, "from guide")
+        XCTAssertFalse(controller.isCaptureVisible)
     }
 }
 

@@ -192,7 +192,7 @@ Product hardening for the existing 1.0 feature set. No new panel types, no schem
 - Todo panel (interactive checklist with inline add/edit/complete/delete)
 - Image panel
 - PDF panel
-- Quick Capture — capture text or a Todo without first creating an empty panel. Default: `⌥⌘J`
+- Quick Capture — capture text, a URL, or a file and choose whether it becomes a Snippet, Link, File Shelf item, or Panel. Default: `⌥⌘J`
 - Global Search — recall Clipboard, File Shelf, Snippets, Links, and all-workspace Panels from one in-memory search. Default: `⌥⌘K`. No persistent search index.
 - Clipboard Capture — create a Text or Image panel from the current clipboard. Default: `⌥⌘B`
 - Panel Manager — browse, search, reveal, hide, delete, and move existing panels; the sidebar switches the active workspace. Multi-select a filtered result set and apply atomic batch hide/show, workspace move, and tag add/remove.
@@ -215,7 +215,7 @@ Product hardening for the existing 1.0 feature set. No new panel types, no schem
 
 The core loop is still: create a panel → put content in it → drag it where you want → it stays floating → quit and reopen, everything is still there.
 
-Quick Capture skips the empty-panel step: use the Quick Capture shortcut from any app, type, press Enter.
+Quick Capture is a unified capture entry: classify the content, let the user pick the destination, then close. It still skips inventing a seventh top-level tool.
 
 Clipboard Capture still creates a panel from whatever is on the system clipboard right now.
 
@@ -284,9 +284,12 @@ The Dock icon is hidden. There is no traditional main window. The data-recovery 
 
 The default shortcut `⌥⌘J` opens a transient capture window on the display under the pointer. It is not a panel: it is not stored in `panels.json`, has no payload directory, and is discarded on close.
 
-- Default mode is **Text**. `⌘2` (or the 待办 segment) switches to **Todo**. `⌘1` returns to Text.
-- `Enter` creates one panel and closes capture. `Shift+Enter` inserts a newline in Text mode.
-- Empty or whitespace-only input does not create a panel.
+- Opening with an empty draft can prefill the current pasteboard (text, http(s) URL, or file URLs) without saving it.
+- Glance classifies **Text**, **Link** (`http`/`https` only), or **Files**. `example.com` stays Text.
+- Default actions: Text → Save as Snippet; Link → Save to Links; File → Add to File Shelf. Create Panel stays available. Actions are never auto-executed.
+- `↑` / `↓` move the current action. `Enter` or `⌘Enter` runs it. `Shift+Enter` inserts a newline while typing text.
+- Empty or whitespace-only input does not save. A failed save keeps the draft and shows a short error.
+- File Shelf capture bookmarks the original file; Glance does not move or delete it.
 - `Escape` or a click outside capture closes it and drops the draft.
 - If Glance is globally hidden (Hide / Show, default `⌥⌘G`), capture still appears. A submitted panel is created with `isHidden = false` but stays concealed until you show all panels again.
 
