@@ -135,38 +135,92 @@ final class GuideTests: XCTestCase {
 
     func testCatalogLocksPanelAndQuickCaptureOperations() {
         let provider = ShortcutDefaults.shortcut(for:)
-        let option = GuideShortcutCatalog.panel.first { $0.id == "optionPassThrough" }
-        let control = GuideShortcutCatalog.panel.first { $0.id == "controlSnapBypass" }
-        let newline = GuideShortcutCatalog.quickCapture.first { $0.id == "qcNewline" }
+        let option = GuideShortcutCatalog.item(id: "optionPassThrough")
+        let control = GuideShortcutCatalog.item(id: "controlSnapBypass")
+        let newline = GuideShortcutCatalog.item(id: "qcNewline")
         XCTAssertEqual(option?.tokens(using: provider).map(\.spoken), ["Option"])
         XCTAssertTrue(option?.detail?.contains("仅在开启点击穿透时生效") == true)
         XCTAssertEqual(control?.tokens(using: provider).map(\.spoken), ["Control"])
         XCTAssertTrue(control?.detail?.contains("暂时关闭边缘吸附") == true)
         XCTAssertEqual(
-            GuideShortcutCatalog.quickCapture.first { $0.id == "qcText" }?.tokens(using: provider).map(\.display),
+            GuideShortcutCatalog.item(id: "qcText")?.tokens(using: provider).map(\.display),
             ["⌘", "1"]
         )
         XCTAssertEqual(
-            GuideShortcutCatalog.quickCapture.first { $0.id == "qcTodo" }?.tokens(using: provider).map(\.display),
+            GuideShortcutCatalog.item(id: "qcTodo")?.tokens(using: provider).map(\.display),
             ["⌘", "2"]
         )
         XCTAssertEqual(
-            GuideShortcutCatalog.quickCapture.first { $0.id == "qcCreate" }?.tokens(using: provider).map(\.display),
+            GuideShortcutCatalog.item(id: "qcCreate")?.tokens(using: provider).map(\.display),
             ["↩"]
         )
         XCTAssertEqual(newline?.tokens(using: provider).map(\.display), ["⇧", "↩"])
         XCTAssertEqual(newline?.detail, "文字模式下换行")
+        XCTAssertEqual(GuideShortcutCatalog.item(id: "qcCancel")?.title, "取消 Quick Capture")
         XCTAssertEqual(
-            GuideShortcutCatalog.quickCapture.first { $0.id == "qcCancel" }?.tokens(using: provider).map(\.display),
+            GuideShortcutCatalog.item(id: "qcCancel")?.tokens(using: provider).map(\.display),
             ["Esc"]
         )
         XCTAssertEqual(
-            GuideShortcutCatalog.panel.first { $0.id == "editText" }?.tokens(using: provider).map(\.display),
-            ["双击"]
+            GuideShortcutCatalog.item(id: "bold")?.tokens(using: provider).map(\.display),
+            ["⌘", "B"]
+        )
+    }
+
+    func testCatalogDescribesDoubleClickEditingAccurately() {
+        let provider = ShortcutDefaults.shortcut(for:)
+        let textMarkdown = GuideShortcutCatalog.item(id: "editTextMarkdown")
+        let todo = GuideShortcutCatalog.item(id: "editTodo")
+        XCTAssertEqual(textMarkdown?.title, "编辑文字 / Markdown")
+        XCTAssertEqual(textMarkdown?.tokens(using: provider).map(\.display), ["双击内容"])
+        XCTAssertEqual(todo?.title, "编辑待办")
+        XCTAssertEqual(todo?.tokens(using: provider).map(\.display), ["双击待办项"])
+        XCTAssertEqual(GuideShortcutCatalog.groups.first { $0.id == "panel" }?.title, "面板操作")
+    }
+
+    func testCatalogIncludesMarkdownEditingExit() {
+        let item = GuideShortcutCatalog.item(id: "markdownEndEditing")
+        XCTAssertEqual(item?.title, "结束 Markdown 编辑")
+        XCTAssertNil(item?.detail)
+        XCTAssertEqual(
+            item?.tokens(using: ShortcutDefaults.shortcut(for:)).map(\.display),
+            ["Esc"]
         )
         XCTAssertEqual(
-            GuideShortcutCatalog.textEditing.first { $0.id == "bold" }?.tokens(using: provider).map(\.display),
-            ["⌘", "B"]
+            item?.accessibilityLabel(using: ShortcutDefaults.shortcut(for:)),
+            "结束 Markdown 编辑，快捷键 Escape"
+        )
+    }
+
+    func testCatalogIncludesTodoEditingCommands() {
+        let provider = ShortcutDefaults.shortcut(for:)
+        let commit = GuideShortcutCatalog.item(id: "todoCommit")
+        let cancel = GuideShortcutCatalog.item(id: "todoCancel")
+        XCTAssertEqual(commit?.title, "保存待办 / 继续添加")
+        XCTAssertEqual(commit?.detail, "新增待办时，保存后继续创建下一项")
+        XCTAssertEqual(commit?.tokens(using: provider).map(\.display), ["↩"])
+        XCTAssertEqual(cancel?.title, "取消待办编辑")
+        XCTAssertEqual(cancel?.detail, "恢复编辑前的内容")
+        XCTAssertEqual(cancel?.tokens(using: provider).map(\.display), ["Esc"])
+        XCTAssertEqual(
+            cancel?.accessibilityLabel(using: provider),
+            "取消待办编辑，恢复编辑前的内容，快捷键 Escape"
+        )
+    }
+
+    func testCatalogIncludesTextEditingExitAndChecklistToggle() {
+        let provider = ShortcutDefaults.shortcut(for:)
+        let textEsc = GuideShortcutCatalog.item(id: "textEndEditing")
+        let checklist = GuideShortcutCatalog.item(id: "textChecklistToggle")
+        XCTAssertEqual(textEsc?.title, "结束文字编辑")
+        XCTAssertEqual(textEsc?.tokens(using: provider).map(\.display), ["Esc"])
+        XCTAssertEqual(checklist?.title, "切换文字清单")
+        XCTAssertEqual(checklist?.detail, "阅读模式下点击清单符号")
+        XCTAssertEqual(checklist?.tokens(using: provider).map(\.display), ["单击清单符号"])
+        XCTAssertEqual(GuideShortcutCatalog.groups.first { $0.id == "editing" }?.title, "编辑")
+        XCTAssertEqual(
+            GuideShortcutCatalog.groups.first { $0.id == "editing" }?.items.map(\.id),
+            ["bold", "textEndEditing", "markdownEndEditing", "todoCommit", "todoCancel"]
         )
     }
 
