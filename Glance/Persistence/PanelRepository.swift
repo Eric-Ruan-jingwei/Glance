@@ -16,18 +16,28 @@ private enum PanelDatabaseApplyResult {
 
 @MainActor
 final class PanelRepository {
+    typealias PrimaryMetadataWriter = (Data, URL) throws -> Void
+
     private var records: [UUID: PanelRecord] = [:]
     private let fileURL: URL
     private let fileManager: FileManager
+    private let writePrimaryMetadata: PrimaryMetadataWriter
     private(set) var lastLoadOutcome: PanelDatabaseLoadOutcome = .missing
 
     var backupURL: URL {
         fileURL.deletingLastPathComponent().appendingPathComponent("panels.backup.json")
     }
 
-    init(fileURL: URL, fileManager: FileManager = .default) throws {
+    init(
+        fileURL: URL,
+        fileManager: FileManager = .default,
+        writePrimaryMetadata: PrimaryMetadataWriter? = nil
+    ) throws {
         self.fileURL = fileURL
         self.fileManager = fileManager
+        self.writePrimaryMetadata = writePrimaryMetadata ?? { data, url in
+            try data.write(to: url, options: .atomic)
+        }
         let directory = fileURL.deletingLastPathComponent()
         try fileManager.createDirectory(at: directory, withIntermediateDirectories: true)
         loadRecovering()
@@ -43,14 +53,26 @@ final class PanelRepository {
 
     func insert(_ record: PanelRecord) throws {
         try assertMetadataWritable()
+        let previous = records[record.id]
         records[record.id] = record
-        try save()
+        do {
+            try save()
+        } catch {
+            restore(id: record.id, previous: previous)
+            throw error
+        }
     }
 
     func delete(id: UUID) throws {
         try assertMetadataWritable()
+        let previous = records[id]
         records[id] = nil
-        try save()
+        do {
+            try save()
+        } catch {
+            restore(id: id, previous: previous)
+            throw error
+        }
     }
 
     func save() throws {
@@ -67,7 +89,7 @@ final class PanelRepository {
             panels: records.values.sorted { $0.createdAt < $1.createdAt }
         )
         let data = try PanelDatabaseCodec.encode(database)
-        try data.write(to: fileURL, options: .atomic)
+        try writePrimaryMetadata(data, fileURL)
         do {
             try data.write(to: backupURL, options: .atomic)
         } catch {
@@ -156,6 +178,14 @@ final class PanelRepository {
         } catch {
             NSLog("Glance persistence: could not decode %@: %@", url.lastPathComponent, error.localizedDescription)
             return .unreadable
+        }
+    }
+
+    private func restore(id: UUID, previous: PanelRecord?) {
+        if let previous {
+            records[id] = previous
+        } else {
+            records.removeValue(forKey: id)
         }
     }
 
