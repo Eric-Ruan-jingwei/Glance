@@ -127,7 +127,7 @@ final class TextChecklistClickTests: XCTestCase {
         XCTAssertNil(strikethroughStyle(in: view, at: 2))
     }
 
-    func testInsertedChecklistMarkIsLargerThanBody() {
+    func testInsertedChecklistMarkMatchesBodySize() {
         let view = GlanceTextView(usingTextLayoutManager: false)
         view.font = GlanceConstants.textBodyFont
         view.string = "hello"
@@ -135,7 +135,7 @@ final class TextChecklistClickTests: XCTestCase {
         view.insertChecklist()
         let font = view.textStorage?.attribute(.font, at: 0, effectiveRange: nil) as? NSFont
         XCTAssertEqual(font?.pointSize, TextChecklistToggle.markSize)
-        XCTAssertGreaterThan(TextChecklistToggle.markSize, GlanceConstants.textBodyFont.pointSize)
+        XCTAssertEqual(TextChecklistToggle.markSize, GlanceConstants.textBodyFont.pointSize)
         XCTAssertTrue(view.string.hasPrefix("○"))
         XCTAssertEqual(foregroundColor(in: view, at: 0), GlanceConstants.textBodyColor)
     }

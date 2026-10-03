@@ -296,7 +296,7 @@ enum TextChecklistToggle {
     static let legacyChecked: unichar = 0x2611
     static let glyph = "○"
     static let hitSlop: CGFloat = 8
-    static let markSize: CGFloat = 16
+    static let markSize: CGFloat = 13
 
     struct Spans: Equatable {
         var markRange: NSRange
