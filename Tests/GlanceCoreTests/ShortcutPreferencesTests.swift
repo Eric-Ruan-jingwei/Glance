@@ -50,6 +50,8 @@ final class ShortcutPreferencesTests: XCTestCase {
         XCTAssertEqual(ShortcutAction.links.preferenceKey, "com.glance.shortcut.links")
         XCTAssertEqual(ShortcutAction.clipboardCapture.preferenceKey, "com.glance.shortcut.clipboardCapture")
         XCTAssertEqual(ShortcutAction.hideShow.preferenceKey, "com.glance.shortcut.hideShow")
+        let defaults = ShortcutAction.allCases.map { ShortcutDefaults.shortcut(for: $0) }
+        XCTAssertEqual(Set(defaults).count, defaults.count)
     }
 
     func testCodableRoundTrip() throws {
@@ -81,18 +83,35 @@ final class ShortcutPreferencesTests: XCTestCase {
         XCTAssertEqual(restored.shortcut(for: .clipboardCapture), ShortcutDefaults.clipboardCapture)
     }
 
+    func testExplicitShortcutDetectsStoredPreferenceNotDefaultEquality() {
+        let (store, defaults, name) = makeStore()
+        defer { defaults.removePersistentDomain(forName: name) }
+        XCTAssertNil(store.explicitShortcut(for: .quickCapture))
+        XCTAssertEqual(store.shortcut(for: .quickCapture), ShortcutDefaults.quickCapture)
+
+        store.setShortcut(controlOptionK, for: .quickCapture)
+        XCTAssertEqual(store.explicitShortcut(for: .quickCapture), controlOptionK)
+
+        store.setShortcut(ShortcutDefaults.quickCapture, for: .quickCapture)
+        XCTAssertEqual(store.explicitShortcut(for: .quickCapture), ShortcutDefaults.quickCapture)
+        XCTAssertNotNil(defaults.object(forKey: ShortcutAction.quickCapture.preferenceKey))
+    }
+
     func testCorruptPreferenceFallsBackToDefault() {
         let (store, defaults, name) = makeStore()
         defer { defaults.removePersistentDomain(forName: name) }
         defaults.set("not-json", forKey: ShortcutAction.quickCapture.preferenceKey)
         XCTAssertEqual(store.shortcut(for: .quickCapture), ShortcutDefaults.quickCapture)
+        XCTAssertNil(store.explicitShortcut(for: .quickCapture))
         defaults.set(Data("{".utf8), forKey: ShortcutAction.hideShow.preferenceKey)
         XCTAssertEqual(store.shortcut(for: .hideShow), ShortcutDefaults.hideShow)
+        XCTAssertNil(store.explicitShortcut(for: .hideShow))
         let empty = GlanceShortcut(key: "", command: true, option: true, control: false, shift: false)
         if let data = try? JSONEncoder().encode(empty) {
             defaults.set(data, forKey: ShortcutAction.clipboardCapture.preferenceKey)
         }
         XCTAssertEqual(store.shortcut(for: .clipboardCapture), ShortcutDefaults.clipboardCapture)
+        XCTAssertNil(store.explicitShortcut(for: .clipboardCapture))
     }
 
     func testInvalidAndDangerousShortcutsAreRejected() {
@@ -564,8 +583,10 @@ final class ShortcutCoordinatorTests: XCTestCase {
         let coordinator = ShortcutCoordinator(store: store, manager: manager)
         coordinator.start()
         XCTAssertEqual(store.shortcut(for: .quickCapture), controlOptionK)
+        XCTAssertEqual(coordinator.configuredShortcut(for: .quickCapture), controlOptionK)
         XCTAssertEqual(manager.registeredShortcut(for: .quickCapture), ShortcutDefaults.quickCapture)
-        XCTAssertEqual(coordinator.shortcut(for: .quickCapture), ShortcutDefaults.quickCapture)
+        XCTAssertEqual(coordinator.activeShortcut(for: .quickCapture), ShortcutDefaults.quickCapture)
+        XCTAssertEqual(coordinator.runtimeIssue(for: .quickCapture), .customRegistrationFailedUsingDefault)
         XCTAssertEqual(
             coordinator.errorMessage,
             "“快速记录”的自定义快捷键无法注册，本次运行暂时使用默认快捷键。"
@@ -704,12 +725,15 @@ final class ShortcutCoordinatorTests: XCTestCase {
         harness.coordinator.start()
         XCTAssertEqual(harness.store.shortcut(for: .quickCapture), controlOptionK)
         XCTAssertNil(harness.manager.registeredShortcut(for: .quickCapture))
-        XCTAssertEqual(harness.coordinator.shortcut(for: .quickCapture), controlOptionK)
+        XCTAssertNil(harness.coordinator.activeShortcut(for: .quickCapture))
+        XCTAssertEqual(harness.coordinator.configuredShortcut(for: .quickCapture), controlOptionK)
+        XCTAssertEqual(harness.coordinator.runtimeIssue(for: .quickCapture), .registrationFailed)
         XCTAssertEqual(harness.coordinator.errorMessage, "“快速记录”的快捷键当前未能注册。")
+        XCTAssertNil(harness.coordinator.shortcuts[.quickCapture])
         let item = quickCaptureMenuItem(shortcuts: harness.coordinator.shortcuts)
         XCTAssertEqual(item?.title, "快速记录…")
         XCTAssertEqual(item?.isEnabled, true)
-        XCTAssertEqual(item?.keyEquivalent, "k")
+        XCTAssertEqual(item?.keyEquivalent, "")
     }
 
     private func makeHarness() -> (

@@ -76,11 +76,14 @@ final class ShortcutManager: @unchecked Sendable {
     }
 
     func menuShortcuts() -> [ShortcutAction: GlanceShortcut] {
-        var result = ShortcutDefaults.all
-        for (action, shortcut) in registered {
-            result[action] = shortcut
+        registered
+    }
+
+    func clearRegistrations() {
+        for action in ShortcutAction.allCases {
+            registrar.unregister(id: carbonID(for: action))
         }
-        return result
+        registered.removeAll()
     }
 
     func installHandler() {
