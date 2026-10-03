@@ -33,6 +33,10 @@ There is no Windows client yet. Shared data contracts are documented so a future
 - No cloud
 - Open source
 
+## V0.18.5
+
+Clicking Text or Markdown content enters edit mode. Todo items still use a double-click.
+
 ## V0.18.4
 
 Text checklist marks toggle on click while editing, and the hit target follows the text layout.
@@ -99,7 +103,7 @@ Product hardening for the existing 1.0 feature set. No new panel types, no schem
 ## 已支持
 
 - Text panel
-- Markdown panel (rendered preview, double-click to edit raw UTF-8 `.md`)
+- Markdown panel (rendered preview, click to edit raw UTF-8 `.md`)
 - Todo panel (interactive checklist with inline add/edit/complete/delete)
 - Image panel
 - PDF panel
@@ -258,7 +262,7 @@ Presets use the current display’s visible frame (avoiding the Dock and menu ba
 
 Each panel can be pinned, locked, made click-through, and faded independently. Those flags are stored on the panel record and restored after relaunch.
 
-- **Markdown** shows a rendered preview. Double-click to edit the raw Markdown source. Payload is UTF-8 `content.md`.
+- **Markdown** shows a rendered preview. Click to edit the raw Markdown source. Payload is UTF-8 `content.md`.
 - **Todo** is a lightweight on-screen checklist: add, inline edit, complete, and delete. Payload is UTF-8 `todo.json`. There is no reorder, due date, reminder, or priority system.
 - **PDF** is a local copy of the imported document. Payload is `document.pdf` plus `pdf.json` (filename and page count). There is no annotation, OCR, or full-text search.
 - **Lock** prevents accidental drag, resize, text editing, checklist toggles, Markdown source edits, Todo mutations, and image replace. PDF reading (scroll, select, copy) still works. Right-click, unlock, opacity, pin, click-through, hide, rename, edit tags, delete, and panel settings still work.
