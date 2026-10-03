@@ -1,6 +1,24 @@
 import Foundation
 
-/// Schema 3 envelope. Has workspaces and workspaceID; missing `customTitle`.
+/// Schema 4 envelope. Has workspaces, workspaceID, and customTitle; missing `tags`.
+struct PanelDatabaseV4: Decodable {
+    var schemaVersion: Int
+    var workspaces: [WorkspaceRecord]
+    var panels: [PanelRecord]
+
+    func migrated() -> PanelDatabase {
+        for panel in panels {
+            panel.tags = []
+        }
+        return PanelDatabase(
+            schemaVersion: PanelDatabase.currentSchemaVersion,
+            workspaces: workspaces,
+            panels: panels
+        )
+    }
+}
+
+/// Schema 3 envelope. Has workspaces and workspaceID; missing `customTitle` and `tags`.
 struct PanelDatabaseV3: Decodable {
     var schemaVersion: Int
     var workspaces: [WorkspaceRecord]
@@ -9,6 +27,7 @@ struct PanelDatabaseV3: Decodable {
     func migrated() -> PanelDatabase {
         for panel in panels {
             panel.customTitle = nil
+            panel.tags = []
         }
         return PanelDatabase(
             schemaVersion: PanelDatabase.currentSchemaVersion,

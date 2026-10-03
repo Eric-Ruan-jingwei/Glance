@@ -5,7 +5,7 @@ struct PanelDatabase: Codable, Equatable {
     var workspaces: [WorkspaceRecord]
     var panels: [PanelRecord]
 
-    static let currentSchemaVersion = 4
+    static let currentSchemaVersion = 5
 
     init(
         schemaVersion: Int = currentSchemaVersion,
@@ -25,7 +25,7 @@ enum PanelDatabaseError: Error, Equatable, LocalizedError {
     var errorDescription: String? {
         switch self {
         case .unreadable:
-            return "panels.json is not a readable schema 0 array, schema 1 envelope, schema 2 envelope, schema 3 envelope, or schema 4 envelope"
+            return "panels.json is not a readable schema 0 array, schema 1 envelope, schema 2 envelope, schema 3 envelope, schema 4 envelope, or schema 5 envelope"
         case .unsupportedFutureSchema(let version):
             return "panels.json uses unsupported schema \(version); this app supports schema \(PanelDatabase.currentSchemaVersion)"
         }
@@ -51,14 +51,18 @@ enum PanelDatabaseCodec {
         return decoder
     }
 
-    /// Accepts schema 4 envelopes, schema 3/2/1 envelopes, and V0.1 raw arrays (schema 0).
-    /// Future envelopes are rejected without rewriting them as schema 4.
+    /// Accepts schema 5 envelopes, schema 4/3/2/1 envelopes, and V0.1 raw arrays (schema 0).
+    /// Future envelopes are rejected without rewriting them as schema 5.
     static func decode(from data: Data, decoder: JSONDecoder = makeDecoder()) throws -> (database: PanelDatabase, migratedFromLegacy: Bool) {
         if let peek = try? decoder.decode(PanelDatabaseSchemaPeek.self, from: data) {
             switch peek.schemaVersion {
             case PanelDatabase.currentSchemaVersion:
                 let envelope = try decoder.decode(PanelDatabase.self, from: data)
                 return (envelope, false)
+
+            case 4:
+                let v4 = try decoder.decode(PanelDatabaseV4.self, from: data)
+                return (v4.migrated(), true)
 
             case 3:
                 let v3 = try decoder.decode(PanelDatabaseV3.self, from: data)
@@ -168,6 +172,7 @@ extension PanelRecord: Equatable {
             && lhs.isHidden == rhs.isHidden
             && lhs.workspaceID == rhs.workspaceID
             && lhs.customTitle == rhs.customTitle
+            && lhs.tags == rhs.tags
             && lhs.opacity == rhs.opacity
             && lhs.themeIdentifier == rhs.themeIdentifier
             && lhs.payloadPath == rhs.payloadPath
