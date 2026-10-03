@@ -19,15 +19,19 @@ final class ShortcutPreferencesTests: XCTestCase {
 
     func testDefaultShortcuts() {
         XCTAssertEqual(ShortcutDefaults.quickCapture, GlanceShortcut(key: "j", command: true, option: true, control: false, shift: false))
+        XCTAssertEqual(ShortcutDefaults.clipboardHistory, GlanceShortcut(key: "v", command: true, option: true, control: false, shift: false))
         XCTAssertEqual(ShortcutDefaults.clipboardCapture, GlanceShortcut(key: "b", command: true, option: true, control: false, shift: false))
         XCTAssertEqual(ShortcutDefaults.hideShow, GlanceShortcut(key: "g", command: true, option: true, control: false, shift: false))
         XCTAssertEqual(ShortcutDisplayFormatter.display(ShortcutDefaults.quickCapture), "⌥⌘J")
+        XCTAssertEqual(ShortcutDisplayFormatter.display(ShortcutDefaults.clipboardHistory), "⌥⌘V")
         XCTAssertEqual(ShortcutDisplayFormatter.display(ShortcutDefaults.clipboardCapture), "⌥⌘B")
         XCTAssertEqual(ShortcutDisplayFormatter.display(ShortcutDefaults.hideShow), "⌥⌘G")
         XCTAssertEqual(GlanceConstants.quickCaptureShortcutDisplay, "⌥⌘J")
+        XCTAssertEqual(GlanceConstants.clipboardHistoryShortcutDisplay, "⌥⌘V")
         XCTAssertEqual(GlanceConstants.clipboardCaptureShortcutDisplay, "⌥⌘B")
         XCTAssertEqual(GlanceConstants.hideShowShortcutDisplay, "⌥⌘G")
         XCTAssertEqual(ShortcutAction.quickCapture.preferenceKey, "com.glance.shortcut.quickCapture")
+        XCTAssertEqual(ShortcutAction.clipboardHistory.preferenceKey, "com.glance.shortcut.clipboardHistory")
         XCTAssertEqual(ShortcutAction.clipboardCapture.preferenceKey, "com.glance.shortcut.clipboardCapture")
         XCTAssertEqual(ShortcutAction.hideShow.preferenceKey, "com.glance.shortcut.hideShow")
     }
@@ -129,6 +133,7 @@ final class ShortcutPreferencesTests: XCTestCase {
 
     func testCarbonMapping() {
         XCTAssertEqual(MacShortcutAdapter.carbonKeyCode(for: ShortcutDefaults.quickCapture), UInt32(kVK_ANSI_J))
+        XCTAssertEqual(MacShortcutAdapter.carbonKeyCode(for: ShortcutDefaults.clipboardHistory), UInt32(kVK_ANSI_V))
         XCTAssertEqual(MacShortcutAdapter.carbonKeyCode(for: ShortcutDefaults.clipboardCapture), UInt32(kVK_ANSI_B))
         XCTAssertEqual(MacShortcutAdapter.carbonKeyCode(for: ShortcutDefaults.hideShow), UInt32(kVK_ANSI_G))
         XCTAssertEqual(MacShortcutAdapter.carbonKeyCode(for: controlOptionK), UInt32(kVK_ANSI_K))
@@ -140,6 +145,23 @@ final class ShortcutPreferencesTests: XCTestCase {
         XCTAssertTrue(menu.contains(.control))
         XCTAssertTrue(menu.contains(.option))
         XCTAssertFalse(menu.contains(.command))
+    }
+
+    func testClipboardHistoryRegistersAndDispatches() {
+        let fake = FakeHotKeyRegistrar()
+        let manager = ShortcutManager(registrar: fake, bindSystemHandler: false)
+        var shown = 0
+        manager.onShowClipboardHistory = { shown += 1 }
+        XCTAssertTrue(manager.register(ShortcutDefaults.clipboardHistory, for: .clipboardHistory))
+        XCTAssertEqual(fake.registered[GlanceHotKeyID.clipboardHistory.rawValue]?.keyCode, UInt32(kVK_ANSI_V))
+        manager.handleHotKeyForTesting(.clipboardHistory)
+        XCTAssertEqual(shown, 1)
+        manager.suspend(.clipboardHistory)
+        manager.handleHotKeyForTesting(.clipboardHistory)
+        XCTAssertEqual(shown, 1)
+        try? manager.resume(.clipboardHistory)
+        manager.handleHotKeyForTesting(.clipboardHistory)
+        XCTAssertEqual(shown, 2)
     }
 
     func testReplacementSuccessAndFailureRollback() throws {

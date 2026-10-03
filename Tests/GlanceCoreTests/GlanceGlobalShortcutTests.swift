@@ -37,7 +37,8 @@ final class GlanceGlobalShortcutTests: XCTestCase {
         XCTAssertEqual(item?.keyEquivalent, "j")
         XCTAssertEqual(item?.keyEquivalentModifierMask, [.option, .command])
         XCTAssertEqual(menu.items.first?.title, "快速记录…")
-        XCTAssertEqual(menu.items[1].title, "从剪贴板创建…")
+        XCTAssertEqual(menu.items[1].title, "剪贴板…")
+        XCTAssertEqual(menu.items[2].title, "从当前剪贴板创建…")
         XCTAssertEqual(menu.items.first { $0.title == "管理面板…" }?.title, "管理面板…")
     }
 

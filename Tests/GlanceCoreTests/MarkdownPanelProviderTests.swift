@@ -66,7 +66,7 @@ final class MarkdownPanelProviderTests: XCTestCase {
             onQuit: {}
         )
         XCTAssertNotNil(menu.items.first { $0.title == "快速记录…" })
-        XCTAssertNotNil(menu.items.first { $0.title == "从剪贴板创建…" })
+        XCTAssertNotNil(menu.items.first { $0.title == "从当前剪贴板创建…" })
         XCTAssertNotNil(menu.items.first { $0.title == "工作区" })
         XCTAssertNotNil(menu.items.first { $0.title == "管理面板…" })
         let newPanel = menu.items.first { $0.title == "新建面板" }

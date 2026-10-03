@@ -124,8 +124,8 @@ final class ClipboardCaptureTests: XCTestCase {
             onSettings: {},
             onQuit: {}
         )
-        let item = menu.items.first { $0.title == "从剪贴板创建…" }
-        XCTAssertEqual(menu.items[1].title, "从剪贴板创建…")
+        let item = menu.items.first { $0.title == "从当前剪贴板创建…" }
+        XCTAssertEqual(menu.items[2].title, "从当前剪贴板创建…")
         XCTAssertEqual(item?.keyEquivalent, "b")
         XCTAssertEqual(item?.keyEquivalentModifierMask, [.option, .command])
         XCTAssertEqual(item?.isEnabled, false)

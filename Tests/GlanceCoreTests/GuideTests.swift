@@ -208,6 +208,24 @@ final class GuideTests: XCTestCase {
         )
     }
 
+    func testCatalogIncludesClipboardHistoryDynamicAction() {
+        let item = GuideShortcutCatalog.item(id: "clipboardHistory")
+        XCTAssertEqual(item?.title, "剪贴板")
+        if case .dynamic(let action) = item?.source {
+            XCTAssertEqual(action, .clipboardHistory)
+        } else {
+            XCTFail("clipboard history must read the live shortcut")
+        }
+        let custom = GlanceShortcut(key: "v", command: false, option: true, control: true, shift: false)
+        XCTAssertEqual(
+            item?.tokens { action in
+                action == .clipboardHistory ? custom : ShortcutDefaults.shortcut(for: action)
+            }.map(\.display),
+            ["⌃", "⌥", "V"]
+        )
+        XCTAssertEqual(GuideShortcutCatalog.groups.first { $0.id == "clipboard" }?.title, "剪贴板")
+    }
+
     func testCatalogIncludesTextEditingExitAndChecklistToggle() {
         let provider = ShortcutDefaults.shortcut(for:)
         let textEsc = GuideShortcutCatalog.item(id: "textEndEditing")
