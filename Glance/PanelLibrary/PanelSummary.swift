@@ -24,6 +24,7 @@ enum PanelSummaryKindFilter: String, CaseIterable, Equatable {
     case markdown
     case todo
     case image
+    case pdf
 
     var title: String {
         switch self {
@@ -32,6 +33,7 @@ enum PanelSummaryKindFilter: String, CaseIterable, Equatable {
         case .markdown: return "Markdown"
         case .todo: return "待办"
         case .image: return "图片"
+        case .pdf: return "PDF"
         }
     }
 
@@ -42,6 +44,7 @@ enum PanelSummaryKindFilter: String, CaseIterable, Equatable {
         case .markdown: return "com.glance.panel.markdown"
         case .todo: return "com.glance.panel.todo"
         case .image: return "com.glance.panel.image"
+        case .pdf: return "com.glance.panel.pdf"
         }
     }
 }
@@ -51,6 +54,8 @@ enum PanelSummaryFallback {
     static let markdown = "空 Markdown 面板"
     static let todo = "空待办面板"
     static let image = "图片面板"
+    static let pdf = "PDF 文档"
+    static let pdfUnreadable = "⚠️ 无法读取 PDF"
     static let unreadable = "无法读取内容"
 }
 
@@ -61,6 +66,7 @@ enum PanelSummaryKindLabel {
         case "com.glance.panel.markdown": return "Markdown"
         case "com.glance.panel.todo": return "待办"
         case "com.glance.panel.image": return "图片"
+        case "com.glance.panel.pdf": return "PDF"
         default: return "面板"
         }
     }
@@ -135,6 +141,25 @@ enum PanelSummaryText {
             return (truncated(open.text), subtitle)
         }
         return (truncated(items[0].text), subtitle)
+    }
+
+    static func pdfTitle(from displayName: String) -> String {
+        let trimmed = displayName.trimmingCharacters(in: .whitespacesAndNewlines)
+        let url = URL(fileURLWithPath: trimmed)
+        if url.pathExtension.lowercased() == "pdf" {
+            let stem = url.deletingPathExtension().lastPathComponent.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !stem.isEmpty {
+                return truncated(stem)
+            }
+        }
+        return trimmed.isEmpty ? PanelSummaryFallback.pdf : truncated(trimmed)
+    }
+
+    static func pdfSubtitle(pageCount: Int?) -> String {
+        if let pageCount, pageCount > 0 {
+            return "PDF · \(pageCount) 页"
+        }
+        return "PDF"
     }
 }
 

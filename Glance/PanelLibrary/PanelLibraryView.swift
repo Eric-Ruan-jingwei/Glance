@@ -124,6 +124,7 @@ private struct PanelLibraryRow: View {
         case "com.glance.panel.markdown": return "text.alignleft"
         case "com.glance.panel.todo": return "checklist"
         case "com.glance.panel.image": return "photo"
+        case "com.glance.panel.pdf": return "doc.richtext"
         default: return "square.dashed"
         }
     }

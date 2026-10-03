@@ -24,6 +24,8 @@ enum PanelSummaryBuilder {
             return summarizeTodo(base, directory: payloadDirectory)
         case PanelKind.image:
             return summarizeImage(base, directory: payloadDirectory)
+        case PanelKind.pdf:
+            return summarizePDF(base, directory: payloadDirectory)
         default:
             return base
         }
@@ -35,6 +37,7 @@ enum PanelSummaryBuilder {
         case PanelKind.markdown: return PanelSummaryFallback.markdown
         case PanelKind.todo: return PanelSummaryFallback.todo
         case PanelKind.image: return PanelSummaryFallback.image
+        case PanelKind.pdf: return PanelSummaryFallback.pdf
         default: return "面板"
         }
     }
@@ -98,6 +101,37 @@ enum PanelSummaryBuilder {
             return summary
         }
         return unreadable(base)
+    }
+
+    private static func summarizePDF(_ base: PanelSummary, directory: URL) -> PanelSummary {
+        let documentExists = PDFPayloadFile.documentExists(in: directory)
+        let metadata: PDFDocumentMetadata?
+        do {
+            metadata = try PDFPayloadFile.readMetadata(from: directory)
+        } catch {
+            metadata = nil
+        }
+
+        var summary = base
+        if !documentExists {
+            summary.title = PanelSummaryFallback.pdfUnreadable
+            summary.subtitle = PanelSummaryText.pdfSubtitle(pageCount: nil)
+            summary.isUnreadable = true
+            summary.preview = metadata?.displayName ?? ""
+            return summary
+        }
+
+        if let metadata {
+            summary.title = PanelSummaryText.pdfTitle(from: metadata.displayName)
+            summary.subtitle = PanelSummaryText.pdfSubtitle(pageCount: metadata.pageCount)
+            summary.preview = metadata.displayName
+            return summary
+        }
+
+        summary.title = PanelSummaryFallback.pdf
+        summary.subtitle = PanelSummaryText.pdfSubtitle(pageCount: nil)
+        summary.preview = ""
+        return summary
     }
 
     private static func unreadable(_ base: PanelSummary) -> PanelSummary {
