@@ -196,7 +196,12 @@ final class PanelInitialContentTests: XCTestCase {
         XCTAssertFalse(PanelRevealPolicy.shouldPresentNewlyCreatedPanel(isGloballyConcealed: true))
         XCTAssertTrue(PanelRevealPolicy.shouldPresentNewlyCreatedPanel(isGloballyConcealed: false))
         XCTAssertFalse(
-            PanelVisibilityPolicy.shouldPresent(panelHidden: false, globallyConcealed: true)
+            PanelVisibilityPolicy.shouldPresent(
+                panelHidden: false,
+                panelWorkspaceID: WorkspaceRecord.defaultID,
+                activeWorkspaceID: WorkspaceRecord.defaultID,
+                globallyConcealed: true
+            )
         )
     }
 

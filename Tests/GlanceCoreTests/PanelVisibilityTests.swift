@@ -9,22 +9,22 @@ import XCTest
 
 final class PanelVisibilityPolicyTests: XCTestCase {
     func testEffectiveVisibility() {
-        XCTAssertTrue(PanelVisibilityPolicy.shouldPresent(panelHidden: false, globallyConcealed: false))
-        XCTAssertFalse(PanelVisibilityPolicy.shouldPresent(panelHidden: true, globallyConcealed: false))
-        XCTAssertFalse(PanelVisibilityPolicy.shouldPresent(panelHidden: false, globallyConcealed: true))
-        XCTAssertFalse(PanelVisibilityPolicy.shouldPresent(panelHidden: true, globallyConcealed: true))
+        XCTAssertTrue(present(hidden: false, global: false))
+        XCTAssertFalse(present(hidden: true, global: false))
+        XCTAssertFalse(present(hidden: false, global: true))
+        XCTAssertFalse(present(hidden: true, global: true))
     }
 
     func testNewPanelFollowsGlobalConcealmentOnly() {
         XCTAssertFalse(PanelRevealPolicy.shouldPresentNewlyCreatedPanel(isGloballyConcealed: true))
         XCTAssertTrue(PanelRevealPolicy.shouldPresentNewlyCreatedPanel(isGloballyConcealed: false))
         XCTAssertTrue(
-            PanelVisibilityPolicy.shouldPresent(panelHidden: false, globallyConcealed: false)
+            present(hidden: false, global: false)
         )
     }
 
     func testGlobalHideDoesNotTreatPanelAsIndividuallyHidden() {
-        XCTAssertFalse(PanelVisibilityPolicy.shouldPresent(panelHidden: false, globallyConcealed: true))
+        XCTAssertFalse(present(hidden: false, global: true))
         XCTAssertEqual(PanelVisibilityMenu.symbolName(isHidden: false), "eye")
         XCTAssertEqual(PanelVisibilityMenu.symbolName(isHidden: true), "eye.slash")
     }
@@ -43,9 +43,10 @@ final class PanelVisibilityPersistenceTests: XCTestCase {
     func testV1MigratesToVisibleWithoutChangingTimestamps() throws {
         let decoded = try PanelDatabaseCodec.decode(from: Data(GlanceTestFixtures.schemaV1EnvelopeJSON.utf8))
         XCTAssertTrue(decoded.migratedFromLegacy)
-        XCTAssertEqual(decoded.database.schemaVersion, 2)
+        XCTAssertEqual(decoded.database.schemaVersion, 3)
         let panel = try XCTUnwrap(decoded.database.panels.first)
         XCTAssertFalse(panel.isHidden)
+        XCTAssertEqual(panel.workspaceID, WorkspaceRecord.defaultID)
         XCTAssertTrue(panel.isLocked)
         XCTAssertEqual(panel.frame.x, 1130)
         XCTAssertEqual(panel.opacity, 0.5, accuracy: 0.0001)
@@ -68,12 +69,13 @@ final class PanelVisibilityPersistenceTests: XCTestCase {
             PanelDatabase(schemaVersion: PanelDatabase.currentSchemaVersion, panels: [record])
         )
         let root = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
-        XCTAssertEqual(root["schemaVersion"] as? Int, 2)
+        XCTAssertEqual(root["schemaVersion"] as? Int, 3)
         let panel = try XCTUnwrap((root["panels"] as? [[String: Any]])?.first)
         XCTAssertEqual(panel["isHidden"] as? Bool, true)
+        XCTAssertEqual(panel["workspaceID"] as? String, WorkspaceRecord.defaultID)
         let decoded = try PanelDatabaseCodec.decode(from: data)
         XCTAssertFalse(decoded.migratedFromLegacy)
-        XCTAssertEqual(decoded.database.schemaVersion, 2)
+        XCTAssertEqual(decoded.database.schemaVersion, 3)
         XCTAssertEqual(decoded.database.panels.first?.isHidden, true)
     }
 
@@ -85,7 +87,7 @@ final class PanelVisibilityPersistenceTests: XCTestCase {
             try repository.insert(record)
             let reloaded = try PanelRepository(fileURL: metadataURL)
             XCTAssertEqual(try reloaded.record(id: record.id)?.isHidden, true)
-            XCTAssertEqual(try PanelDatabaseCodec.decode(from: Data(contentsOf: metadataURL)).database.schemaVersion, 2)
+            XCTAssertEqual(try PanelDatabaseCodec.decode(from: Data(contentsOf: metadataURL)).database.schemaVersion, 3)
         }
     }
 
@@ -98,7 +100,7 @@ final class PanelVisibilityPersistenceTests: XCTestCase {
             XCTAssertFalse(panel.isHidden)
             XCTAssertEqual(panel.updatedAt, ISO8601DateFormatter().date(from: "2026-10-02T16:00:00Z"))
             let rewritten = try PanelDatabaseCodec.decode(from: Data(contentsOf: metadataURL))
-            XCTAssertEqual(rewritten.database.schemaVersion, 2)
+            XCTAssertEqual(rewritten.database.schemaVersion, 3)
             XCTAssertEqual(rewritten.database.panels.first?.isHidden, false)
             XCTAssertEqual(rewritten.database.panels.first?.updatedAt, panel.updatedAt)
         }
@@ -125,6 +127,7 @@ final class PanelVisibilityTransactionTests: XCTestCase {
             hidden: true,
             record: record,
             globallyConcealed: false,
+            activeWorkspaceID: WorkspaceRecord.defaultID,
             touch: { $0.updatedAt = Date(timeIntervalSince1970: 2_000) },
             persist: { persisted = true },
             present: { presented += 1 },
@@ -148,6 +151,7 @@ final class PanelVisibilityTransactionTests: XCTestCase {
                 hidden: true,
                 record: record,
                 globallyConcealed: false,
+                activeWorkspaceID: WorkspaceRecord.defaultID,
                 touch: { $0.updatedAt = Date(timeIntervalSince1970: 2_000) },
                 persist: { throw ForcedMetadataWriteError() },
                 present: { presented += 1 },
@@ -169,6 +173,7 @@ final class PanelVisibilityTransactionTests: XCTestCase {
             hidden: false,
             record: record,
             globallyConcealed: false,
+            activeWorkspaceID: WorkspaceRecord.defaultID,
             touch: { $0.updatedAt = Date() },
             persist: {},
             present: { presented += 1 },
@@ -188,6 +193,7 @@ final class PanelVisibilityTransactionTests: XCTestCase {
             hidden: false,
             record: record,
             globallyConcealed: true,
+            activeWorkspaceID: WorkspaceRecord.defaultID,
             touch: { $0.updatedAt = Date() },
             persist: {},
             present: { presented += 1 },
@@ -197,7 +203,7 @@ final class PanelVisibilityTransactionTests: XCTestCase {
         XCTAssertEqual(presented, 0)
         XCTAssertEqual(concealed, 1)
         XCTAssertTrue(
-            PanelVisibilityPolicy.shouldPresent(panelHidden: record.isHidden, globallyConcealed: false)
+            present(hidden: record.isHidden, global: false)
         )
     }
 
@@ -250,11 +256,11 @@ final class PanelVisibilityGlobalStateTests: XCTestCase {
         let bHidden = true
         let cHidden = false
         let concealedPresentations = [aHidden, bHidden, cHidden].map {
-            PanelVisibilityPolicy.shouldPresent(panelHidden: $0, globallyConcealed: true)
+            present(hidden: $0, global: true)
         }
         XCTAssertEqual(concealedPresentations, [false, false, false])
         let restored = [aHidden, bHidden, cHidden].map {
-            PanelVisibilityPolicy.shouldPresent(panelHidden: $0, globallyConcealed: false)
+            present(hidden: $0, global: false)
         }
         XCTAssertEqual(restored, [true, false, true])
         XCTAssertEqual([aHidden, bHidden, cHidden], [false, true, false])
@@ -264,16 +270,10 @@ final class PanelVisibilityGlobalStateTests: XCTestCase {
         let record = GlanceTestFixtures.sampleRecord()
         XCTAssertFalse(record.isHidden)
         XCTAssertFalse(
-            PanelVisibilityPolicy.shouldPresent(
-                panelHidden: record.isHidden,
-                globallyConcealed: true
-            )
+            present(hidden: record.isHidden, global: true)
         )
         XCTAssertTrue(
-            PanelVisibilityPolicy.shouldPresent(
-                panelHidden: record.isHidden,
-                globallyConcealed: false
-            )
+            present(hidden: record.isHidden, global: false)
         )
     }
 }
@@ -337,4 +337,18 @@ final class PanelVisibilitySummaryTests: XCTestCase {
         XCTAssertEqual(PanelVisibilityMenu.libraryActionTitle(isHidden: true), "显示")
         XCTAssertEqual(PanelVisibilityMenu.libraryActionTitle(isHidden: false), "隐藏")
     }
+}
+
+private func present(
+    hidden: Bool,
+    workspace: String = WorkspaceRecord.defaultID,
+    active: String = WorkspaceRecord.defaultID,
+    global: Bool
+) -> Bool {
+    PanelVisibilityPolicy.shouldPresent(
+        panelHidden: hidden,
+        panelWorkspaceID: workspace,
+        activeWorkspaceID: active,
+        globallyConcealed: global
+    )
 }

@@ -16,6 +16,7 @@ final class PanelRecord: Codable, Identifiable {
     var createdAt: Date
     var updatedAt: Date
     var isHidden: Bool
+    var workspaceID: String
 
     init(
         id: UUID = UUID(),
@@ -29,6 +30,7 @@ final class PanelRecord: Codable, Identifiable {
         isCollapsed: Bool = false,
         isPassThrough: Bool = false,
         isHidden: Bool = false,
+        workspaceID: String = WorkspaceRecord.defaultID,
         opacity: Double = 1,
         themeIdentifier: String = "system",
         createdAt: Date = Date(),
@@ -43,6 +45,7 @@ final class PanelRecord: Codable, Identifiable {
         self.isCollapsed = isCollapsed
         self.isPassThrough = isPassThrough
         self.isHidden = isHidden
+        self.workspaceID = workspaceID
         self.opacity = PanelOpacity.clamp(opacity)
         self.themeIdentifier = themeIdentifier
         self.payloadPath = payloadPath
@@ -53,7 +56,7 @@ final class PanelRecord: Codable, Identifiable {
 
     enum CodingKeys: String, CodingKey {
         case id, kindIdentifier, x, y, width, height, displayIdentifier
-        case isPinned, isLocked, isCollapsed, isPassThrough, isHidden
+        case isPinned, isLocked, isCollapsed, isPassThrough, isHidden, workspaceID
         case opacity, themeIdentifier, payloadPath, payloadVersion
         case createdAt, updatedAt
     }
@@ -78,6 +81,7 @@ final class PanelRecord: Codable, Identifiable {
         isCollapsed = try container.decodeIfPresent(Bool.self, forKey: .isCollapsed) ?? false
         isPassThrough = try container.decodeIfPresent(Bool.self, forKey: .isPassThrough) ?? false
         isHidden = try container.decodeIfPresent(Bool.self, forKey: .isHidden) ?? false
+        workspaceID = try container.decodeIfPresent(String.self, forKey: .workspaceID) ?? WorkspaceRecord.defaultID
         opacity = PanelOpacity.clamp(try container.decodeIfPresent(Double.self, forKey: .opacity) ?? 1)
         themeIdentifier = try container.decodeIfPresent(String.self, forKey: .themeIdentifier) ?? "system"
         payloadVersion = try container.decodeIfPresent(Int.self, forKey: .payloadVersion) ?? 1
@@ -97,6 +101,7 @@ final class PanelRecord: Codable, Identifiable {
         try container.encode(isCollapsed, forKey: .isCollapsed)
         try container.encode(isPassThrough, forKey: .isPassThrough)
         try container.encode(isHidden, forKey: .isHidden)
+        try container.encode(workspaceID, forKey: .workspaceID)
         try container.encode(opacity, forKey: .opacity)
         try container.encode(themeIdentifier, forKey: .themeIdentifier)
         try container.encode(payloadPath, forKey: .payloadPath)

@@ -109,7 +109,55 @@ enum GlanceTestFixtures {
           "y" : 20
         }
       ],
-      "schemaVersion" : 3
+      "schemaVersion" : 4
+    }
+    """
+
+    static let schemaV2EnvelopeJSON = """
+    {
+      "panels" : [
+        {
+          "createdAt" : "2026-10-02T15:32:51Z",
+          "displayIdentifier" : "1",
+          "height" : 220,
+          "id" : "AAAAAAAA-AAAA-AAAA-AAAA-AAAAAAAAAAAA",
+          "isCollapsed" : false,
+          "isHidden" : true,
+          "isLocked" : false,
+          "isPassThrough" : false,
+          "isPinned" : true,
+          "kindIdentifier" : "com.glance.panel.text",
+          "opacity" : 1,
+          "payloadPath" : "Panels/AAAAAAAA-AAAA-AAAA-AAAA-AAAAAAAAAAAA",
+          "payloadVersion" : 1,
+          "themeIdentifier" : "system",
+          "updatedAt" : "2026-10-02T16:00:00Z",
+          "width" : 320,
+          "x" : 100,
+          "y" : 200
+        },
+        {
+          "createdAt" : "2026-10-02T15:40:00Z",
+          "displayIdentifier" : "1",
+          "height" : 220,
+          "id" : "BBBBBBBB-BBBB-BBBB-BBBB-BBBBBBBBBBBB",
+          "isCollapsed" : false,
+          "isHidden" : false,
+          "isLocked" : true,
+          "isPassThrough" : false,
+          "isPinned" : true,
+          "kindIdentifier" : "com.glance.panel.markdown",
+          "opacity" : 0.5,
+          "payloadPath" : "Panels/BBBBBBBB-BBBB-BBBB-BBBB-BBBBBBBBBBBB",
+          "payloadVersion" : 1,
+          "themeIdentifier" : "system",
+          "updatedAt" : "2026-10-02T16:10:00Z",
+          "width" : 420,
+          "x" : 200,
+          "y" : 300
+        }
+      ],
+      "schemaVersion" : 2
     }
     """
 }
