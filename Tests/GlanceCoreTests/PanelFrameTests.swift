@@ -23,6 +23,8 @@ final class PanelFrameTests: XCTestCase {
         XCTAssertEqual(frame.minY, 20)
         XCTAssertEqual(frame.maxX, 110)
         XCTAssertEqual(frame.maxY, 70)
+        XCTAssertEqual(frame.midX, 60)
+        XCTAssertEqual(frame.midY, 45)
     }
 
     func testCodableRoundTrip() throws {
