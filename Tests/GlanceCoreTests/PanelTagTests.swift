@@ -503,4 +503,101 @@ final class PanelTagEditorSessionTests: XCTestCase {
         XCTAssertEqual(session.draft.count, 12)
         XCTAssertEqual(session.errorMessage, PanelTagError.tooManyTags.errorDescription)
     }
+
+    func testPendingSingleTagCommit() throws {
+        let session = PanelTagEditorSession(tags: [], catalog: [])
+        session.input = "具身智能"
+        XCTAssertEqual(try session.tagsForCommit(), ["具身智能"])
+        XCTAssertEqual(session.draft, [])
+        XCTAssertEqual(session.input, "具身智能")
+    }
+
+    func testDraftPlusPendingCommit() throws {
+        let session = PanelTagEditorSession(tags: ["API"], catalog: [])
+        session.input = "参考"
+        XCTAssertEqual(try session.tagsForCommit(), ["API", "参考"])
+        XCTAssertEqual(session.draft, ["API"])
+        XCTAssertEqual(session.input, "参考")
+    }
+
+    func testPendingMultipleValues() throws {
+        let session = PanelTagEditorSession(tags: [], catalog: [])
+        session.input = "API, 参考，必读\n后端"
+        XCTAssertEqual(try session.tagsForCommit(), ["API", "参考", "必读", "后端"])
+    }
+
+    func testPendingDuplicateKeepsFirstCasing() throws {
+        let session = PanelTagEditorSession(tags: ["API"], catalog: [])
+        session.input = "api"
+        XCTAssertEqual(try session.tagsForCommit(), ["API"])
+        XCTAssertEqual(session.draft, ["API"])
+        XCTAssertEqual(session.input, "api")
+    }
+
+    func testBlankPendingLeavesDraft() throws {
+        let session = PanelTagEditorSession(tags: ["API", "参考"], catalog: [])
+        session.input = "   "
+        XCTAssertEqual(try session.tagsForCommit(), ["API", "参考"])
+        XCTAssertEqual(session.input, "   ")
+    }
+
+    func testPendingTooLongDoesNotMutateState() {
+        let session = PanelTagEditorSession(tags: ["API"], catalog: [])
+        let tooLong = String(repeating: "a", count: 25)
+        session.input = tooLong
+        XCTAssertThrowsError(try session.tagsForCommit()) { error in
+            XCTAssertEqual(error as? PanelTagError, .tagTooLong)
+        }
+        XCTAssertEqual(session.draft, ["API"])
+        XCTAssertEqual(session.input, tooLong)
+        XCTAssertNil(session.errorMessage)
+    }
+
+    func testPendingThirteenthTagDoesNotMutateState() {
+        let session = PanelTagEditorSession(tags: (1...12).map { "t\($0)" }, catalog: [])
+        session.input = "tag13"
+        XCTAssertThrowsError(try session.tagsForCommit()) { error in
+            XCTAssertEqual(error as? PanelTagError, .tooManyTags)
+        }
+        XCTAssertEqual(session.draft.count, 12)
+        XCTAssertEqual(session.input, "tag13")
+        XCTAssertNil(session.errorMessage)
+    }
+
+    func testAttemptCommitValidPendingSucceeds() {
+        let session = PanelTagEditorSession(tags: ["API"], catalog: [])
+        session.input = "参考"
+        switch session.attemptCommit() {
+        case .success(let tags):
+            XCTAssertEqual(tags, ["API", "参考"])
+            XCTAssertNil(session.errorMessage)
+        case .failure:
+            XCTFail("expected success")
+        }
+        XCTAssertEqual(session.draft, ["API"])
+        XCTAssertEqual(session.input, "参考")
+    }
+
+    func testAttemptCommitInvalidPendingKeepsEditorOpenState() {
+        let session = PanelTagEditorSession(tags: (1...12).map { "t\($0)" }, catalog: [])
+        session.input = "tag13"
+        switch session.attemptCommit() {
+        case .success:
+            XCTFail("expected failure")
+        case .failure(let error):
+            XCTAssertEqual(error as? PanelTagError, .tooManyTags)
+            XCTAssertEqual(session.errorMessage, PanelTagError.tooManyTags.errorDescription)
+        }
+        XCTAssertEqual(session.draft.count, 12)
+        XCTAssertEqual(session.input, "tag13")
+        session.input = "ok"
+        session.draft = ["API"]
+        switch session.attemptCommit() {
+        case .success(let tags):
+            XCTAssertEqual(tags, ["API", "ok"])
+            XCTAssertNil(session.errorMessage)
+        case .failure:
+            XCTFail("expected success after fixing input")
+        }
+    }
 }
