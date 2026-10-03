@@ -4,7 +4,7 @@
 
 A lightweight, local-first floating panel app for **macOS**.
 
-Glance is not another notes app. It is an always-on-top information layer: put the text or reference images you need to keep seeing on independent panels, pin them anywhere on screen, and they stay there while you work in the browser, editor, or chat.
+Glance is not another notes app. It is an always-on-top information layer: put the text, reference images, or PDFs you need to keep seeing on independent panels, pin them anywhere on screen, and they stay there while you work in the browser, editor, or chat.
 
 There is no Windows client yet. Shared data contracts are documented so a future Windows app can reuse them.
 
@@ -13,7 +13,7 @@ There is no Windows client yet. Shared data contracts are documented so a future
 - Native macOS
 - Always on top
 - Local-first
-- Text, Markdown, Todo, and images
+- Text, Markdown, Todo, images, and PDF
 - Quick Capture from any app
 - Clipboard Capture
 - Panel Manager
@@ -21,12 +21,13 @@ There is no Windows client yet. Shared data contracts are documented so a future
 - No cloud
 - Open source
 
-## V0.8 已支持
+## V0.9 已支持
 
 - Text panel
 - Markdown panel (rendered preview, double-click to edit raw UTF-8 `.md`)
 - Todo panel (interactive checklist with inline add/edit/complete/delete)
 - Image panel
+- PDF panel
 - Quick Capture (`⌥⌘J`) — capture text or a Todo without first creating an empty panel
 - Clipboard Capture (`⌥⌘B`) — create a Text or Image panel from the current clipboard
 - Panel Manager — browse, search, reveal, and delete existing panels from one place
@@ -60,6 +61,7 @@ Status-item menu:
 新建 Markdown 面板
 新建待办面板
 新建图片面板
+新建 PDF 面板…
 ────────────
 显示全部 / 隐藏全部    ⌥⌘G
 ────────────
@@ -90,6 +92,17 @@ Clipboard is only read when you invoke the command. Glance does not maintain cli
 - Empty or unsupported clipboard content does not create a panel.
 - If Glance is globally hidden, the new panel is created but stays concealed.
 
+### PDF Panel
+
+Import a local PDF into Glance and keep it floating as a reference document.
+
+PDFs are copied into Glance's local data directory. Deleting the original file does not blank the panel.
+
+- `新建 PDF 面板…` opens a file picker. Cancel creates nothing.
+- Password-protected PDFs are rejected. V0.9 does not unlock or annotate them.
+- Reading uses PDFKit: continuous vertical scroll, auto-scale, text selection, and copy.
+- Reading position is not saved; reopening starts at the first page.
+
 ### Panel Manager
 
 `管理面板…` opens a regular macOS window (not a floating panel). It is not stored in `panels.json`. Browse panels, filter by type, search titles, bring a panel forward, or delete it with the same confirmation as the panel menu. Titles are derived from existing payload content; there is no separate rename field.
@@ -115,7 +128,8 @@ Each panel can be pinned, locked, made click-through, and faded independently. T
 
 - **Markdown** shows a rendered preview. Double-click to edit the raw Markdown source. Payload is UTF-8 `content.md`.
 - **Todo** is a lightweight on-screen checklist: add, inline edit, complete, and delete. Payload is UTF-8 `todo.json`. There is no reorder, due date, reminder, or priority system.
-- **Lock** prevents accidental drag, resize, text editing, checklist toggles, Markdown source edits, Todo mutations, and image replace. Right-click, unlock, opacity, pin, click-through, delete, and panel settings still work.
+- **PDF** is a local copy of the imported document. Payload is `document.pdf` plus `pdf.json` (filename and page count). There is no annotation, OCR, or full-text search.
+- **Lock** prevents accidental drag, resize, text editing, checklist toggles, Markdown source edits, Todo mutations, and image replace. PDF reading (scroll, select, copy) still works. Right-click, unlock, opacity, pin, click-through, delete, and panel settings still work.
 - **Click-through** ignores mouse events until you hold Option. Lock still wins: Option can open the menu and settings, but cannot move, resize, or edit a locked panel.
 - **Opacity** ranges from 30% to 100% (`window.alphaValue`). The slider in panel settings updates live and persists after you release.
 
@@ -162,10 +176,12 @@ Everything lives on disk. See [docs/architecture/data-format.md](docs/architectu
         ├── content.rtf
         ├── content.md
         ├── todo.json
-        └── image.png
+        ├── image.png
+        ├── document.pdf
+        └── pdf.json
 ```
 
-Images are copied into this directory. Deleting the original file does not blank the panel.
+Images and PDFs are copied into this directory. Deleting the original file does not blank the panel.
 
 There is no save button. Moves, resizes, and text edits are debounced and flushed on quit.
 

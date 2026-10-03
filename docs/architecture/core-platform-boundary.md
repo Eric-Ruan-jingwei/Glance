@@ -36,7 +36,7 @@ Dirty state
 Portable data contracts
 ```
 
-Examples in this tree: `PanelRecord`, `PanelFrame`, `PanelDatabase`, `PanelRepository`, `PanelInteractionPolicy`, `PanelInteractionState`, `PanelModeTransition`, `PanelOpacity`, `PayloadDirtyFlag`, `PanelPlacementEngine` (geometry), `PanelSnapEngine`, `PanelLayoutPreset`, `PanelSnapConfiguration`, `PanelFrameRecovery` (geometry), `ApplicationDataLocation`, `PayloadStore`, `MarkdownPayloadFile`, `MarkdownDocument`, `TodoItem`, `TodoDocument`, `TodoMutation`, `TodoPayloadFile`, `QuickCaptureRequest`, `QuickCaptureKind`, `ClipboardCaptureContent`, `ClipboardCaptureRouter`, `PanelInitialContent`, `PanelCreationSession`, `PanelRevealPolicy`, `PanelSummary`, `PanelSummaryQuery`, `PanelSummaryText`.
+Examples in this tree: `PanelRecord`, `PanelFrame`, `PanelDatabase`, `PanelRepository`, `PanelInteractionPolicy`, `PanelInteractionState`, `PanelModeTransition`, `PanelOpacity`, `PayloadDirtyFlag`, `PanelPlacementEngine` (geometry), `PanelSnapEngine`, `PanelLayoutPreset`, `PanelSnapConfiguration`, `PanelFrameRecovery` (geometry), `ApplicationDataLocation`, `PayloadStore`, `MarkdownPayloadFile`, `MarkdownDocument`, `TodoItem`, `TodoDocument`, `TodoMutation`, `TodoPayloadFile`, `QuickCaptureRequest`, `QuickCaptureKind`, `ClipboardCaptureContent`, `ClipboardCaptureRouter`, `PanelInitialContent`, `PanelCreationSession`, `PanelRevealPolicy`, `PanelSummary`, `PanelSummaryQuery`, `PanelSummaryText`, `PDFDocumentMetadata`, `PDFPayloadFile`.
 
 These types should stay on Foundation (or pure Swift). They must not depend on `NSRect`, `NSWindow`, or other AppKit types.
 
@@ -55,6 +55,8 @@ Launch at login
 Native file chooser
 Pasteboard
 AppKit rendering
+PDFKit
+PDFView
 Screen APIs
 Quick Capture window
 Panel Library window
@@ -67,6 +69,8 @@ AppKit adapters convert `PanelFrame` ↔ `NSRect`. Carbon hotkeys, `SMAppService
 Quick Capture itself is not persisted. `QuickCaptureRequest` describes the product intent (create text or a todo). The macOS window writes an initial payload, then inserts a `PanelRecord`, only after a successful submit.
 
 Clipboard Capture is also not persisted as a separate object. `ClipboardCaptureContent` is a one-shot intent. `MacClipboardReader` reads `NSPasteboard` only when the user invokes the command. Capture priority is valid image → valid text → unsupported.
+
+PDF payload files (`document.pdf`, `pdf.json`) are portable. `MacPDFImporter` uses `NSOpenPanel` and PDFKit only to validate and render; it does not write PDFKit archives.
 
 ## Future Windows
 

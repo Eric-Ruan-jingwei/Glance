@@ -20,7 +20,9 @@ Application data root
         ├── content.rtf
         ├── content.md
         ├── todo.json
-        └── image.png
+        ├── image.png
+        ├── document.pdf
+        └── pdf.json
 ```
 
 `{panel-id}` is the panel UUID string.
@@ -87,6 +89,27 @@ Panels/{panel-id}/image.png
 
 Copied into the panel directory. Deleting the original source file does not blank the panel. Unreadable existing files are not overwritten.
 
+## PDF payload
+
+```text
+kindIdentifier: com.glance.panel.pdf
+payloadVersion: 1
+Panels/{panel-id}/document.pdf
+Panels/{panel-id}/pdf.json
+```
+
+`document.pdf` is a full copy of the imported file. `pdf.json` is payload-local metadata, not PanelRecord schema:
+
+```json
+{
+  "version": 1,
+  "displayName": "Physical AI Survey.pdf",
+  "pageCount": 42
+}
+```
+
+`displayName` is the chosen filename. `pageCount` is recorded at import so Panel Manager does not open every PDF. Missing or unreadable `pdf.json` does not rewrite the sidecar; a readable `document.pdf` can still be shown. Unreadable existing PDF files are left on disk and not overwritten. PDFs are imported only through the file picker, not Clipboard Capture.
+
 ## Kinds
 
 Current `kindIdentifier` values:
@@ -96,6 +119,7 @@ com.glance.panel.text
 com.glance.panel.markdown
 com.glance.panel.todo
 com.glance.panel.image
+com.glance.panel.pdf
 ```
 
 Unknown kinds still restore as metadata so a newer client’s panels are not deleted by an older build.
@@ -120,4 +144,4 @@ Clipboard Capture is a user-triggered one-shot read. It is **not** stored as cli
 
 ## Future clients
 
-Any future Windows (or other) client should read and write this JSON + RTF + Markdown + Todo JSON + PNG layout. Windowing, shortcuts, and tray code are platform-specific; the files are not.
+Any future Windows (or other) client should read and write this JSON + RTF + Markdown + Todo JSON + PNG + PDF layout. Windowing, shortcuts, and tray code are platform-specific; the files are not.
