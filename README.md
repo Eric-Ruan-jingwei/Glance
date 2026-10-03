@@ -4,7 +4,7 @@
 
 A lightweight, local-first personal workspace for **macOS**.
 
-Glance keeps five kinds of work nearby: floating panels for things you need to keep seeing, a local clipboard shelf for things you keep copying, a file shelf for files you will need again soon, snippets for text you will reuse on purpose, and a link library for web pages you will open again. Links are explicitly saved web resources. Glance does not fetch webpage metadata or favicons in V0.22. Clipboard History is not Snippets, and Snippets are not Links. Everything stays on this machine.
+Glance keeps five kinds of information nearby, and one way to find them again: floating panels for things you need to keep seeing, a local clipboard shelf for things you keep copying, a file shelf for files you will need again soon, snippets for text you will reuse on purpose, a link library for web pages you will open again, and Global Search to recall any of them without first choosing a tool. Links are explicitly saved web resources. Glance does not fetch webpage metadata or favicons. Global Search searches existing local Glance data in memory and does not maintain a separate persistent search index. Clipboard History is not Snippets, and Snippets are not Links. Everything stays on this machine.
 
 There is no Windows client yet. Shared data contracts are documented so a future Windows app can reuse them.
 
@@ -15,6 +15,7 @@ There is no Windows client yet. Shared data contracts are documented so a future
 - Local-first
 - Text, Markdown, Todo, images, and PDF
 - Quick Capture from any app
+- Global Search
 - Clipboard Shelf
 - File Shelf
 - Snippets
@@ -36,6 +37,10 @@ There is no Windows client yet. Shared data contracts are documented so a future
 - No account
 - No cloud
 - Open source
+
+## V0.23.0
+
+Global Search: one in-memory recall layer across Clipboard, File Shelf, Snippets, Links, and every workspace’s panels. Empty query shows recent activity. Enter runs the natural action for that source. Panel summaries load asynchronously and only once per search session. Global Search has no persisted schema and does not add a Search directory. Panel, Clipboard, File Shelf, Snippets, and Links schemas are unchanged.
 
 ## V0.22.0
 
@@ -152,6 +157,7 @@ Product hardening for the existing 1.0 feature set. No new panel types, no schem
 - Image panel
 - PDF panel
 - Quick Capture — capture text or a Todo without first creating an empty panel. Default: `⌥⌘J`
+- Global Search — recall Clipboard, File Shelf, Snippets, Links, and all-workspace Panels from one in-memory search. Default: `⌥⌘K`. No persistent search index.
 - Clipboard Capture — create a Text or Image panel from the current clipboard. Default: `⌥⌘B`
 - Panel Manager — browse, search, reveal, hide, delete, and move existing panels; the sidebar switches the active workspace. Multi-select a filtered result set and apply atomic batch hide/show, workspace move, and tag add/remove.
 - Workspaces — organize panels by workspace and switch the visible set of panels without changing their content or per-panel hidden state
@@ -185,10 +191,13 @@ Snippets are long-lived text you save on purpose: an address, a reply, a prompt,
 
 Links are long-lived web resources you save on purpose: a GitHub repo, a Figma file, a dashboard, a docs page. Enter opens the URL in the default browser. Glance does not fetch titles, favicons, or page previews.
 
+Global Search is the recall layer over those five stores. `⌥⌘K` searches them together in memory. It does not search the rest of the Mac, the browser, or the web, and it does not keep a search database.
+
 Default shortcuts:
 
 ```text
 Quick Capture                 ⌥⌘J
+Global Search                 ⌥⌘K
 Clipboard                     ⌥⌘V
 File Shelf                    ⌥⌘F
 Snippets                      ⌥⌘S
@@ -203,6 +212,7 @@ Status-item menu (defaults shown):
 
 ```text
 快速记录…                  ⌥⌘J
+搜索 Glance…               ⌥⌘K
 ────────────
 剪贴板…                    ⌥⌘V
 文件架…                    ⌥⌘F
@@ -243,6 +253,28 @@ The default shortcut `⌥⌘J` opens a transient capture window on the display u
 - Empty or whitespace-only input does not create a panel.
 - `Escape` or a click outside capture closes it and drops the draft.
 - If Glance is globally hidden (Hide / Show, default `⌥⌘G`), capture still appears. A submitted panel is created with `isHidden = false` but stays concealed until you show all panels again.
+
+### Global Search
+
+The default shortcut `⌥⌘K` opens a unified search window over Glance’s own local data. It does not own records, does not write a search index, and does not search Settings, Guide, the rest of the disk, the browser, or the network.
+
+- Empty query shows the 20 most recently used items across Clipboard, File Shelf, Snippets, Links, and all workspaces’ panels, ordered by activity time. Pins and favorites do not boost Global Search.
+- A non-empty query matches case-insensitively and diacritic-insensitively as a substring, ranked by title exact / prefix / substring then secondary fields, and returns at most 50 results.
+- Enter restores clipboard content, opens a File Shelf file, copies a snippet, opens a link, or reveals a panel (switching workspace if needed). It does not open the source’s manager window.
+- Missing files, invalid links, and Global Hide stay in the search window with a notice. Revealing a panel does not silently turn Global Hide off.
+- Panel summaries load in the background using the existing Panel Manager loader. Query changes filter memory only.
+
+## Privacy
+
+Glance stays on this Mac.
+
+Global Search:
+
+- does not upload queries
+- does not fetch web content
+- does not scan arbitrary user files
+- does not search File Shelf file contents
+- does not OCR clipboard images
 
 ### Clipboard Capture
 
@@ -388,6 +420,8 @@ Everything lives on disk. See [docs/architecture/data-format.md](docs/architectu
 └── Links/
     └── links.json           schemaVersion 1 saved web links
 ```
+
+Global Search has no persisted user-data schema. There is no `Search/` directory, SQLite FTS index, or Spotlight copy.
 
 Panel images and PDFs are copied into this directory. File Shelf stores only references and bookmarks; the original files stay where they are. Removing a File Shelf item does not delete the original file.
 

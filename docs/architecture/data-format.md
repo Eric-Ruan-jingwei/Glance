@@ -244,6 +244,16 @@ The envelope is `{ "schemaVersion": 1, "items": [ ... ] }`. This schema is indep
 
 Each item stores `id`, `title`, `urlString`, `createdAt`, `updatedAt`, `lastOpenedAt`, and `isPinned`.
 
+## Global Search
+
+Global Search is a runtime recall layer, not a data domain. It reads the five existing sources in memory and does not write:
+
+```text
+Search/
+```
+
+There is no search envelope, no FTS database, and no schema version. Closing the search window discards the in-memory documents. The next open rebuilds them from Clipboard, File Shelf, Snippets, Links, and Panel summaries.
+
 ## Future clients
 
 Any future Windows (or other) client should read and write this JSON + RTF + Markdown + Todo JSON + PNG + PDF layout. Windowing, shortcuts, and tray code are platform-specific; the files are not.
