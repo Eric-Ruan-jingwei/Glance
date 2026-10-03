@@ -45,6 +45,7 @@ final class QuickCaptureRequestTests: XCTestCase {
         XCTAssertEqual(GlanceHotKeyID.hideShow.rawValue, 1)
         XCTAssertEqual(GlanceHotKeyID.quickCapture.rawValue, 2)
         XCTAssertEqual(GlanceHotKeyID.clipboardCapture.rawValue, 3)
+        XCTAssertEqual(GlanceHotKeyID.fileShelf.rawValue, 5)
         XCTAssertNotEqual(GlanceConstants.quickCaptureKeyEquivalent, GlanceConstants.hideShowKeyEquivalent)
         XCTAssertNotEqual(GlanceConstants.clipboardCaptureKeyEquivalent, GlanceConstants.quickCaptureKeyEquivalent)
         XCTAssertEqual(GlanceConstants.quickCaptureKeyEquivalent, "j")

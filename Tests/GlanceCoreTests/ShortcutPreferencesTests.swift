@@ -20,18 +20,22 @@ final class ShortcutPreferencesTests: XCTestCase {
     func testDefaultShortcuts() {
         XCTAssertEqual(ShortcutDefaults.quickCapture, GlanceShortcut(key: "j", command: true, option: true, control: false, shift: false))
         XCTAssertEqual(ShortcutDefaults.clipboardHistory, GlanceShortcut(key: "v", command: true, option: true, control: false, shift: false))
+        XCTAssertEqual(ShortcutDefaults.fileShelf, GlanceShortcut(key: "f", command: true, option: true, control: false, shift: false))
         XCTAssertEqual(ShortcutDefaults.clipboardCapture, GlanceShortcut(key: "b", command: true, option: true, control: false, shift: false))
         XCTAssertEqual(ShortcutDefaults.hideShow, GlanceShortcut(key: "g", command: true, option: true, control: false, shift: false))
         XCTAssertEqual(ShortcutDisplayFormatter.display(ShortcutDefaults.quickCapture), "⌥⌘J")
         XCTAssertEqual(ShortcutDisplayFormatter.display(ShortcutDefaults.clipboardHistory), "⌥⌘V")
+        XCTAssertEqual(ShortcutDisplayFormatter.display(ShortcutDefaults.fileShelf), "⌥⌘F")
         XCTAssertEqual(ShortcutDisplayFormatter.display(ShortcutDefaults.clipboardCapture), "⌥⌘B")
         XCTAssertEqual(ShortcutDisplayFormatter.display(ShortcutDefaults.hideShow), "⌥⌘G")
         XCTAssertEqual(GlanceConstants.quickCaptureShortcutDisplay, "⌥⌘J")
         XCTAssertEqual(GlanceConstants.clipboardHistoryShortcutDisplay, "⌥⌘V")
+        XCTAssertEqual(GlanceConstants.fileShelfShortcutDisplay, "⌥⌘F")
         XCTAssertEqual(GlanceConstants.clipboardCaptureShortcutDisplay, "⌥⌘B")
         XCTAssertEqual(GlanceConstants.hideShowShortcutDisplay, "⌥⌘G")
         XCTAssertEqual(ShortcutAction.quickCapture.preferenceKey, "com.glance.shortcut.quickCapture")
         XCTAssertEqual(ShortcutAction.clipboardHistory.preferenceKey, "com.glance.shortcut.clipboardHistory")
+        XCTAssertEqual(ShortcutAction.fileShelf.preferenceKey, "com.glance.shortcut.fileShelf")
         XCTAssertEqual(ShortcutAction.clipboardCapture.preferenceKey, "com.glance.shortcut.clipboardCapture")
         XCTAssertEqual(ShortcutAction.hideShow.preferenceKey, "com.glance.shortcut.hideShow")
     }
@@ -134,6 +138,7 @@ final class ShortcutPreferencesTests: XCTestCase {
     func testCarbonMapping() {
         XCTAssertEqual(MacShortcutAdapter.carbonKeyCode(for: ShortcutDefaults.quickCapture), UInt32(kVK_ANSI_J))
         XCTAssertEqual(MacShortcutAdapter.carbonKeyCode(for: ShortcutDefaults.clipboardHistory), UInt32(kVK_ANSI_V))
+        XCTAssertEqual(MacShortcutAdapter.carbonKeyCode(for: ShortcutDefaults.fileShelf), UInt32(kVK_ANSI_F))
         XCTAssertEqual(MacShortcutAdapter.carbonKeyCode(for: ShortcutDefaults.clipboardCapture), UInt32(kVK_ANSI_B))
         XCTAssertEqual(MacShortcutAdapter.carbonKeyCode(for: ShortcutDefaults.hideShow), UInt32(kVK_ANSI_G))
         XCTAssertEqual(MacShortcutAdapter.carbonKeyCode(for: controlOptionK), UInt32(kVK_ANSI_K))
@@ -162,6 +167,39 @@ final class ShortcutPreferencesTests: XCTestCase {
         try? manager.resume(.clipboardHistory)
         manager.handleHotKeyForTesting(.clipboardHistory)
         XCTAssertEqual(shown, 2)
+    }
+
+    func testFileShelfRegistersReplacesAndDispatchesHotKeyFive() throws {
+        let fake = FakeHotKeyRegistrar()
+        let manager = ShortcutManager(registrar: fake, bindSystemHandler: false)
+        var shown = 0
+        manager.onShowFileShelf = { shown += 1 }
+        XCTAssertTrue(manager.register(ShortcutDefaults.fileShelf, for: .fileShelf))
+        XCTAssertEqual(fake.registered[GlanceHotKeyID.fileShelf.rawValue]?.keyCode, UInt32(kVK_ANSI_F))
+        XCTAssertEqual(GlanceHotKeyID.fileShelf.rawValue, 5)
+        manager.handleHotKeyForTesting(.fileShelf)
+        XCTAssertEqual(shown, 1)
+
+        let replaced = GlanceShortcut(key: "f", command: false, option: true, control: true, shift: false)
+        try manager.replaceShortcut(for: .fileShelf, with: replaced)
+        XCTAssertEqual(manager.registeredShortcut(for: .fileShelf), replaced)
+        XCTAssertEqual(fake.registered[GlanceHotKeyID.fileShelf.rawValue]?.keyCode, UInt32(kVK_ANSI_F))
+
+        manager.suspend(.fileShelf)
+        manager.handleHotKeyForTesting(.fileShelf)
+        XCTAssertEqual(shown, 1)
+        try manager.resume(.fileShelf)
+        manager.handleHotKeyForTesting(.fileShelf)
+        XCTAssertEqual(shown, 2)
+
+        XCTAssertEqual(
+            ShortcutValidator.duplicate(
+                of: ShortcutDefaults.fileShelf,
+                excluding: .quickCapture,
+                in: ShortcutDefaults.all
+            ),
+            .fileShelf
+        )
     }
 
     func testReplacementSuccessAndFailureRollback() throws {

@@ -213,6 +213,7 @@ final class GuideTests: XCTestCase {
         XCTAssertTrue(GuideGettingStartedCopy.step1Detail.contains("个人办公工具入口"))
         XCTAssertTrue(GuideGettingStartedCopy.step1Detail.contains("桌面面板"))
         XCTAssertTrue(GuideGettingStartedCopy.step1Detail.contains("复制"))
+        XCTAssertTrue(GuideGettingStartedCopy.step1Detail.contains("文件架"))
         XCTAssertEqual(GuideModel.onboardingPageCount, 4)
     }
 
@@ -220,7 +221,7 @@ final class GuideTests: XCTestCase {
         XCTAssertEqual(GuideFeatureCatalog.items.first?.title, "剪贴板")
         XCTAssertEqual(
             GuideFeatureCatalog.items.map(\.title),
-            ["剪贴板", "Workspaces", "Tags", "Panel Manager"]
+            ["剪贴板", "文件架", "Workspaces", "Tags", "Panel Manager"]
         )
         XCTAssertNotEqual(GuideFeatureCatalog.items.last?.title, "剪贴板")
     }
@@ -241,6 +242,37 @@ final class GuideTests: XCTestCase {
             ["⌃", "⌥", "V"]
         )
         XCTAssertEqual(GuideShortcutCatalog.groups.first { $0.id == "clipboard" }?.title, "剪贴板")
+    }
+
+    func testCatalogIncludesFileShelfDynamicAction() {
+        let item = GuideShortcutCatalog.item(id: "fileShelf")
+        XCTAssertEqual(item?.title, "文件架")
+        if case .dynamic(let action) = item?.source {
+            XCTAssertEqual(action, .fileShelf)
+        } else {
+            XCTFail("file shelf must read the live shortcut")
+        }
+        let custom = GlanceShortcut(key: "f", command: false, option: true, control: true, shift: false)
+        XCTAssertEqual(
+            item?.tokens { action in
+                action == .fileShelf ? custom : ShortcutDefaults.shortcut(for: action)
+            }.map(\.display),
+            ["⌃", "⌥", "F"]
+        )
+        XCTAssertEqual(GuideShortcutCatalog.groups.first { $0.id == "fileShelf" }?.title, "文件架")
+        XCTAssertEqual(
+            GuideShortcutCatalog.groups.first { $0.id == "fileShelf" }?.items.map(\.id),
+            [
+                "fileShelfOpen",
+                "fileShelfReveal",
+                "fileShelfPreview",
+                "fileShelfCopy",
+                "fileShelfRemove",
+                "fileShelfRecentTab",
+                "fileShelfFavoriteTab",
+                "fileShelfCancel"
+            ]
+        )
     }
 
     func testCatalogIncludesTextEditingExitAndChecklistToggle() {
