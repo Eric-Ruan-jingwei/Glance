@@ -5,6 +5,7 @@ enum PanelKind {
     static let markdown = "com.glance.panel.markdown"
     static let todo = "com.glance.panel.todo"
     static let image = "com.glance.panel.image"
+    static let pdf = "com.glance.panel.pdf"
 }
 
 enum GlanceConstants {
@@ -35,6 +36,8 @@ enum GlanceConstants {
     static let todoMinSize = NSSize(width: 220, height: 140)
     static let imageMinSize = NSSize(width: 100, height: 100)
     static let imageMaxEdge: CGFloat = 400
+    static let pdfDefaultSize = NSSize(width: 480, height: 620)
+    static let pdfMinSize = NSSize(width: 260, height: 260)
 
     static let cornerRadius: CGFloat = 11
     static let spawnMargin = CGFloat(GlanceLayout.spawnMargin)
@@ -50,6 +53,7 @@ enum GlanceConstants {
     static let payloadVersionImage = 1
     static let payloadVersionMarkdown = 1
     static let payloadVersionTodo = 1
+    static let payloadVersionPDF = 1
 
     static let textBodyFont = NSFont.systemFont(ofSize: 13)
     static let textBodyColor = NSColor.labelColor
