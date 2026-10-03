@@ -18,6 +18,8 @@ struct PanelSummary: Identifiable, Equatable {
     var isPinned: Bool
     var isHidden: Bool
     var workspaceID: String = WorkspaceRecord.defaultID
+    var automaticTitle: String = ""
+    var customTitle: String? = nil
     var isUnreadable: Bool
 }
 
@@ -171,6 +173,10 @@ enum PanelSummaryQuery {
         let needle = query.trimmingCharacters(in: .whitespacesAndNewlines)
         if needle.isEmpty { return true }
         if summary.title.localizedCaseInsensitiveContains(needle) { return true }
+        if summary.automaticTitle.localizedCaseInsensitiveContains(needle) { return true }
+        if let custom = summary.customTitle, custom.localizedCaseInsensitiveContains(needle) {
+            return true
+        }
         if let subtitle = summary.subtitle, subtitle.localizedCaseInsensitiveContains(needle) {
             return true
         }

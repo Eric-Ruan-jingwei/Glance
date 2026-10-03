@@ -17,20 +17,30 @@ enum PanelSummaryBuilder {
             workspaceID: record.workspaceID,
             isUnreadable: false
         )
+        let automatic: PanelSummary
         switch record.kindIdentifier {
         case PanelKind.text:
-            return summarizeText(base, directory: payloadDirectory)
+            automatic = summarizeText(base, directory: payloadDirectory)
         case PanelKind.markdown:
-            return summarizeMarkdown(base, directory: payloadDirectory)
+            automatic = summarizeMarkdown(base, directory: payloadDirectory)
         case PanelKind.todo:
-            return summarizeTodo(base, directory: payloadDirectory)
+            automatic = summarizeTodo(base, directory: payloadDirectory)
         case PanelKind.image:
-            return summarizeImage(base, directory: payloadDirectory)
+            automatic = summarizeImage(base, directory: payloadDirectory)
         case PanelKind.pdf:
-            return summarizePDF(base, directory: payloadDirectory)
+            automatic = summarizePDF(base, directory: payloadDirectory)
         default:
-            return base
+            automatic = base
         }
+        return applyCustomTitle(automatic, from: record)
+    }
+
+    private static func applyCustomTitle(_ summary: PanelSummary, from record: PanelRecord) -> PanelSummary {
+        var result = summary
+        result.automaticTitle = summary.title
+        result.customTitle = record.customTitle
+        result.title = record.customTitle ?? summary.title
+        return result
     }
 
     private static func fallbackTitle(for kindIdentifier: String) -> String {
