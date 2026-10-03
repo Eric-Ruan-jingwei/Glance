@@ -33,12 +33,13 @@ Tests may override the root with `GLANCE_DATA_ROOT`. Production user data is nev
 
 `Database/panels.json` is UTF-8 JSON.
 
-- Current envelope: `{ "schemaVersion": 4, "workspaces": [ ... ], "panels": [ ... ] }`
-- Schema 3 envelopes are accepted and migrated in one hop to schema 4: missing `customTitle` becomes `nil`. Other panel fields, workspace records, and timestamps are unchanged. The repository rewrites recovered/migrated metadata as schema 4
-- Schema 2 envelopes are accepted and migrated in memory: a Default workspace (`id: "default"`, name `默认`) is created, every existing panel gets `workspaceID: "default"`, and `customTitle` is `nil`. Other panel fields and timestamps are unchanged
-- Schema 1 envelopes are accepted and migrated in one hop to schema 4: missing `isHidden` becomes `false`, missing `workspaceID` becomes `"default"`, `customTitle` is `nil`
-- V0.1 raw arrays of panel objects are still accepted and rewritten as schema 4
-- Envelopes with `schemaVersion` greater than 4 are **rejected**. The file is left untouched; Glance does not quarantine it or write an empty schema 4 database over it
+- Current envelope: `{ "schemaVersion": 5, "workspaces": [ ... ], "panels": [ ... ] }`
+- Schema 4 envelopes are accepted and migrated in one hop to schema 5: missing `tags` becomes `[]`. Other panel fields including `customTitle`, workspace records, and timestamps are unchanged. The repository rewrites recovered/migrated metadata as schema 5
+- Schema 3 envelopes are accepted and migrated in one hop to schema 5: missing `customTitle` becomes `nil`, missing `tags` becomes `[]`. Other panel fields, workspace records, and timestamps are unchanged
+- Schema 2 envelopes are accepted and migrated in memory: a Default workspace (`id: "default"`, name `默认`) is created, every existing panel gets `workspaceID: "default"`, `customTitle` is `nil`, and `tags` is `[]`. Other panel fields and timestamps are unchanged
+- Schema 1 envelopes are accepted and migrated in one hop to schema 5: missing `isHidden` becomes `false`, missing `workspaceID` becomes `"default"`, `customTitle` is `nil`, `tags` is `[]`
+- V0.1 raw arrays of panel objects are still accepted and rewritten as schema 5
+- Envelopes with `schemaVersion` greater than 5 are **rejected**. The file is left untouched; Glance does not quarantine it or write an empty schema 5 database over it
 
 Each panel object stores geometry as **flat** numbers, not a nested `frame` object:
 
@@ -48,9 +49,11 @@ x, y, width, height
 
 These are portable numeric fields, but coordinates are platform/display-layout restoration hints, not a guarantee of pixel-identical placement across operating systems.
 
-Other fields include `id`, `kindIdentifier`, `displayIdentifier`, `isPinned`, `isLocked`, `isCollapsed`, `isPassThrough`, `isHidden`, `workspaceID`, `customTitle`, `opacity`, `themeIdentifier`, `payloadPath`, `payloadVersion`, `createdAt`, `updatedAt`.
+Other fields include `id`, `kindIdentifier`, `displayIdentifier`, `isPinned`, `isLocked`, `isCollapsed`, `isPassThrough`, `isHidden`, `workspaceID`, `customTitle`, `tags`, `opacity`, `themeIdentifier`, `payloadPath`, `payloadVersion`, `createdAt`, `updatedAt`.
 
 `customTitle` is an optional display-name override stored on `PanelRecord`. It is **not** derived from payload content and does not rewrite Text, Markdown, Todo, Image, or PDF files. `nil` (omitted on encode) means the panel uses its automatic, payload-derived title. Blank or whitespace-only values are treated as `nil` on read. User writes reject titles longer than 80 characters; oversized values already on disk are kept so a hand-edited file cannot take the whole database down.
+
+`tags` is a JSON string array on `PanelRecord`. It is lightweight, multi-value metadata for search and Manager filtering. It is **not** a second workspace: a panel still belongs to exactly one workspace, and tags never change `effectiveVisible`. Empty panels encode `"tags": []`. There is no separate tag registry, UUID, color, or `tags.json`. Read path trims, collapses newlines, drops blanks, and case-insensitive-dedupes while keeping first-seen casing and insertion order. User writes reject tags longer than 24 characters and more than 12 tags per panel; oversized values already on disk are kept.
 
 `isHidden` is persistent per-panel visibility. `false` means the panel should be shown unless it belongs to an inactive workspace or Global Hide is active. Global Hide / Show is runtime-only and is **not** stored on `PanelRecord`.
 
@@ -78,6 +81,7 @@ Example panel object:
   "isHidden": false,
   "workspaceID": "default",
   "customTitle": "论文",
+  "tags": ["具身智能", "论文", "必读"],
   "opacity": 1,
   "themeIdentifier": "system",
   "payloadPath": "Panels/0D74D7D4-33F4-4795-A657-D40F456187A7",
@@ -168,7 +172,7 @@ Unknown kinds still restore as metadata so a newer client’s panels are not del
 
 Quick Capture is a transient input window. It is **not** stored in `panels.json`, has no `PanelRecord`, and has no payload directory. Closing it discards the draft.
 
-A successful submit creates a normal Text or Todo panel using the existing payload files (`content.rtf` or `todo.json`). New panels always have `isHidden = false`, `customTitle = nil`, and `workspaceID` equal to the current active workspace (or `default` if that id is missing). `schemaVersion` remains `4`.
+A successful submit creates a normal Text or Todo panel using the existing payload files (`content.rtf` or `todo.json`). New panels always have `isHidden = false`, `customTitle = nil`, `tags = []`, and `workspaceID` equal to the current active workspace (or `default` if that id is missing). `schemaVersion` remains `5`.
 
 ## Panel Library
 
@@ -182,15 +186,15 @@ Custom title    = PanelRecord.customTitle metadata
 Effective title = customTitle ?? automaticTitle
 ```
 
-Search matches the effective title, automatic title, subtitle, and preview. Manager hide/show writes `PanelRecord.isHidden` and updates `updatedAt`. Rename writes `customTitle` only. Global concealment is not reflected as `isHidden` on summaries. Inactive-workspace membership is not shown as `eye.slash`.
+Search matches the effective title, automatic title, subtitle, preview, and tags. Tag filter is exact (case-insensitive) and applies only within the current workspace, together with type and search. Manager hide/show writes `PanelRecord.isHidden` and updates `updatedAt`. Rename writes `customTitle` only. Editing tags writes `tags` only. Global concealment is not reflected as `isHidden` on summaries. Inactive-workspace membership is not shown as `eye.slash`.
 
 ## Panel snap and layout
 
-Edge snap and layout presets are interaction-only. They write the resulting `x` / `y` / `width` / `height` and do not add `isSnapped`, `layoutPreset`, or similar fields. `schemaVersion` remains `4`.
+Edge snap and layout presets are interaction-only. They write the resulting `x` / `y` / `width` / `height` and do not add `isSnapped`, `layoutPreset`, or similar fields. `schemaVersion` remains `5`.
 
 ## Clipboard Capture
 
-Clipboard Capture is a user-triggered one-shot read. It is **not** stored as clipboard history and does not add a `source` field. Capture priority is valid image → valid text → unsupported. A successful capture creates a normal Text (`content.rtf`) or Image (`image.png`) panel with `isHidden = false`, `customTitle = nil`, and `workspaceID` equal to the current active workspace. `schemaVersion` remains `4`.
+Clipboard Capture is a user-triggered one-shot read. It is **not** stored as clipboard history and does not add a `source` field. Capture priority is valid image → valid text → unsupported. A successful capture creates a normal Text (`content.rtf`) or Image (`image.png`) panel with `isHidden = false`, `customTitle = nil`, `tags = []`, and `workspaceID` equal to the current active workspace. `schemaVersion` remains `5`.
 
 ## Future clients
 
