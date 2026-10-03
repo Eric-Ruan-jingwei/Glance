@@ -73,7 +73,7 @@ Clipboard Capture is also not persisted as a separate object. `ClipboardCaptureC
 
 PDF payload files (`document.pdf`, `pdf.json`) are portable. `MacPDFImporter` uses `NSOpenPanel` and PDFKit only to validate and render; it does not write PDFKit archives.
 
-Global shortcut preferences (`ShortcutAction`, `GlanceShortcut`) are app settings, not panel data. They live in `UserDefaults`, outside `panels.json`. `MacShortcutAdapter` maps portable keys onto Carbon virtual key codes, `RegisterEventHotKey`, `NSEvent`, and `NSMenu` key equivalents. The shortcut recorder UI stays on macOS.
+Global shortcut preferences (`ShortcutAction`, `GlanceShortcut`) are app settings, not panel data. They live in `UserDefaults`, outside `panels.json`. `MacShortcutAdapter` maps portable keys onto Carbon virtual key codes, `RegisterEventHotKey`, `NSEvent`, and `NSMenu` key equivalents. The shortcut recorder UI stays on macOS. Recording temporarily suspends the target Carbon hotkey; a successful replace finishes that suspension without a second register, so the new combination can fire immediately. Settings and the status menu show the session’s active registration, not a stale preference snapshot.
 
 ## Future Windows
 

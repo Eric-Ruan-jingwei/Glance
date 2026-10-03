@@ -34,7 +34,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 onSettings: { [weak self] in self?.showSettings() },
                 onManagePanels: { [weak self] in self?.showPanelLibrary() },
                 shortcutSnapshot: { [weak environment] in
-                    environment?.shortcuts.menuShortcuts() ?? ShortcutDefaults.all
+                    environment?.shortcutCoordinator.shortcuts ?? ShortcutDefaults.all
                 }
             )
             statusBar.install()
