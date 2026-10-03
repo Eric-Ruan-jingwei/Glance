@@ -35,7 +35,9 @@ final class StatusBarController: NSObject, NSMenuDelegate {
         StatusMenuBuilder.populate(
             menu,
             allHidden: manager.allHidden,
+            clipboardCaptureEnabled: MacClipboardReader.hasSupportedContent(),
             onQuickCapture: { [weak self] in self?.manager.toggleQuickCapture() },
+            onCaptureClipboard: { [weak self] in self?.manager.captureClipboard() },
             onManagePanels: { [weak self] in self?.onManagePanels() },
             onNewText: { [weak self] in self?.manager.createTextPanel() },
             onNewMarkdown: { [weak self] in self?.manager.createMarkdownPanel() },

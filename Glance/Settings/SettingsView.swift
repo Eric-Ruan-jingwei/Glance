@@ -43,6 +43,13 @@ struct SettingsView: View {
                             .font(.body.monospaced())
                     }
                     HStack {
+                        Text("从剪贴板创建")
+                        Spacer()
+                        Text(GlanceConstants.clipboardCaptureShortcutDisplay)
+                            .foregroundStyle(.secondary)
+                            .font(.body.monospaced())
+                    }
+                    HStack {
                         Text("隐藏 / 显示全部")
                         Spacer()
                         Text(GlanceConstants.hideShowShortcutDisplay)

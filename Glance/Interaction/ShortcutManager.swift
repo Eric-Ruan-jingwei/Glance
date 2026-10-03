@@ -4,15 +4,18 @@ import Foundation
 enum GlanceHotKeyID: UInt32 {
     case hideShow = 1
     case quickCapture = 2
+    case clipboardCapture = 3
 }
 
-/// Registers ⌥⌘G and ⌥⌘J without Accessibility permission.
+/// Registers ⌥⌘G, ⌥⌘J, and ⌥⌘B without Accessibility permission.
 final class ShortcutManager: @unchecked Sendable {
     var onToggleVisibility: (() -> Void)?
     var onQuickCapture: (() -> Void)?
+    var onCaptureClipboard: (() -> Void)?
 
     private var hideShowHotKeyRef: EventHotKeyRef?
     private var quickCaptureHotKeyRef: EventHotKeyRef?
+    private var clipboardCaptureHotKeyRef: EventHotKeyRef?
     private var handlerRef: EventHandlerRef?
 
     func registerDefaults() {
@@ -29,6 +32,12 @@ final class ShortcutManager: @unchecked Sendable {
             id: GlanceHotKeyID.quickCapture,
             displayName: GlanceConstants.quickCaptureShortcutDisplay,
             storage: &quickCaptureHotKeyRef
+        )
+        registerHotKey(
+            virtualKey: UInt32(kVK_ANSI_B),
+            id: GlanceHotKeyID.clipboardCapture,
+            displayName: GlanceConstants.clipboardCaptureShortcutDisplay,
+            storage: &clipboardCaptureHotKeyRef
         )
 
         var spec = EventTypeSpec(eventClass: OSType(kEventClassKeyboard), eventKind: UInt32(kEventHotKeyPressed))
@@ -59,6 +68,10 @@ final class ShortcutManager: @unchecked Sendable {
             UnregisterEventHotKey(quickCaptureHotKeyRef)
             self.quickCaptureHotKeyRef = nil
         }
+        if let clipboardCaptureHotKeyRef {
+            UnregisterEventHotKey(clipboardCaptureHotKeyRef)
+            self.clipboardCaptureHotKeyRef = nil
+        }
     }
 
     fileprivate func handleHotKey(id: UInt32) {
@@ -67,6 +80,8 @@ final class ShortcutManager: @unchecked Sendable {
             onToggleVisibility?()
         case .quickCapture:
             onQuickCapture?()
+        case .clipboardCapture:
+            onCaptureClipboard?()
         case nil:
             break
         }

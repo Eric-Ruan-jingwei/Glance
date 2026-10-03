@@ -15,6 +15,8 @@ enum GlanceConstants {
     static let hideShowKeyEquivalent = "g"
     static let quickCaptureShortcutDisplay = "⌥⌘J"
     static let quickCaptureKeyEquivalent = "j"
+    static let clipboardCaptureShortcutDisplay = "⌥⌘B"
+    static let clipboardCaptureKeyEquivalent = "b"
 
     static var versionDisplay: String {
         let short = (Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String)?

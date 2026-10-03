@@ -50,6 +50,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             environment.shortcuts.onQuickCapture = { [weak capture] in
                 capture?.toggle()
             }
+            environment.shortcuts.onCaptureClipboard = { [weak manager] in
+                manager?.captureClipboard()
+            }
             environment.shortcuts.registerDefaults()
             manager.restoreAll()
         } catch {

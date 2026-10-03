@@ -4,7 +4,9 @@ enum StatusMenuBuilder {
     static func populate(
         _ menu: NSMenu,
         allHidden: Bool,
+        clipboardCaptureEnabled: Bool = true,
         onQuickCapture: @escaping () -> Void,
+        onCaptureClipboard: @escaping () -> Void = {},
         onManagePanels: @escaping () -> Void,
         onNewText: @escaping () -> Void,
         onNewMarkdown: @escaping () -> Void,
@@ -22,6 +24,15 @@ enum StatusMenuBuilder {
                 onQuickCapture,
                 keyEquivalent: GlanceConstants.quickCaptureKeyEquivalent,
                 modifiers: [.option, .command]
+            )
+        )
+        menu.addItem(
+            actionItem(
+                "从剪贴板创建…",
+                onCaptureClipboard,
+                keyEquivalent: GlanceConstants.clipboardCaptureKeyEquivalent,
+                modifiers: [.option, .command],
+                enabled: clipboardCaptureEnabled
             )
         )
         menu.addItem(.separator())
@@ -49,12 +60,14 @@ enum StatusMenuBuilder {
         _ title: String,
         _ handler: @escaping () -> Void,
         keyEquivalent: String = "",
-        modifiers: NSEvent.ModifierFlags = []
+        modifiers: NSEvent.ModifierFlags = [],
+        enabled: Bool = true
     ) -> NSMenuItem {
         let item = NSMenuItem(title: title, action: nil, keyEquivalent: keyEquivalent)
         if !keyEquivalent.isEmpty {
             item.keyEquivalentModifierMask = modifiers
         }
+        item.isEnabled = enabled
         item.representedObject = ClosureBox(handler)
         item.target = MenuActionRelay.shared
         item.action = #selector(MenuActionRelay.invoke(_:))
