@@ -106,6 +106,10 @@ Quick Capture is a transient input window. It is **not** stored in `panels.json`
 
 A successful submit creates a normal Text or Todo panel using the existing payload files (`content.rtf` or `todo.json`). `schemaVersion` remains `1`.
 
+## Panel Library
+
+The Panel Manager / Library window is a derived view of existing metadata and payloads. It is **not** stored in `panels.json` and does not add a `title` field. Summaries are rebuilt at runtime.
+
 ## Future clients
 
 Any future Windows (or other) client should read and write this JSON + RTF + Markdown + Todo JSON + PNG layout. Windowing, shortcuts, and tray code are platform-specific; the files are not.

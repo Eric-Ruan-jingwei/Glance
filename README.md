@@ -15,17 +15,19 @@ There is no Windows client yet. Shared data contracts are documented so a future
 - Local-first
 - Text, Markdown, Todo, and images
 - Quick Capture from any app
+- Panel Manager
 - No account
 - No cloud
 - Open source
 
-## V0.5 已支持
+## V0.6 已支持
 
 - Text panel
 - Markdown panel (rendered preview, double-click to edit raw UTF-8 `.md`)
 - Todo panel (interactive checklist with inline add/edit/complete/delete)
 - Image panel
 - Quick Capture (`⌥⌘J`) — capture text or a Todo without first creating an empty panel
+- Panel Manager — browse, search, reveal, and delete existing panels from one place
 - Always on top
 - Lock
 - Click-through
@@ -44,6 +46,8 @@ Status-item menu:
 
 ```text
 快速记录…              ⌥⌘J
+────────────
+管理面板…
 ────────────
 新建文字面板
 新建 Markdown 面板
@@ -67,6 +71,12 @@ The Dock icon is hidden. There is no traditional main window.
 - Empty or whitespace-only input does not create a panel.
 - `Escape` or a click outside capture closes it and drops the draft.
 - If Glance is globally hidden (`⌥⌘G`), capture still appears. A submitted panel is created but stays hidden until you show all panels again.
+
+### Panel Manager
+
+`管理面板…` opens a regular macOS window (not a floating panel). It is not stored in `panels.json`. Browse panels, filter by type, search titles, bring a panel forward, or delete it with the same confirmation as the panel menu. Titles are derived from existing payload content; there is no separate rename field.
+
+If all floating panels are hidden with `⌥⌘G`, the manager stays visible. Revealing one panel from the manager shows only that panel and does not turn Show All back on.
 
 ### Panel control
 
