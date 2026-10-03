@@ -23,6 +23,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var panelLibrary: PanelLibraryWindowController?
     private var quickCapture: QuickCaptureWindowController?
     private var clipboardWindow: ClipboardHistoryWindowController?
+    private var fileShelfWindow: FileShelfWindowController?
     private var guideWindow: GuideWindowController?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -37,6 +38,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 onManagePanels: { [weak self] in self?.showPanelLibrary() },
                 onOpenGuide: { [weak self] in self?.showGuide() },
                 onShowClipboardHistory: { [weak self] in self?.toggleClipboardHistory() },
+                onShowFileShelf: { [weak self] in self?.toggleFileShelf() },
                 shortcutSnapshot: { [weak environment] in
                     environment?.shortcutCoordinator.shortcuts ?? ShortcutDefaults.all
                 }
@@ -62,6 +64,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
             environment.shortcuts.onShowClipboardHistory = { [weak self] in
                 self?.toggleClipboardHistory()
+            }
+            environment.shortcuts.onShowFileShelf = { [weak self] in
+                self?.toggleFileShelf()
             }
             environment.shortcutCoordinator.start()
             environment.startClipboardMonitoringIfNeeded()
@@ -118,6 +123,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             clipboardWindow = window
         }
         clipboardWindow?.toggle()
+    }
+
+    private func toggleFileShelf() {
+        guard let environment else { return }
+        if fileShelfWindow == nil {
+            fileShelfWindow = FileShelfWindowController(service: environment.fileShelfService)
+        }
+        fileShelfWindow?.toggle()
     }
 
     private func showSettings() {

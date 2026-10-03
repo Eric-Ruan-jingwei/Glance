@@ -17,6 +17,8 @@ final class AppEnvironment {
     let clipboardHistoryStore: ClipboardHistoryStore
     let clipboardHistoryService: ClipboardHistoryService
     let clipboardHistoryMonitor: ClipboardHistoryMonitor
+    let fileShelfStore: FileShelfStore
+    let fileShelfService: FileShelfService
 
     weak var panelManager: PanelManager?
 
@@ -67,6 +69,14 @@ final class AppEnvironment {
         self.clipboardHistoryStore = clipboardStore
         self.clipboardHistoryService = clipboardService
         self.clipboardHistoryMonitor = clipboardMonitor
+        let fileShelfStore = FileShelfStore(
+            root: root.appendingPathComponent("FileShelf", isDirectory: true)
+        )
+        self.fileShelfStore = fileShelfStore
+        self.fileShelfService = FileShelfService(
+            store: fileShelfStore,
+            bookmarks: MacFileReferenceAdapter.shared
+        )
     }
 
     func startClipboardMonitoringIfNeeded() {

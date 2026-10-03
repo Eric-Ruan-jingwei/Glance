@@ -30,6 +30,12 @@ enum GlanceConstants {
     static var clipboardHistoryKeyEquivalent: String {
         ShortcutDisplayFormatter.keyEquivalent(ShortcutDefaults.clipboardHistory)
     }
+    static var fileShelfShortcutDisplay: String {
+        ShortcutDisplayFormatter.display(ShortcutDefaults.fileShelf)
+    }
+    static var fileShelfKeyEquivalent: String {
+        ShortcutDisplayFormatter.keyEquivalent(ShortcutDefaults.fileShelf)
+    }
     static var clipboardCaptureShortcutDisplay: String {
         ShortcutDisplayFormatter.display(ShortcutDefaults.clipboardCapture)
     }
@@ -64,6 +70,7 @@ enum GlanceConstants {
     static let panelDragStrip: CGFloat = GlanceTheme.Size.panelChromeHeight
     static let quickCaptureSize = NSSize(width: 520, height: 168)
     static let clipboardHistorySize = NSSize(width: 520, height: 420)
+    static let fileShelfSize = NSSize(width: 560, height: 440)
 
     static let frameSaveDelay: TimeInterval = 0.25
     static let textSaveDelay: TimeInterval = 0.4

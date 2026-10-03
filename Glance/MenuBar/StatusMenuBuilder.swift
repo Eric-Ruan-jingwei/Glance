@@ -8,6 +8,7 @@ enum StatusMenuBuilder {
         workspaces: [WorkspaceMenuItem] = [],
         onQuickCapture: @escaping () -> Void,
         onShowClipboardHistory: @escaping () -> Void = {},
+        onShowFileShelf: @escaping () -> Void = {},
         onCaptureClipboard: @escaping () -> Void = {},
         onSelectWorkspace: @escaping (String) -> Void = { _ in },
         onCreateWorkspace: @escaping () -> Void = {},
@@ -29,6 +30,7 @@ enum StatusMenuBuilder {
 
         let quickCapture = shortcuts[.quickCapture] ?? ShortcutDefaults.quickCapture
         let clipboardHistory = shortcuts[.clipboardHistory] ?? ShortcutDefaults.clipboardHistory
+        let fileShelf = shortcuts[.fileShelf] ?? ShortcutDefaults.fileShelf
 
         menu.addItem(
             actionItem(
@@ -47,6 +49,15 @@ enum StatusMenuBuilder {
                 symbol: "list.clipboard",
                 keyEquivalent: ShortcutDisplayFormatter.keyEquivalent(clipboardHistory),
                 modifiers: MacShortcutAdapter.menuModifierMask(for: clipboardHistory)
+            )
+        )
+        menu.addItem(
+            actionItem(
+                "文件架…",
+                onShowFileShelf,
+                symbol: "tray",
+                keyEquivalent: ShortcutDisplayFormatter.keyEquivalent(fileShelf),
+                modifiers: MacShortcutAdapter.menuModifierMask(for: fileShelf)
             )
         )
         menu.addItem(
