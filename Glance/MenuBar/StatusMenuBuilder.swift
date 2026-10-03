@@ -7,6 +7,7 @@ enum StatusMenuBuilder {
         clipboardCaptureEnabled: Bool = true,
         workspaces: [WorkspaceMenuItem] = [],
         onQuickCapture: @escaping () -> Void,
+        onShowGlobalSearch: @escaping () -> Void = {},
         onShowClipboardHistory: @escaping () -> Void = {},
         onShowFileShelf: @escaping () -> Void = {},
         onShowSnippets: @escaping () -> Void = {},
@@ -31,6 +32,7 @@ enum StatusMenuBuilder {
         menu.removeAllItems()
 
         let quickCapture = shortcuts[.quickCapture] ?? ShortcutDefaults.quickCapture
+        let globalSearch = shortcuts[.globalSearch] ?? ShortcutDefaults.globalSearch
         let clipboardHistory = shortcuts[.clipboardHistory] ?? ShortcutDefaults.clipboardHistory
         let fileShelf = shortcuts[.fileShelf] ?? ShortcutDefaults.fileShelf
         let snippets = shortcuts[.snippets] ?? ShortcutDefaults.snippets
@@ -43,6 +45,15 @@ enum StatusMenuBuilder {
                 symbol: "square.and.pencil",
                 keyEquivalent: ShortcutDisplayFormatter.keyEquivalent(quickCapture),
                 modifiers: MacShortcutAdapter.menuModifierMask(for: quickCapture)
+            )
+        )
+        menu.addItem(
+            actionItem(
+                "搜索 Glance…",
+                onShowGlobalSearch,
+                symbol: "magnifyingglass",
+                keyEquivalent: ShortcutDisplayFormatter.keyEquivalent(globalSearch),
+                modifiers: MacShortcutAdapter.menuModifierMask(for: globalSearch)
             )
         )
         menu.addItem(.separator())

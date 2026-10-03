@@ -48,6 +48,12 @@ enum GlanceConstants {
     static var linksKeyEquivalent: String {
         ShortcutDisplayFormatter.keyEquivalent(ShortcutDefaults.links)
     }
+    static var globalSearchShortcutDisplay: String {
+        ShortcutDisplayFormatter.display(ShortcutDefaults.globalSearch)
+    }
+    static var globalSearchKeyEquivalent: String {
+        ShortcutDisplayFormatter.keyEquivalent(ShortcutDefaults.globalSearch)
+    }
     static var clipboardCaptureShortcutDisplay: String {
         ShortcutDisplayFormatter.display(ShortcutDefaults.clipboardCapture)
     }
@@ -85,6 +91,7 @@ enum GlanceConstants {
     static let fileShelfSize = NSSize(width: 560, height: 440)
     static let snippetLibrarySize = NSSize(width: 560, height: 460)
     static let linkLibrarySize = NSSize(width: 560, height: 460)
+    static let globalSearchSize = NSSize(width: 640, height: 480)
 
     static let frameSaveDelay: TimeInterval = 0.25
     static let textSaveDelay: TimeInterval = 0.4

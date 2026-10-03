@@ -2,6 +2,7 @@ import Foundation
 
 enum ShortcutAction: String, CaseIterable, Equatable {
     case quickCapture
+    case globalSearch
     case clipboardHistory
     case fileShelf
     case snippets
@@ -12,6 +13,7 @@ enum ShortcutAction: String, CaseIterable, Equatable {
     var title: String {
         switch self {
         case .quickCapture: return "快速记录"
+        case .globalSearch: return "搜索 Glance"
         case .clipboardHistory: return "剪贴板"
         case .fileShelf: return "文件架"
         case .snippets: return "片段库"
@@ -77,6 +79,13 @@ enum ShortcutDefaults {
         control: false,
         shift: false
     )
+    static let globalSearch = GlanceShortcut(
+        key: "k",
+        command: true,
+        option: true,
+        control: false,
+        shift: false
+    )
     static let clipboardHistory = GlanceShortcut(
         key: "v",
         command: true,
@@ -123,6 +132,7 @@ enum ShortcutDefaults {
     static func shortcut(for action: ShortcutAction) -> GlanceShortcut {
         switch action {
         case .quickCapture: return quickCapture
+        case .globalSearch: return globalSearch
         case .clipboardHistory: return clipboardHistory
         case .fileShelf: return fileShelf
         case .snippets: return snippets

@@ -26,6 +26,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var fileShelfWindow: FileShelfWindowController?
     private var snippetWindow: SnippetLibraryWindowController?
     private var linkWindow: LinkLibraryWindowController?
+    private var searchWindow: GlobalSearchWindowController?
     private var guideWindow: GuideWindowController?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -43,6 +44,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 onShowFileShelf: { [weak self] in self?.toggleFileShelf() },
                 onShowSnippets: { [weak self] in self?.toggleSnippets() },
                 onShowLinks: { [weak self] in self?.toggleLinks() },
+                onShowGlobalSearch: { [weak self] in self?.toggleGlobalSearch() },
                 shortcutSnapshot: { [weak environment] in
                     environment?.shortcutCoordinator.shortcuts ?? ShortcutDefaults.all
                 }
@@ -77,6 +79,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
             environment.shortcuts.onShowLinks = { [weak self] in
                 self?.toggleLinks()
+            }
+            environment.shortcuts.onShowGlobalSearch = { [weak self] in
+                self?.toggleGlobalSearch()
             }
             environment.shortcutCoordinator.start()
             environment.startClipboardMonitoringIfNeeded()
@@ -189,6 +194,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             clipboardWindow?.dismiss()
         }
         linkWindow?.presentEditor(prefilledURL: url)
+    }
+
+    private func toggleGlobalSearch() {
+        guard let environment, let panelManager else { return }
+        if searchWindow == nil {
+            searchWindow = GlobalSearchWindowController(
+                environment: environment,
+                panelManager: panelManager
+            )
+        }
+        searchWindow?.toggle()
     }
 
     private func toggleFileShelf() {

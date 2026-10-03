@@ -10,6 +10,7 @@ final class StatusBarController: NSObject, NSMenuDelegate {
     private let onShowFileShelf: () -> Void
     private let onShowSnippets: () -> Void
     private let onShowLinks: () -> Void
+    private let onShowGlobalSearch: () -> Void
     private let shortcutSnapshot: () -> [ShortcutAction: GlanceShortcut]
     private var statusItem: NSStatusItem?
 
@@ -22,6 +23,7 @@ final class StatusBarController: NSObject, NSMenuDelegate {
         onShowFileShelf: @escaping () -> Void = {},
         onShowSnippets: @escaping () -> Void = {},
         onShowLinks: @escaping () -> Void = {},
+        onShowGlobalSearch: @escaping () -> Void = {},
         shortcutSnapshot: @escaping () -> [ShortcutAction: GlanceShortcut] = { ShortcutDefaults.all }
     ) {
         self.manager = manager
@@ -32,6 +34,7 @@ final class StatusBarController: NSObject, NSMenuDelegate {
         self.onShowFileShelf = onShowFileShelf
         self.onShowSnippets = onShowSnippets
         self.onShowLinks = onShowLinks
+        self.onShowGlobalSearch = onShowGlobalSearch
         self.shortcutSnapshot = shortcutSnapshot
     }
 
@@ -56,6 +59,7 @@ final class StatusBarController: NSObject, NSMenuDelegate {
             clipboardCaptureEnabled: MacClipboardReader.hasSupportedContent(),
             workspaces: manager.workspaceMenuItems(),
             onQuickCapture: { [weak self] in self?.manager.toggleQuickCapture() },
+            onShowGlobalSearch: { [weak self] in self?.onShowGlobalSearch() },
             onShowClipboardHistory: { [weak self] in self?.onShowClipboardHistory() },
             onShowFileShelf: { [weak self] in self?.onShowFileShelf() },
             onShowSnippets: { [weak self] in self?.onShowSnippets() },

@@ -9,6 +9,7 @@ enum GlanceHotKeyID: UInt32 {
     case fileShelf = 5
     case snippets = 6
     case links = 7
+    case globalSearch = 8
 }
 
 final class CarbonHotKeyRegistrar: HotKeyRegistering {
@@ -54,6 +55,7 @@ final class ShortcutManager: @unchecked Sendable {
     var onShowFileShelf: (() -> Void)?
     var onShowSnippets: (() -> Void)?
     var onShowLinks: (() -> Void)?
+    var onShowGlobalSearch: (() -> Void)?
 
     private let registrar: HotKeyRegistering
     private let bindSystemHandler: Bool
@@ -192,6 +194,8 @@ final class ShortcutManager: @unchecked Sendable {
             onShowSnippets?()
         case .links:
             onShowLinks?()
+        case .globalSearch:
+            onShowGlobalSearch?()
         }
     }
 
@@ -216,6 +220,7 @@ final class ShortcutManager: @unchecked Sendable {
         case .fileShelf: return GlanceHotKeyID.fileShelf.rawValue
         case .snippets: return GlanceHotKeyID.snippets.rawValue
         case .links: return GlanceHotKeyID.links.rawValue
+        case .globalSearch: return GlanceHotKeyID.globalSearch.rawValue
         }
     }
 
@@ -228,6 +233,7 @@ final class ShortcutManager: @unchecked Sendable {
         case .fileShelf: return .fileShelf
         case .snippets: return .snippets
         case .links: return .links
+        case .globalSearch: return .globalSearch
         case nil: return nil
         }
     }
