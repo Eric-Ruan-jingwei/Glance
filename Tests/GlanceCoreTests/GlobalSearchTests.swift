@@ -196,8 +196,12 @@ final class GlobalSearchRankingTests: XCTestCase {
         XCTAssertEqual(GlobalSearchActionPolicy.action(keyCode: 126), .moveSelection(-1))
         XCTAssertEqual(GlobalSearchActionPolicy.action(keyCode: 125), .moveSelection(1))
         XCTAssertEqual(GlobalSearchActionPolicy.action(keyCode: 36), .activate)
+        XCTAssertEqual(GlobalSearchActionPolicy.action(keyCode: 36, command: true), .revealInSource)
+        XCTAssertEqual(GlobalSearchActionPolicy.action(keyCode: 76, command: true), .revealInSource)
         XCTAssertEqual(GlobalSearchActionPolicy.action(keyCode: 53), .dismiss)
         XCTAssertNil(GlobalSearchActionPolicy.action(keyCode: 18))
+        XCTAssertEqual(GlobalSearchCopy.revealHint, "⌘↩ 在来源中显示")
+        XCTAssertEqual(GlobalSearchCopy.actHint, "↩ 执行")
     }
 }
 

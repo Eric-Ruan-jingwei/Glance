@@ -54,6 +54,11 @@ final class ShortcutPreferencesTests: XCTestCase {
         XCTAssertEqual(Set(defaults).count, defaults.count)
     }
 
+    func testDefaultShortcutsAreUnique() {
+        let shortcuts = ShortcutAction.allCases.map { ShortcutDefaults.shortcut(for: $0) }
+        XCTAssertEqual(Set(shortcuts).count, shortcuts.count)
+    }
+
     func testCodableRoundTrip() throws {
         let data = try JSONEncoder().encode(controlOptionK)
         let decoded = try JSONDecoder().decode(GlanceShortcut.self, from: data)
