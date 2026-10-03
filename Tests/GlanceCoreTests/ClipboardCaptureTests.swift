@@ -78,13 +78,32 @@ final class ClipboardCaptureTests: XCTestCase {
         XCTAssertNil(MacClipboardReader.read(pasteboard))
     }
 
-    func testUnreadableImageTypeDoesNotFallBackToText() {
-        let pasteboard = NSPasteboard.withUniqueName()
-        pasteboard.clearContents()
-        pasteboard.declareTypes([.tiff, .string], owner: nil)
+    func testUnreadableImageFallsBackToValidText() {
+        let pasteboard = isolatedPasteboard(types: [.tiff, .string])
         pasteboard.setData(Data([0x00, 0x01]), forType: .tiff)
         pasteboard.setString("hello", forType: .string)
         XCTAssertTrue(MacClipboardReader.hasImageType(pasteboard))
+        XCTAssertEqual(MacClipboardReader.read(pasteboard), .text("hello"))
+    }
+
+    func testUnreadableImageFallsBackToOriginalTextIncludingWhitespace() {
+        let pasteboard = isolatedPasteboard(types: [.tiff, .string])
+        pasteboard.setData(Data([0x00, 0x01]), forType: .tiff)
+        pasteboard.setString("  hello\nworld  ", forType: .string)
+        XCTAssertEqual(MacClipboardReader.read(pasteboard), .text("  hello\nworld  "))
+    }
+
+    func testUnreadableImageAndNoTextIsUnsupported() {
+        let pasteboard = isolatedPasteboard(types: [.tiff])
+        pasteboard.setData(Data([0x00, 0x01]), forType: .tiff)
+        XCTAssertTrue(MacClipboardReader.hasSupportedContent(pasteboard))
+        XCTAssertNil(MacClipboardReader.read(pasteboard))
+    }
+
+    func testUnreadableImageAndWhitespaceTextIsUnsupported() {
+        let pasteboard = isolatedPasteboard(types: [.tiff, .string])
+        pasteboard.setData(Data([0x00, 0x01]), forType: .tiff)
+        pasteboard.setString("   \n ", forType: .string)
         XCTAssertNil(MacClipboardReader.read(pasteboard))
     }
 
@@ -110,6 +129,13 @@ final class ClipboardCaptureTests: XCTestCase {
         XCTAssertEqual(item?.keyEquivalent, "b")
         XCTAssertEqual(item?.keyEquivalentModifierMask, [.option, .command])
         XCTAssertEqual(item?.isEnabled, false)
+    }
+
+    private func isolatedPasteboard(types: [NSPasteboard.PasteboardType]) -> NSPasteboard {
+        let pasteboard = NSPasteboard.withUniqueName()
+        pasteboard.clearContents()
+        pasteboard.declareTypes(types, owner: nil)
+        return pasteboard
     }
 }
 
