@@ -10,14 +10,14 @@ enum MacFileShelfActions {
     }
 
     static func reveal(path: String) {
-        withAccess(path) { url in
+        _ = withAccess(path) { url in
             NSWorkspace.shared.activateFileViewerSelecting([url])
             return true
         }
     }
 
     static func copyFile(path: String) {
-        withAccess(path) { url in
+        _ = withAccess(path) { url in
             let pasteboard = NSPasteboard.general
             pasteboard.clearContents()
             return pasteboard.writeObjects([url as NSURL])
