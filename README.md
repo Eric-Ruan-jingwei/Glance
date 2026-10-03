@@ -33,6 +33,10 @@ There is no Windows client yet. Shared data contracts are documented so a future
 - No cloud
 - Open source
 
+## V0.18.9
+
+Text checklist circles match the body type size.
+
 ## V0.18.8
 
 Text checklist marks are circles. Completing an item grays the circle and draws a thicker strikethrough.
