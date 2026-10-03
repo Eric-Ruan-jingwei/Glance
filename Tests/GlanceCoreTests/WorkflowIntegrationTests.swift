@@ -448,8 +448,44 @@ final class WorkflowIntegrationTests: XCTestCase {
         XCTAssertTrue(model.selectForReveal(target))
         XCTAssertEqual(model.selectedWorkspaceID, "project")
         XCTAssertEqual(model.selectedPanelIDs, [target])
+        XCTAssertEqual(model.pendingScrollID, target)
         XCTAssertEqual(model.query, "")
         XCTAssertTrue(switched.isEmpty)
+    }
+
+    func testUtilityWindowToggleBringsForwardWhenVisibleButNotKey() {
+        XCTAssertEqual(
+            UtilityWindowPresentation.toggleAction(isVisible: false, isKey: false),
+            .present
+        )
+        XCTAssertEqual(
+            UtilityWindowPresentation.toggleAction(isVisible: true, isKey: true),
+            .dismiss
+        )
+        XCTAssertEqual(
+            UtilityWindowPresentation.toggleAction(isVisible: true, isKey: false),
+            .bringForward
+        )
+    }
+
+    func testFileShelfPathCopyAdoptsClipboardMonitor() {
+        let pasteboard = NSPasteboard.withUniqueName()
+        let monitor = ClipboardHistoryMonitor(pasteboard: pasteboard, interval: 30, isEnabled: { true })
+        var captured = 0
+        monitor.onCapture = { _ in captured += 1 }
+        monitor.start(baselineChangeCount: pasteboard.changeCount)
+        let writer = GlanceClipboardWriter(monitor: monitor, pasteboard: pasteboard)
+        XCTAssertTrue(writer.write(.text("/tmp/report.pdf")))
+        monitor.tick()
+        XCTAssertEqual(captured, 0)
+        XCTAssertEqual(pasteboard.string(forType: .string), "/tmp/report.pdf")
+        writer.adoptCurrent()
+        pasteboard.clearContents()
+        pasteboard.writeObjects([URL(fileURLWithPath: "/tmp/report.pdf") as NSURL])
+        writer.adoptCurrent()
+        monitor.tick()
+        XCTAssertEqual(captured, 0)
+        monitor.stop()
     }
 
     func testWindowHandoffDoesNotDeactivateWhenOpeningGlanceSource() {

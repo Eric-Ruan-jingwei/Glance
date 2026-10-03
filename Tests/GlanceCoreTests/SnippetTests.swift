@@ -353,6 +353,24 @@ final class SnippetStoreAndServiceTests: XCTestCase {
         try FileManager.default.removeItem(at: appRoot)
     }
 
+    func testQuarantineFailureLeavesCorruptSnippetsUntouched() throws {
+        enum MoveFailure: Error { case denied }
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("GlanceSnippets-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let original = Data("{".utf8)
+        let metadata = root.appendingPathComponent("snippets.json")
+        try original.write(to: metadata)
+        let store = SnippetStore(root: root, moveItem: { _, _ in throw MoveFailure.denied })
+        XCTAssertTrue(store.load().isEmpty)
+        XCTAssertEqual(store.lastLoadOutcome, .corruptUnquarantined)
+        XCTAssertFalse(store.isWritable)
+        XCTAssertEqual(try Data(contentsOf: metadata), original)
+        XCTAssertThrowsError(try store.save([]))
+        XCTAssertEqual(try Data(contentsOf: metadata), original)
+    }
+
     func testWhitespaceOnlyCreateIsRejected() throws {
         let harness = try makeHarness()
         defer { harness.cleanup() }

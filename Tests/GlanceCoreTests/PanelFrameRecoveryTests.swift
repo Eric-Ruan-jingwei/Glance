@@ -27,7 +27,14 @@ final class PanelFrameRecoveryTests: XCTestCase {
         XCTAssertFalse(recovered.migrated)
     }
 
-    func testClampLeft() {
+    func testPartiallyVisibleUsableFrameIsNotMoved() {
+        let frame = PanelFrame(x: 100, y: -80, width: 320, height: 220)
+        let recovered = PanelFrameRecovery.recover(frame: frame, displayIdentifier: "main", displays: [main])
+        XCTAssertEqual(recovered.frame, frame)
+        XCTAssertFalse(recovered.migrated)
+    }
+
+    func testFullyOffscreenMovesOnscreenPreservingSize() {
         let recovered = PanelFrameRecovery.recover(
             frame: PanelFrame(x: -400, y: 100, width: 320, height: 220),
             displayIdentifier: "main",
@@ -35,33 +42,28 @@ final class PanelFrameRecoveryTests: XCTestCase {
         )
         XCTAssertEqual(recovered.frame.x, 0)
         XCTAssertEqual(recovered.frame.y, 100)
+        XCTAssertEqual(recovered.frame.width, 320)
+        XCTAssertEqual(recovered.frame.height, 220)
     }
 
-    func testClampRight() {
+    func testAlmostUnusableRightEdgeIsRecovered() {
         let recovered = PanelFrameRecovery.recover(
             frame: PanelFrame(x: 1400, y: 100, width: 320, height: 220),
             displayIdentifier: "main",
             displays: [main]
         )
         XCTAssertEqual(recovered.frame.maxX, main.visibleFrame.maxX)
+        XCTAssertEqual(recovered.frame.width, 320)
     }
 
-    func testClampTop() {
+    func testAlmostUnusableTopEdgeIsRecovered() {
         let recovered = PanelFrameRecovery.recover(
             frame: PanelFrame(x: 100, y: 880, width: 320, height: 220),
             displayIdentifier: "main",
             displays: [main]
         )
         XCTAssertEqual(recovered.frame.maxY, main.visibleFrame.maxY)
-    }
-
-    func testClampBottom() {
-        let recovered = PanelFrameRecovery.recover(
-            frame: PanelFrame(x: 100, y: -80, width: 320, height: 220),
-            displayIdentifier: "main",
-            displays: [main]
-        )
-        XCTAssertEqual(recovered.frame.y, 0)
+        XCTAssertEqual(recovered.frame.height, 220)
     }
 
     func testPanelLargerThanVisibleFrame() {
@@ -76,22 +78,31 @@ final class PanelFrameRecoveryTests: XCTestCase {
         XCTAssertEqual(recovered.frame.y, main.visibleFrame.y)
     }
 
-    func testMissingDisplayMigratesToMain() {
+    func testMissingDisplayKeepsFrameIfStillOperableOnMain() {
+        let frame = PanelFrame(x: 50, y: 50, width: 320, height: 220)
         let recovered = PanelFrameRecovery.recover(
-            frame: PanelFrame(x: 50, y: 50, width: 320, height: 220),
+            frame: frame,
             displayIdentifier: "gone",
             displays: [main, left]
         )
         XCTAssertTrue(recovered.migrated)
         XCTAssertEqual(recovered.displayIdentifier, "main")
-        XCTAssertEqual(
-            recovered.frame.x,
-            main.visibleFrame.maxX - 320 - GlanceLayout.spawnMargin
+        XCTAssertEqual(recovered.frame, frame)
+    }
+
+    func testUnpluggedDisplayOffscreenFrameMovesOntoMain() {
+        let recovered = PanelFrameRecovery.recover(
+            frame: PanelFrame(x: -4000, y: 40, width: 320, height: 220),
+            displayIdentifier: "gone",
+            displays: [main]
         )
-        XCTAssertEqual(
-            recovered.frame.y,
-            main.visibleFrame.maxY - 220 - GlanceLayout.spawnMargin
-        )
+        XCTAssertTrue(recovered.migrated)
+        XCTAssertEqual(recovered.displayIdentifier, "main")
+        XCTAssertEqual(recovered.frame.width, 320)
+        XCTAssertEqual(recovered.frame.height, 220)
+        XCTAssertEqual(recovered.frame.x, main.visibleFrame.minX)
+        XCTAssertGreaterThanOrEqual(recovered.frame.y, main.visibleFrame.minY)
+        XCTAssertLessThanOrEqual(recovered.frame.maxY, main.visibleFrame.maxY)
     }
 
     func testNegativeCoordinateSecondDisplay() {
@@ -104,5 +115,6 @@ final class PanelFrameRecoveryTests: XCTestCase {
         XCTAssertEqual(recovered.displayIdentifier, "left")
         XCTAssertEqual(recovered.frame.x, left.visibleFrame.minX)
         XCTAssertEqual(recovered.frame.y, 40)
+        XCTAssertEqual(recovered.frame.width, 320)
     }
 }

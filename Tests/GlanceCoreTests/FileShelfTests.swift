@@ -318,6 +318,71 @@ final class FileShelfStoreAndServiceTests: XCTestCase {
         XCTAssertTrue(FileManager.default.fileExists(atPath: file.path))
     }
 
+    func testRelinkMetadataSaveFailureRestoresPreviousRecordAndBookmark() throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("GlanceFileShelf-\(UUID().uuidString)", isDirectory: true)
+        var failSave = false
+        let store = FileShelfStore(root: root, writePrimaryMetadata: { data, url in
+            if failSave { throw FileShelfStoreError.writeFailed }
+            try data.write(to: url, options: .atomic)
+        })
+        let bookmarks = FakeFileShelfBookmarks()
+        let service = FileShelfService(store: store, bookmarks: bookmarks)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let original = root.appendingPathComponent("files/old.txt")
+        let replacement = root.appendingPathComponent("files/new.txt")
+        try FileManager.default.createDirectory(at: original.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try Data("old".utf8).write(to: original)
+        try Data("new".utf8).write(to: replacement)
+        let id = try XCTUnwrap(service.add(paths: [original.path]).addedIDs.first)
+        let previousBookmark = try XCTUnwrap(store.readBookmark(id: id))
+        failSave = true
+        XCTAssertFalse(service.relink(id: id, to: replacement.path))
+        let record = try XCTUnwrap(service.records.first)
+        XCTAssertEqual(record.id, id)
+        XCTAssertEqual(record.displayName, "old.txt")
+        XCTAssertEqual(store.readBookmark(id: id), previousBookmark)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: original.path))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: replacement.path))
+    }
+
+    func testFavoriteSaveFailureRestoresMemory() throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("GlanceFileShelf-\(UUID().uuidString)", isDirectory: true)
+        var failSave = false
+        let store = FileShelfStore(root: root, writePrimaryMetadata: { data, url in
+            if failSave { throw FileShelfStoreError.writeFailed }
+            try data.write(to: url, options: .atomic)
+        })
+        let service = FileShelfService(store: store, bookmarks: FakeFileShelfBookmarks())
+        defer { try? FileManager.default.removeItem(at: root) }
+        let file = root.appendingPathComponent("files/keep.txt")
+        try FileManager.default.createDirectory(at: file.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try Data("keep".utf8).write(to: file)
+        let id = try XCTUnwrap(service.add(paths: [file.path]).addedIDs.first)
+        failSave = true
+        service.toggleFavorite(id: id)
+        XCTAssertFalse(service.records[0].isFavorite)
+    }
+
+    func testQuarantineFailureLeavesCorruptShelfUntouched() throws {
+        enum MoveFailure: Error { case denied }
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("GlanceFileShelf-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let original = Data("{".utf8)
+        let metadata = root.appendingPathComponent("shelf.json")
+        try original.write(to: metadata)
+        let store = FileShelfStore(root: root, moveItem: { _, _ in throw MoveFailure.denied })
+        XCTAssertTrue(store.load().isEmpty)
+        XCTAssertEqual(store.lastLoadOutcome, .corruptUnquarantined)
+        XCTAssertFalse(store.isWritable)
+        XCTAssertEqual(try Data(contentsOf: metadata), original)
+        XCTAssertThrowsError(try store.save([]))
+        XCTAssertEqual(try Data(contentsOf: metadata), original)
+    }
+
     func testStaleBookmarkRefreshWritesSidecar() throws {
         let harness = try makeHarness()
         defer { harness.cleanup() }

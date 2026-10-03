@@ -212,6 +212,21 @@ final class GlobalSearchActionTests: XCTestCase {
         } else {
             XCTFail("clipboard should run")
         }
+        if case .run(_, let deactivate) = GlobalSearchActionPlanner.plan(source: .snippets, globallyConcealed: false) {
+            XCTAssertTrue(deactivate)
+        } else {
+            XCTFail("snippets should run")
+        }
+        if case .run(_, let deactivate) = GlobalSearchActionPlanner.plan(source: .fileShelf, globallyConcealed: false) {
+            XCTAssertFalse(deactivate)
+        } else {
+            XCTFail("file shelf should run")
+        }
+        if case .run(_, let deactivate) = GlobalSearchActionPlanner.plan(source: .links, globallyConcealed: false) {
+            XCTAssertFalse(deactivate)
+        } else {
+            XCTFail("links should run")
+        }
         if case .run(_, let deactivate) = GlobalSearchActionPlanner.plan(source: .panels, globallyConcealed: false) {
             XCTAssertFalse(deactivate)
         } else {
@@ -220,6 +235,10 @@ final class GlobalSearchActionTests: XCTestCase {
         XCTAssertEqual(
             GlobalSearchActionPlanner.plan(source: .panels, globallyConcealed: true),
             .fail(GlobalSearchCopy.globallyHidden)
+        )
+        XCTAssertEqual(
+            GlobalSearchActionPlanner.plan(source: .links, globallyConcealed: false),
+            .run(.openLink, deactivateApp: UtilityWindowHandoffPolicy.afterPrimarySearchAction(source: .links).shouldDeactivate)
         )
     }
 
@@ -261,7 +280,7 @@ final class GlobalSearchActionTests: XCTestCase {
                 return true
             })
         )
-        XCTAssertEqual(result, .succeeded(deactivateApp: true))
+        XCTAssertEqual(result, .succeeded(deactivateApp: false))
         XCTAssertEqual(opened, [id])
     }
 
@@ -415,6 +434,111 @@ final class GlobalSearchViewModelTests: XCTestCase {
         XCTAssertEqual(ShortcutDefaults.globalSearch.key, "k")
         XCTAssertEqual(GlanceHotKeyID.globalSearch.rawValue, 8)
         XCTAssertEqual(GlanceConstants.globalSearchSize, NSSize(width: 640, height: 480))
+    }
+
+    func testMarkUnavailableFlagsFileShelfRow() throws {
+        let id = UUID()
+        let record = FileShelfRecord(
+            id: id,
+            originalPath: "/tmp/report.pdf",
+            displayName: "report.pdf",
+            fileSize: 1,
+            contentTypeIdentifier: "pdf",
+            createdAt: Date(timeIntervalSince1970: 1),
+            lastUsedAt: Date(timeIntervalSince1970: 2),
+            isFavorite: false,
+            favoritedAt: nil
+        )
+        let model = GlobalSearchViewModel()
+        model.applyImmediateSnapshot(
+            GlobalSearchImmediateSnapshot(
+                clipboard: [],
+                clipboardUnavailable: false,
+                files: [record],
+                filesUnavailable: false,
+                snippets: [],
+                snippetsUnavailable: false,
+                links: [],
+                linksUnavailable: false,
+                panelInputs: [],
+                panelsUnavailable: false,
+                workspaceNames: [:]
+            )
+        )
+        model.markUnavailable(GlobalSearchResultID(source: .fileShelf, itemID: id))
+        let row = try XCTUnwrap(model.immediateDocuments.first)
+        XCTAssertTrue(row.isUnavailable)
+        XCTAssertEqual(row.preview, GlobalSearchCopy.fileMissingRow)
+    }
+
+    func testStressCorpusHonorsLimitsWithoutReloadingDocuments() {
+        let start = Date(timeIntervalSince1970: 1_700_000_000)
+        let clipboard = (0..<100).map { index in
+            ClipboardHistoryRecord(
+                id: UUID(),
+                kind: .text,
+                createdAt: start,
+                lastCopiedAt: start.addingTimeInterval(TimeInterval(index)),
+                isFavorite: false,
+                favoritedAt: nil,
+                contentHash: "c-\(index)",
+                text: "clipboard \(index)",
+                assetPath: nil
+            )
+        }
+        let files = (0..<100).map { index in
+            FileShelfRecord(
+                id: UUID(),
+                originalPath: "/tmp/file-\(index).txt",
+                displayName: "file-\(index).txt",
+                fileSize: 1,
+                contentTypeIdentifier: "txt",
+                createdAt: start,
+                lastUsedAt: start.addingTimeInterval(TimeInterval(index)),
+                isFavorite: false,
+                favoritedAt: nil
+            )
+        }
+        let snippets = (0..<500).map { index in
+            SnippetRecord(
+                id: UUID(),
+                title: index == 17 ? "unique-token-xyz" : "snippet \(index)",
+                content: "body \(index)",
+                createdAt: start,
+                updatedAt: start,
+                lastUsedAt: start.addingTimeInterval(TimeInterval(index)),
+                isPinned: false
+            )
+        }
+        let links = (0..<500).map { index in
+            LinkRecord(
+                id: UUID(),
+                title: "link \(index)",
+                urlString: "https://example.com/\(index)",
+                createdAt: start,
+                updatedAt: start,
+                lastOpenedAt: start.addingTimeInterval(TimeInterval(index)),
+                isPinned: false
+            )
+        }
+        let panels = (0..<100).map { index in
+            panelSummary(title: "panel \(index)", updated: TimeInterval(index))
+        }
+        let documents =
+            GlobalSearchSnapshotBuilder.clipboard(clipboard, unavailable: false)
+            + GlobalSearchSnapshotBuilder.fileShelf(files, unavailable: false)
+            + GlobalSearchSnapshotBuilder.snippets(snippets, unavailable: false)
+            + GlobalSearchSnapshotBuilder.links(links, unavailable: false)
+            + GlobalSearchSnapshotBuilder.panels(panels, workspaceName: { _ in "默认" })
+        XCTAssertEqual(documents.count, 1300)
+        let recent = GlobalSearchEngine.results(documents: documents, query: "")
+        XCTAssertEqual(recent.count, GlobalSearchPolicy.maximumRecentResults)
+        let hits = GlobalSearchEngine.results(documents: documents, query: "unique-token-xyz")
+        XCTAssertEqual(hits.count, 1)
+        XCTAssertEqual(hits.first?.title, "unique-token-xyz")
+        let crowded = GlobalSearchEngine.results(documents: documents, query: "snippet")
+        XCTAssertEqual(crowded.count, GlobalSearchPolicy.maximumSearchResults)
+        XCTAssertTrue(documents.allSatisfy { $0.foldedFields.count == $0.searchableFields.count })
     }
 }
 

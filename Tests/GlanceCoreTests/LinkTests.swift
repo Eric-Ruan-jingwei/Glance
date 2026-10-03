@@ -546,6 +546,24 @@ final class LinkStoreAndServiceTests: XCTestCase {
         try FileManager.default.removeItem(at: appRoot)
     }
 
+    func testQuarantineFailureLeavesCorruptLinksUntouched() throws {
+        enum MoveFailure: Error { case denied }
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("GlanceLinks-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let original = Data("{".utf8)
+        let metadata = root.appendingPathComponent("links.json")
+        try original.write(to: metadata)
+        let store = LinkStore(root: root, moveItem: { _, _ in throw MoveFailure.denied })
+        XCTAssertTrue(store.load().isEmpty)
+        XCTAssertEqual(store.lastLoadOutcome, .corruptUnquarantined)
+        XCTAssertFalse(store.isWritable)
+        XCTAssertEqual(try Data(contentsOf: metadata), original)
+        XCTAssertThrowsError(try store.save([]))
+        XCTAssertEqual(try Data(contentsOf: metadata), original)
+    }
+
     func testInvalidSchemeCreateIsRejected() throws {
         let harness = try LinkHarness()
         defer { harness.cleanup() }

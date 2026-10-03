@@ -283,6 +283,10 @@ final class PersistenceDiagnosticTests: XCTestCase {
         XCTAssertNil(PersistenceDiagnostic.from(outcome: .missing))
         XCTAssertNil(PersistenceDiagnostic.from(outcome: .loaded(migratedFromLegacy: false)))
         XCTAssertNil(PersistenceDiagnostic.from(outcome: .loaded(migratedFromLegacy: true)))
+        XCTAssertEqual(
+            PersistenceDiagnostic.from(outcome: .corruptUnquarantined),
+            .corruptUnquarantined
+        )
     }
 
     func testBackupRecoveryCopyDoesNotClaimPayloadIntegrity() {
@@ -328,6 +332,22 @@ final class PersistenceDiagnosticTests: XCTestCase {
             )
             let leftovers = try FileManager.default.contentsOfDirectory(atPath: directory.path)
             XCTAssertTrue(leftovers.contains { $0.hasPrefix("panels.corrupted-") && $0.hasSuffix(".json") })
+        }
+    }
+
+    func testQuarantineFailureLeavesCorruptFileAndBlocksWrites() throws {
+        enum MoveFailure: Error { case denied }
+        try withIsolatedRepository { _, metadataURL in
+            let original = Data("{ not-json".utf8)
+            try original.write(to: metadataURL)
+            let repository = try PanelRepository(
+                fileURL: metadataURL,
+                moveItem: { _, _ in throw MoveFailure.denied }
+            )
+            XCTAssertEqual(repository.lastLoadOutcome, .corruptUnquarantined)
+            XCTAssertEqual(try Data(contentsOf: metadataURL), original)
+            try repository.save()
+            XCTAssertEqual(try Data(contentsOf: metadataURL), original)
         }
     }
 
