@@ -43,6 +43,7 @@ final class PanelWindowController: NSWindowController, NSWindowDelegate {
         chrome.minimumSize = content.minimumSize
         chrome.embed(content.view)
         chrome.onCommitFrame = { [weak self] in self?.recoverAndApplyFrame() }
+        chrome.onFinishMove = { [weak self] in self?.finishInteractiveMove() }
         chrome.onContextMenu = { [weak self] _ in
             self?.makeContextMenu() ?? NSMenu()
         }
@@ -210,14 +211,41 @@ final class PanelWindowController: NSWindowController, NSWindowDelegate {
             frame: window.frame,
             displayIdentifier: DisplayManager.identifier(for: window.screen ?? DisplayManager.screenContainingMouse())
         )
-        if window.frame != recovered.frame.nsRect {
-            window.setFrame(recovered.frame.nsRect, display: true)
-            window.invalidateShadow()
-        }
-        mutateRecord { record in
-            record.frame = recovered.frame
-            record.displayIdentifier = recovered.displayIdentifier
-        }
+        applyRecoveredFrame(recovered)
+    }
+
+    func finishInteractiveMove() {
+        guard let window else { return }
+        environment.debouncer.cancel(id: frameDebounceID)
+        let screen = window.screen ?? DisplayManager.screenContainingMouse()
+        let visible = PanelFrame(screen.visibleFrame)
+        let current = PanelFrame(window.frame)
+        let snapped = PanelSnapEngine.snappedFrame(
+            current,
+            in: visible,
+            enabled: !ModifierKeyController.controlIsPressed
+        )
+        let recovered = PanelFrameRecovery.recover(
+            frame: snapped,
+            displayIdentifier: DisplayManager.identifier(for: screen)
+        )
+        applyRecoveredFrame(recovered)
+    }
+
+    func applyLayoutPreset(_ preset: PanelLayoutPreset) {
+        guard !isLocked, let window else { return }
+        environment.debouncer.cancel(id: frameDebounceID)
+        let screen = window.screen ?? DisplayManager.screenContainingMouse()
+        let laidOut = PanelSnapEngine.frame(
+            for: preset,
+            panelFrame: PanelFrame(window.frame),
+            visibleFrame: PanelFrame(screen.visibleFrame)
+        )
+        let recovered = PanelFrameRecovery.recover(
+            frame: laidOut,
+            displayIdentifier: DisplayManager.identifier(for: screen)
+        )
+        applyRecoveredFrame(recovered)
     }
 
     private func currentPolicy() -> PanelInteractionPolicy {
@@ -301,6 +329,15 @@ final class PanelWindowController: NSWindowController, NSWindowDelegate {
         }
 
         menu.addItem(.separator())
+        menu.addItem(
+            PanelLayoutMenu.makeItem(
+                target: self,
+                action: #selector(layoutPresetClicked(_:)),
+                enabled: !isLocked
+            )
+        )
+
+        menu.addItem(.separator())
         let settings = NSMenuItem(title: "面板设置…", action: #selector(panelSettingsClicked), keyEquivalent: "")
         settings.target = self
         menu.addItem(settings)
@@ -326,6 +363,12 @@ final class PanelWindowController: NSWindowController, NSWindowDelegate {
 
     @objc private func passThroughClicked() {
         setPassThrough(!isPassThrough)
+    }
+
+    @objc private func layoutPresetClicked(_ sender: NSMenuItem) {
+        guard let raw = sender.representedObject as? String,
+              let preset = PanelLayoutPreset(rawValue: raw) else { return }
+        applyLayoutPreset(preset)
     }
 
     @objc private func panelSettingsClicked() {
@@ -480,6 +523,18 @@ final class PanelWindowController: NSWindowController, NSWindowDelegate {
         frame = PanelFrameRecovery.clamp(frame, to: screen.visibleFrame)
         window.setFrame(frame, display: true)
         recoverAndApplyFrame()
+    }
+
+    private func applyRecoveredFrame(_ recovered: RecoveredFrame) {
+        guard let window else { return }
+        if window.frame != recovered.frame.nsRect {
+            window.setFrame(recovered.frame.nsRect, display: true)
+            window.invalidateShadow()
+        }
+        mutateRecord { record in
+            record.frame = recovered.frame
+            record.displayIdentifier = recovered.displayIdentifier
+        }
     }
 
     private func mutateRecord(_ body: (PanelRecord) -> Void) {

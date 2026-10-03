@@ -3,6 +3,7 @@ import AppKit
 final class PanelChromeView: NSView {
     var minimumSize: NSSize = GlanceConstants.textMinSize
     var onCommitFrame: (() -> Void)?
+    var onFinishMove: (() -> Void)?
     var onContextMenu: ((NSEvent) -> NSMenu)?
     var isInteractable: Bool = true
     var allowsMove: Bool = true {
@@ -162,7 +163,7 @@ final class PanelChromeView: NSView {
             return
         }
         guard allowsMove else { return }
-        PanelWindowDrag.move(window, onFinish: onCommitFrame)
+        PanelWindowDrag.move(window, onFinish: onFinishMove ?? onCommitFrame)
     }
 
     override func mouseDragged(with event: NSEvent) {

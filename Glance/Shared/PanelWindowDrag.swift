@@ -1,5 +1,6 @@
 import AppKit
 
+@MainActor
 enum PanelWindowDrag {
     static func move(_ window: NSWindow, onFinish: (() -> Void)? = nil) {
         let startFrame = window.frame
@@ -15,6 +16,12 @@ enum PanelWindowDrag {
             frame.origin.x = startFrame.origin.x + (mouse.x - startMouse.x)
             frame.origin.y = startFrame.origin.y + (mouse.y - startMouse.y)
             window.setFrame(frame, display: true)
+        }
+    }
+
+    static func moveThenFinishInteractive(_ window: NSWindow) {
+        move(window) {
+            (window.windowController as? PanelWindowController)?.finishInteractiveMove()
         }
     }
 }
