@@ -12,6 +12,7 @@ final class ScriptedSummaryLoader: PanelSummaryLoading, @unchecked Sendable {
         var delayNanoseconds: UInt64
         var summaries: [PanelSummary]
         var gate: LoadGate?
+        var started: LoadGate?
     }
 
     private let steps: [Step]
@@ -24,6 +25,9 @@ final class ScriptedSummaryLoader: PanelSummaryLoading, @unchecked Sendable {
     func loadSummaries(inputs: [PanelSummaryInput]) async -> [PanelSummary] {
         let stepIndex = await counter.next()
         let step = steps[min(stepIndex, steps.count - 1)]
+        if let started = step.started {
+            await started.open()
+        }
         if let gate = step.gate {
             await gate.wait()
         }
@@ -118,14 +122,16 @@ final class PanelSummaryLoadingTests: XCTestCase {
         let first = summary(title: "Old")
         let second = summary(title: "New")
         let staleGate = LoadGate()
+        let staleStarted = LoadGate()
         let loader = ScriptedSummaryLoader(steps: [
-            .init(delayNanoseconds: 0, summaries: [first], gate: staleGate),
+            .init(delayNanoseconds: 0, summaries: [first], gate: staleGate, started: staleStarted),
             .init(delayNanoseconds: 0, summaries: [second])
         ])
         let model = PanelLibraryModel()
         model.summaryLoader = loader
         model.loadSummaryInputs = { [dummyInput(id: first.id)] }
         model.reload()
+        await staleStarted.wait()
         model.loadSummaryInputs = { [dummyInput(id: second.id)] }
         model.reload()
         await waitUntil(timeout: 1) { model.summaries.map(\.title) == ["New"] }
