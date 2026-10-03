@@ -33,38 +33,21 @@ enum ClipboardHistoryIngest {
         if ClipboardPrivacyMarkers.shouldSkip(typeStrings: types) {
             return .skippedPrivacy
         }
-        if MacClipboardReader.hasImageType(pasteboard),
-           rawImagePayloadExceedsLimit(pasteboard, maxImageBytes: maxImageBytes) {
+        switch MacClipboardReader.readImage(from: pasteboard, maxBytes: maxImageBytes) {
+        case .png(let data):
+            return .captured(.png(data))
+        case .oversized:
             return .skippedOversizedImage
+        case .unavailable:
+            break
         }
-        guard let content = MacClipboardReader.read(pasteboard) else {
+        guard let content = ClipboardCaptureRouter.content(
+            imagePNG: nil,
+            text: pasteboard.string(forType: .string)
+        ) else {
             return .unsupported
         }
-        if case .png(let data) = content, data.count > maxImageBytes {
-            return .skippedOversizedImage
-        }
         return .captured(content)
-    }
-
-    private static func rawImagePayloadExceedsLimit(
-        _ pasteboard: NSPasteboard,
-        maxImageBytes: Int
-    ) -> Bool {
-        let types: [NSPasteboard.PasteboardType] = [
-            .png,
-            .tiff,
-            NSPasteboard.PasteboardType("public.jpeg"),
-            NSPasteboard.PasteboardType("public.jpeg-2000"),
-            NSPasteboard.PasteboardType("public.heic"),
-            NSPasteboard.PasteboardType("com.compuserve.gif"),
-            NSPasteboard.PasteboardType("public.webp")
-        ]
-        for type in types {
-            if let data = pasteboard.data(forType: type), data.count > maxImageBytes {
-                return true
-            }
-        }
-        return false
     }
 }
 
