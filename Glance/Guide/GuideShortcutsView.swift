@@ -9,7 +9,7 @@ struct GuideShortcutsView: View {
             VStack(alignment: .leading, spacing: GlanceTheme.Space.xl) {
                 GuideSectionHeader(
                     title: "快捷键与操作",
-                    detail: "包含可修改的全局快捷键，以及面板上的鼠标和修饰键操作。"
+                    detail: "包含可修改的全局快捷键，以及面板上的鼠标、修饰键和编辑操作。"
                 )
                 ForEach(GuideShortcutCatalog.groups) { group in
                     VStack(alignment: .leading, spacing: GlanceTheme.Space.xs) {

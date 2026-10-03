@@ -98,12 +98,16 @@ struct GuideShortcutGroup: Equatable, Identifiable {
 }
 
 enum GuideShortcutCatalog {
+    static func item(id: String) -> GuideShortcutItem? {
+        groups.flatMap(\.items).first { $0.id == id }
+    }
+
     static var groups: [GuideShortcutGroup] {
         [
             GuideShortcutGroup(id: "global", title: "全局", items: global),
             GuideShortcutGroup(id: "panel", title: "面板操作", items: panel),
             GuideShortcutGroup(id: "quickCapture", title: "Quick Capture", items: quickCapture),
-            GuideShortcutGroup(id: "text", title: "文字编辑", items: textEditing),
+            GuideShortcutGroup(id: "editing", title: "编辑", items: editing),
             GuideShortcutGroup(id: "dialogs", title: "弹窗", items: dialogs)
         ]
     }
@@ -131,10 +135,22 @@ enum GuideShortcutCatalog {
 
     static let panel: [GuideShortcutItem] = [
         GuideShortcutItem(
-            id: "editText",
-            title: "编辑文字",
+            id: "editTextMarkdown",
+            title: "编辑文字 / Markdown",
             detail: nil,
-            source: .mouseGesture("双击")
+            source: .mouseGesture("双击内容")
+        ),
+        GuideShortcutItem(
+            id: "editTodo",
+            title: "编辑待办",
+            detail: nil,
+            source: .mouseGesture("双击待办项")
+        ),
+        GuideShortcutItem(
+            id: "textChecklistToggle",
+            title: "切换文字清单",
+            detail: "阅读模式下点击清单符号",
+            source: .mouseGesture("单击清单符号")
         ),
         GuideShortcutItem(
             id: "optionPassThrough",
@@ -177,18 +193,42 @@ enum GuideShortcutCatalog {
         ),
         GuideShortcutItem(
             id: "qcCancel",
-            title: "取消",
+            title: "取消 Quick Capture",
             detail: nil,
             source: .keys([.escape])
         )
     ]
 
-    static let textEditing: [GuideShortcutItem] = [
+    static let editing: [GuideShortcutItem] = [
         GuideShortcutItem(
             id: "bold",
             title: "粗体",
             detail: nil,
             source: .keys([.command, .character("B")])
+        ),
+        GuideShortcutItem(
+            id: "textEndEditing",
+            title: "结束文字编辑",
+            detail: nil,
+            source: .keys([.escape])
+        ),
+        GuideShortcutItem(
+            id: "markdownEndEditing",
+            title: "结束 Markdown 编辑",
+            detail: nil,
+            source: .keys([.escape])
+        ),
+        GuideShortcutItem(
+            id: "todoCommit",
+            title: "保存待办 / 继续添加",
+            detail: "新增待办时，保存后继续创建下一项",
+            source: .keys([.enter])
+        ),
+        GuideShortcutItem(
+            id: "todoCancel",
+            title: "取消待办编辑",
+            detail: "恢复编辑前的内容",
+            source: .keys([.escape])
         )
     ]
 
