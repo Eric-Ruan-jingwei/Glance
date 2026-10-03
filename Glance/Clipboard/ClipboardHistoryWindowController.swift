@@ -5,6 +5,7 @@ import SwiftUI
 final class ClipboardHistoryWindowController: NSWindowController {
     var onCreatePanel: (ClipboardCaptureContent, NSScreen?) -> Bool = { _, _ in false }
     var onSaveAsSnippet: ((String) -> Void)?
+    var onSaveAsLink: ((String) -> Void)?
 
     private let model: ClipboardHistoryViewModel
     private let monitor: ClipboardHistoryMonitor
@@ -69,6 +70,9 @@ final class ClipboardHistoryWindowController: NSWindowController {
             },
             onSaveAsSnippet: { [weak self] id in
                 self?.saveAsSnippet(id)
+            },
+            onSaveAsLink: { [weak self] id in
+                self?.saveAsLink(id)
             }
         )
         let hosting = NSHostingController(rootView: view)
@@ -92,6 +96,12 @@ final class ClipboardHistoryWindowController: NSWindowController {
         guard let record = model.service.records.first(where: { $0.id == id }),
               let draft = ClipboardSnippetHandoff.draft(from: record) else { return }
         onSaveAsSnippet?(draft.content)
+    }
+
+    private func saveAsLink(_ id: UUID) {
+        guard let record = model.service.records.first(where: { $0.id == id }),
+              let url = ClipboardWebLinkHandoff.normalizedURL(from: record) else { return }
+        onSaveAsLink?(url)
     }
 
     private func createPanel(_ id: UUID) {

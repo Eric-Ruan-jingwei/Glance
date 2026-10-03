@@ -87,6 +87,7 @@ struct ClipboardHistoryView: View {
     var onToggleFavorite: (UUID) -> Void
     var onDelete: (UUID) -> Void
     var onSaveAsSnippet: (UUID) -> Void = { _ in }
+    var onSaveAsLink: (UUID) -> Void = { _ in }
     var relativeNow: Date = Date()
 
     var body: some View {
@@ -208,6 +209,11 @@ struct ClipboardHistoryView: View {
                     if ClipboardSnippetHandoff.isAvailable(for: record) {
                         Button(ClipboardHistoryCopy.saveAsSnippet) {
                             onSaveAsSnippet(record.id)
+                        }
+                    }
+                    if ClipboardWebLinkHandoff.isAvailable(for: record) {
+                        Button(LinkCopy.saveAsLink) {
+                            onSaveAsLink(record.id)
                         }
                     }
                     Button(record.isFavorite ? ClipboardHistoryCopy.unfavoriteLabel : ClipboardHistoryCopy.favoriteLabel) {
