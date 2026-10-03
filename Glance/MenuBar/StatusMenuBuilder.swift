@@ -29,8 +29,6 @@ enum StatusMenuBuilder {
 
         let quickCapture = shortcuts[.quickCapture] ?? ShortcutDefaults.quickCapture
         let clipboardHistory = shortcuts[.clipboardHistory] ?? ShortcutDefaults.clipboardHistory
-        let clipboardCapture = shortcuts[.clipboardCapture] ?? ShortcutDefaults.clipboardCapture
-        let hideShow = shortcuts[.hideShow] ?? ShortcutDefaults.hideShow
 
         menu.addItem(
             actionItem(
@@ -41,6 +39,7 @@ enum StatusMenuBuilder {
                 modifiers: MacShortcutAdapter.menuModifierMask(for: quickCapture)
             )
         )
+        menu.addItem(.separator())
         menu.addItem(
             actionItem(
                 "剪贴板…",
@@ -51,38 +50,21 @@ enum StatusMenuBuilder {
             )
         )
         menu.addItem(
-            actionItem(
-                "从当前剪贴板创建…",
-                onCaptureClipboard,
-                symbol: "doc.on.clipboard",
-                keyEquivalent: ShortcutDisplayFormatter.keyEquivalent(clipboardCapture),
-                modifiers: MacShortcutAdapter.menuModifierMask(for: clipboardCapture),
-                enabled: clipboardCaptureEnabled
-            )
-        )
-        menu.addItem(.separator())
-        menu.addItem(workspaceMenu(
-            items: workspaces,
-            onSelect: onSelectWorkspace,
-            onCreate: onCreateWorkspace
-        ))
-        menu.addItem(.separator())
-        menu.addItem(actionItem("管理面板…", onManagePanels, symbol: "square.stack"))
-        menu.addItem(newPanelMenu(
-            onNewText: onNewText,
-            onNewMarkdown: onNewMarkdown,
-            onNewTodo: onNewTodo,
-            onNewImage: onNewImage,
-            onNewPDF: onNewPDF
-        ))
-        menu.addItem(NSMenuItem.sectionHeader(title: "状态"))
-        menu.addItem(
-            actionItem(
-                allHidden ? "显示全部" : "隐藏全部",
-                onToggleVisibility,
-                symbol: allHidden ? "eye" : "eye.slash",
-                keyEquivalent: ShortcutDisplayFormatter.keyEquivalent(hideShow),
-                modifiers: MacShortcutAdapter.menuModifierMask(for: hideShow)
+            panelMenu(
+                allHidden: allHidden,
+                clipboardCaptureEnabled: clipboardCaptureEnabled,
+                workspaces: workspaces,
+                shortcuts: shortcuts,
+                onCaptureClipboard: onCaptureClipboard,
+                onSelectWorkspace: onSelectWorkspace,
+                onCreateWorkspace: onCreateWorkspace,
+                onManagePanels: onManagePanels,
+                onNewText: onNewText,
+                onNewMarkdown: onNewMarkdown,
+                onNewTodo: onNewTodo,
+                onNewImage: onNewImage,
+                onNewPDF: onNewPDF,
+                onToggleVisibility: onToggleVisibility
             )
         )
         if let diagnostic {
@@ -93,6 +75,66 @@ enum StatusMenuBuilder {
         menu.addItem(actionItem(GlanceGuideEntry.menuTitle, onOpenGuide, symbol: "questionmark.circle"))
         menu.addItem(actionItem("设置…", onSettings, symbol: "gearshape"))
         menu.addItem(actionItem("退出", onQuit, symbol: "power"))
+    }
+
+    static func panelMenu(
+        allHidden: Bool,
+        clipboardCaptureEnabled: Bool,
+        workspaces: [WorkspaceMenuItem],
+        shortcuts: [ShortcutAction: GlanceShortcut],
+        onCaptureClipboard: @escaping () -> Void,
+        onSelectWorkspace: @escaping (String) -> Void,
+        onCreateWorkspace: @escaping () -> Void,
+        onManagePanels: @escaping () -> Void,
+        onNewText: @escaping () -> Void,
+        onNewMarkdown: @escaping () -> Void,
+        onNewTodo: @escaping () -> Void,
+        onNewImage: @escaping () -> Void,
+        onNewPDF: @escaping () -> Void,
+        onToggleVisibility: @escaping () -> Void
+    ) -> NSMenuItem {
+        let clipboardCapture = shortcuts[.clipboardCapture] ?? ShortcutDefaults.clipboardCapture
+        let hideShow = shortcuts[.hideShow] ?? ShortcutDefaults.hideShow
+
+        let item = NSMenuItem(title: "面板", action: nil, keyEquivalent: "")
+        item.image = GlanceTheme.menuSymbol("pin")
+        let submenu = NSMenu()
+        submenu.autoenablesItems = false
+        submenu.addItem(newPanelMenu(
+            onNewText: onNewText,
+            onNewMarkdown: onNewMarkdown,
+            onNewTodo: onNewTodo,
+            onNewImage: onNewImage,
+            onNewPDF: onNewPDF
+        ))
+        submenu.addItem(
+            actionItem(
+                "从当前剪贴板创建…",
+                onCaptureClipboard,
+                symbol: "doc.on.clipboard",
+                keyEquivalent: ShortcutDisplayFormatter.keyEquivalent(clipboardCapture),
+                modifiers: MacShortcutAdapter.menuModifierMask(for: clipboardCapture),
+                enabled: clipboardCaptureEnabled
+            )
+        )
+        submenu.addItem(actionItem("管理面板…", onManagePanels, symbol: "square.stack"))
+        submenu.addItem(workspaceMenu(
+            items: workspaces,
+            onSelect: onSelectWorkspace,
+            onCreate: onCreateWorkspace
+        ))
+        submenu.addItem(.separator())
+        submenu.addItem(
+            actionItem(
+                allHidden ? "显示全部" : "隐藏全部",
+                onToggleVisibility,
+                symbol: allHidden ? "eye" : "eye.slash",
+                keyEquivalent: ShortcutDisplayFormatter.keyEquivalent(hideShow),
+                modifiers: MacShortcutAdapter.menuModifierMask(for: hideShow)
+            )
+        )
+        item.submenu = submenu
+        return item
     }
 
     static func workspaceMenu(
