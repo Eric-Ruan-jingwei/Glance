@@ -28,6 +28,9 @@ final class PanelLibraryWindowController: NSWindowController, NSWindowDelegate {
         model.hide = { _ = panelManager.hidePanel(id: $0) }
         model.delete = { panelManager.deletePanel(id: $0) }
         model.openFolder = { panelManager.openPayloadFolder(id: $0) }
+        model.rename = { id, title in
+            try panelManager.setCustomTitle(id: id, title: title)
+        }
         let hosting = NSHostingController(rootView: PanelLibraryView(model: model))
         let window = NSWindow(contentViewController: hosting)
         window.title = "管理面板"

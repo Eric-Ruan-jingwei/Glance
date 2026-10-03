@@ -338,9 +338,11 @@ final class PanelWindowController: NSWindowController, NSWindowDelegate {
         )
 
         menu.addItem(.separator())
+        let rename = NSMenuItem(title: "重命名…", action: #selector(renameClicked), keyEquivalent: "")
+        rename.target = self
+        menu.addItem(rename)
         menu.addItem(makeMoveToWorkspaceItem())
 
-        menu.addItem(.separator())
         let hide = NSMenuItem(
             title: PanelVisibilityMenu.hideThisPanel,
             action: #selector(hidePanelClicked),
@@ -379,6 +381,10 @@ final class PanelWindowController: NSWindowController, NSWindowDelegate {
 
     @objc private func hidePanelClicked() {
         environment.panelManager?.hidePanel(id: recordID)
+    }
+
+    @objc private func renameClicked() {
+        environment.panelManager?.promptRenamePanel(id: recordID)
     }
 
     private func makeMoveToWorkspaceItem() -> NSMenuItem {

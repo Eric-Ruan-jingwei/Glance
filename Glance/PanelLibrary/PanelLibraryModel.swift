@@ -21,6 +21,7 @@ final class PanelLibraryModel: ObservableObject {
     var hide: (UUID) -> Void = { _ in }
     var delete: (UUID) -> Bool = { _ in false }
     var openFolder: (UUID) -> Void = { _ in }
+    var rename: (UUID, String?) throws -> Void = { _, _ in }
 
     var workspaceSummaries: [PanelSummary] {
         summaries.filter { $0.workspaceID == selectedWorkspaceID }
@@ -84,6 +85,23 @@ final class PanelLibraryModel: ObservableObject {
     func movePanelToWorkspace(_ panelID: UUID, workspaceID: String) {
         _ = movePanel(panelID, workspaceID)
         reload()
+    }
+
+    func promptRename(_ summary: PanelSummary) {
+        switch PanelTitlePrompt.runModal(
+            customTitle: summary.customTitle,
+            automaticTitle: summary.automaticTitle
+        ) {
+        case .cancelled:
+            return
+        case .submitted(let raw):
+            do {
+                try rename(summary.id, raw)
+                reload()
+            } catch {
+                PanelTitlePrompt.presentError(error)
+            }
+        }
     }
 
     func promptCreateWorkspace() {

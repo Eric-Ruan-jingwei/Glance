@@ -432,6 +432,31 @@ final class PanelManager {
         }
     }
 
+    func promptRenamePanel(id: UUID) {
+        guard let record = try? environment.repository.record(id: id) else { return }
+        let directory = environment.payloadStore.panelsRoot
+            .appendingPathComponent(id.uuidString, isDirectory: true)
+        let summary = PanelSummaryBuilder.summarize(record: record, payloadDirectory: directory)
+        switch PanelTitlePrompt.runModal(
+            customTitle: record.customTitle,
+            automaticTitle: summary.automaticTitle
+        ) {
+        case .cancelled:
+            return
+        case .submitted(let raw):
+            do {
+                try setCustomTitle(id: id, title: raw)
+            } catch {
+                PanelTitlePrompt.presentError(error)
+            }
+        }
+    }
+
+    func setCustomTitle(id: UUID, title: String?) throws {
+        try environment.repository.setCustomTitle(id: id, title: title)
+        notifyPanelsDidChange()
+    }
+
     func notifyPanelsDidChange() {
         NotificationCenter.default.post(name: .glancePanelCollectionDidChange, object: nil)
     }
@@ -462,7 +487,11 @@ final class PanelManager {
     private func framesForPlacement() -> [NSRect] {
         controllers.compactMap { id, controller in
             guard let record = try? environment.repository.record(id: id) else { return nil }
-            guard record.workspaceID == activeWorkspaceID else { return nil }
+            guard PanelPlacementOccupancy.shouldOccupy(
+                workspaceID: record.workspaceID,
+                isHidden: record.isHidden,
+                activeWorkspaceID: activeWorkspaceID
+            ) else { return nil }
             return controller.window?.frame
         }
     }

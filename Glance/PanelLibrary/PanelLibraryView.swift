@@ -57,6 +57,7 @@ struct PanelLibraryView: View {
                                 workspaces: model.workspaces,
                                 onReveal: { model.revealPanel(summary.id) },
                                 onHide: { model.hidePanel(summary.id) },
+                                onRename: { model.promptRename(summary) },
                                 onDelete: { model.confirmDelete(summary.id) },
                                 onOpenFolder: { model.openPayloadFolder(summary.id) },
                                 onMove: { model.movePanelToWorkspace(summary.id, workspaceID: $0) }
@@ -102,6 +103,7 @@ private struct PanelLibraryRow: View {
     let workspaces: [WorkspaceRecord]
     let onReveal: () -> Void
     let onHide: () -> Void
+    let onRename: () -> Void
     let onDelete: () -> Void
     let onOpenFolder: () -> Void
     let onMove: (String) -> Void
@@ -147,6 +149,7 @@ private struct PanelLibraryRow: View {
                 .controlSize(.small)
             Menu {
                 Button(PanelVisibilityMenu.libraryActionTitle(isHidden: summary.isHidden), action: primaryAction)
+                Button("重命名…", action: onRename)
                 Menu(PanelVisibilityMenu.moveToWorkspace) {
                     ForEach(workspaces) { workspace in
                         Button {
@@ -160,6 +163,7 @@ private struct PanelLibraryRow: View {
                         }
                     }
                 }
+                Divider()
                 Button("打开数据文件夹", action: onOpenFolder)
                 Divider()
                 Button("删除", role: .destructive, action: onDelete)
