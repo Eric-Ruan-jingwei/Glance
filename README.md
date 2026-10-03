@@ -4,7 +4,7 @@
 
 A lightweight, local-first personal workspace for **macOS**.
 
-Glance keeps three kinds of work nearby: floating panels for things you need to keep seeing, a local clipboard shelf for things you keep copying, and a file shelf for files you will need again soon. File Shelf stores references, not copies. Removing a shelf item does not delete the original file. Everything stays on this machine.
+Glance keeps four kinds of work nearby: floating panels for things you need to keep seeing, a local clipboard shelf for things you keep copying, a file shelf for files you will need again soon, and snippets for text you will reuse on purpose. Snippets are explicitly saved, editable text fragments for repeated reuse. Clipboard History is not Snippets. Everything stays on this machine.
 
 There is no Windows client yet. Shared data contracts are documented so a future Windows app can reuse them.
 
@@ -17,6 +17,7 @@ There is no Windows client yet. Shared data contracts are documented so a future
 - Quick Capture from any app
 - Clipboard Shelf
 - File Shelf
+- Snippets
 - Clipboard Capture
 - Customizable global shortcuts
 - First-run onboarding
@@ -34,6 +35,10 @@ There is no Windows client yet. Shared data contracts are documented so a future
 - No account
 - No cloud
 - Open source
+
+## V0.21.0
+
+Snippets: save, edit, search, pin, and copy reusable plain text. Clipboard text can be saved as a snippet through the editor. Snippet copy writes the system clipboard without creating a new clipboard-history record. Panel, Clipboard, and File Shelf schemas are unchanged.
 
 ## V0.20.0
 
@@ -171,12 +176,15 @@ Clipboard Shelf is separate: after you turn on local recording, Glance keeps rec
 
 File Shelf is the file counterpart. Drag a file in, or add it with `+`. Glance stores a reference and a macOS bookmark, not a copy. You can search recent and favorite files, open them, reveal them in Finder, Quick Look them, copy them, or drag them back out. Removing a shelf item does not delete the original file.
 
+Snippets are long-lived text you save on purpose: an address, a reply, a prompt, a command. They are editable and never auto-deleted. Enter copies the exact text to the system clipboard; you paste it yourself. Clipboard History still means “what I recently copied.”
+
 Default shortcuts:
 
 ```text
 Quick Capture                 ⌥⌘J
 Clipboard                     ⌥⌘V
 File Shelf                    ⌥⌘F
+Snippets                      ⌥⌘S
 Create from current clipboard ⌥⌘B
 Hide / Show                   ⌥⌘G
 ```
@@ -190,6 +198,7 @@ Status-item menu (defaults shown):
 ────────────
 剪贴板…                    ⌥⌘V
 文件架…                    ⌥⌘F
+片段库…                    ⌥⌘S
 面板
   新建面板
     文字
@@ -361,10 +370,12 @@ Everything lives on disk. See [docs/architecture/data-format.md](docs/architectu
 │   ├── history.json         schemaVersion 1 clipboard shelf
 │   └── Assets/
 │       └── {item-id}.png
-└── FileShelf/
-    ├── shelf.json           schemaVersion 1 file references
-    └── Bookmarks/
-        └── {item-id}.bookmark
+├── FileShelf/
+│   ├── shelf.json           schemaVersion 1 file references
+│   └── Bookmarks/
+│       └── {item-id}.bookmark
+└── Snippets/
+    └── snippets.json        schemaVersion 1 reusable text
 ```
 
 Panel images and PDFs are copied into this directory. File Shelf stores only references and bookmarks; the original files stay where they are. Removing a File Shelf item does not delete the original file.

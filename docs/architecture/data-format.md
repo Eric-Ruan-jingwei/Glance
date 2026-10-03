@@ -220,6 +220,18 @@ The envelope is `{ "schemaVersion": 1, "items": [ ... ] }`. This schema is indep
 
 Each item stores `id`, `originalPath`, `displayName`, `fileSize`, `contentTypeIdentifier`, `createdAt`, `lastUsedAt`, `isFavorite`, and `favoritedAt`. It does not store bookmark data, custom titles, tags, or workspace membership.
 
+## Snippets
+
+Snippets are a separate data domain. They are explicitly created text assets, not clipboard history.
+
+```text
+Snippets/snippets.json
+```
+
+The envelope is `{ "schemaVersion": 1, "items": [ ... ] }`. This schema is independent of Panel schema **5**, Clipboard schema **1**, and File Shelf schema **1**. Future snippet schemas are rejected without rewriting the file. Body text is stored exactly in JSON; Glance does not trim whitespace. There is no automatic eviction.
+
+Each item stores `id`, `title`, `content`, `createdAt`, `updatedAt`, `lastUsedAt`, and `isPinned`.
+
 ## Future clients
 
 Any future Windows (or other) client should read and write this JSON + RTF + Markdown + Todo JSON + PNG + PDF layout. Windowing, shortcuts, and tray code are platform-specific; the files are not.
