@@ -338,6 +338,9 @@ final class PanelWindowController: NSWindowController, NSWindowDelegate {
         )
 
         menu.addItem(.separator())
+        menu.addItem(makeMoveToWorkspaceItem())
+
+        menu.addItem(.separator())
         let hide = NSMenuItem(
             title: PanelVisibilityMenu.hideThisPanel,
             action: #selector(hidePanelClicked),
@@ -376,6 +379,31 @@ final class PanelWindowController: NSWindowController, NSWindowDelegate {
 
     @objc private func hidePanelClicked() {
         environment.panelManager?.hidePanel(id: recordID)
+    }
+
+    private func makeMoveToWorkspaceItem() -> NSMenuItem {
+        let item = NSMenuItem(title: PanelVisibilityMenu.moveToWorkspace, action: nil, keyEquivalent: "")
+        let submenu = NSMenu()
+        let workspaces = environment.panelManager?.workspaces() ?? [WorkspaceRecord.makeDefault()]
+        let currentID = (try? environment.repository.record(id: recordID))?.workspaceID ?? WorkspaceRecord.defaultID
+        for workspace in workspaces {
+            let entry = NSMenuItem(
+                title: workspace.name,
+                action: #selector(moveToWorkspaceClicked(_:)),
+                keyEquivalent: ""
+            )
+            entry.target = self
+            entry.representedObject = workspace.id
+            entry.state = workspace.id == currentID ? .on : .off
+            submenu.addItem(entry)
+        }
+        item.submenu = submenu
+        return item
+    }
+
+    @objc private func moveToWorkspaceClicked(_ sender: NSMenuItem) {
+        guard let workspaceID = sender.representedObject as? String else { return }
+        _ = environment.panelManager?.movePanel(id: recordID, toWorkspaceID: workspaceID)
     }
 
     @objc private func layoutPresetClicked(_ sender: NSMenuItem) {

@@ -7,6 +7,23 @@ final class PanelLibraryWindowController: NSWindowController, NSWindowDelegate {
     convenience init(panelManager: PanelManager) {
         let model = PanelLibraryModel()
         model.loadSummaries = { panelManager.panelSummaries() }
+        model.loadWorkspaces = { panelManager.workspaces() }
+        model.loadActiveWorkspaceID = { panelManager.activeWorkspaceID }
+        model.switchWorkspace = { id in
+            _ = panelManager.switchWorkspace(id: id)
+        }
+        model.createWorkspace = { name in
+            try panelManager.createWorkspace(name: name)
+        }
+        model.renameWorkspace = { id, name in
+            try panelManager.renameWorkspace(id: id, name: name)
+        }
+        model.deleteWorkspace = { id in
+            try panelManager.deleteWorkspace(id: id)
+        }
+        model.movePanel = { id, workspaceID in
+            panelManager.movePanel(id: id, toWorkspaceID: workspaceID)
+        }
         model.reveal = { panelManager.revealPanel(id: $0) }
         model.hide = { _ = panelManager.hidePanel(id: $0) }
         model.delete = { panelManager.deletePanel(id: $0) }
@@ -15,8 +32,8 @@ final class PanelLibraryWindowController: NSWindowController, NSWindowDelegate {
         let window = NSWindow(contentViewController: hosting)
         window.title = "管理面板"
         window.styleMask = [.titled, .closable, .miniaturizable, .resizable]
-        window.setContentSize(NSSize(width: 760, height: 520))
-        window.minSize = NSSize(width: 600, height: 400)
+        window.setContentSize(NSSize(width: 880, height: 540))
+        window.minSize = NSSize(width: 720, height: 420)
         window.center()
         window.isReleasedWhenClosed = false
         self.init(existingWindow: window, model: model)

@@ -2,6 +2,7 @@ import Foundation
 
 extension Notification.Name {
     static let glancePanelCollectionDidChange = Notification.Name("GlancePanelCollectionDidChange")
+    static let glanceWorkspaceDidChange = Notification.Name("GlanceWorkspaceDidChange")
 }
 
 struct PanelSummary: Identifiable, Equatable {
@@ -16,6 +17,7 @@ struct PanelSummary: Identifiable, Equatable {
     var isPassThrough: Bool
     var isPinned: Bool
     var isHidden: Bool
+    var workspaceID: String = WorkspaceRecord.defaultID
     var isUnreadable: Bool
 }
 
@@ -178,9 +180,13 @@ enum PanelSummaryQuery {
     static func filtered(
         _ summaries: [PanelSummary],
         query: String,
-        kind: PanelSummaryKindFilter
+        kind: PanelSummaryKindFilter,
+        workspaceID: String? = nil
     ) -> [PanelSummary] {
         summaries.filter { summary in
+            if let workspaceID, summary.workspaceID != workspaceID {
+                return false
+            }
             if let identifier = kind.kindIdentifier, summary.kindIdentifier != identifier {
                 return false
             }

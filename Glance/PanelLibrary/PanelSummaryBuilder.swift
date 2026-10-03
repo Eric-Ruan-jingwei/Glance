@@ -14,6 +14,7 @@ enum PanelSummaryBuilder {
             isPassThrough: record.isPassThrough,
             isPinned: record.isPinned,
             isHidden: record.isHidden,
+            workspaceID: record.workspaceID,
             isUnreadable: false
         )
         switch record.kindIdentifier {

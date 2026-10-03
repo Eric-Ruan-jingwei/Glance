@@ -39,8 +39,15 @@ final class StatusBarController: NSObject, NSMenuDelegate {
             menu,
             allHidden: manager.allHidden,
             clipboardCaptureEnabled: MacClipboardReader.hasSupportedContent(),
+            workspaces: manager.workspaceMenuItems(),
             onQuickCapture: { [weak self] in self?.manager.toggleQuickCapture() },
             onCaptureClipboard: { [weak self] in self?.manager.captureClipboard() },
+            onSelectWorkspace: { [weak self] id in
+                _ = self?.manager.switchWorkspace(id: id)
+            },
+            onCreateWorkspace: { [weak self] in
+                self?.manager.promptCreateWorkspace()
+            },
             onManagePanels: { [weak self] in self?.onManagePanels() },
             onNewText: { [weak self] in self?.manager.createTextPanel() },
             onNewMarkdown: { [weak self] in self?.manager.createMarkdownPanel() },

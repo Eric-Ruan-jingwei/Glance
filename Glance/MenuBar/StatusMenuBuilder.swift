@@ -5,8 +5,11 @@ enum StatusMenuBuilder {
         _ menu: NSMenu,
         allHidden: Bool,
         clipboardCaptureEnabled: Bool = true,
+        workspaces: [WorkspaceMenuItem] = [],
         onQuickCapture: @escaping () -> Void,
         onCaptureClipboard: @escaping () -> Void = {},
+        onSelectWorkspace: @escaping (String) -> Void = { _ in },
+        onCreateWorkspace: @escaping () -> Void = {},
         onManagePanels: @escaping () -> Void,
         onNewText: @escaping () -> Void,
         onNewMarkdown: @escaping () -> Void,
@@ -42,6 +45,12 @@ enum StatusMenuBuilder {
             )
         )
         menu.addItem(.separator())
+        menu.addItem(workspaceMenu(
+            items: workspaces,
+            onSelect: onSelectWorkspace,
+            onCreate: onCreateWorkspace
+        ))
+        menu.addItem(.separator())
         menu.addItem(actionItem("管理面板…", onManagePanels))
         menu.addItem(.separator())
         menu.addItem(actionItem("新建文字面板", onNewText))
@@ -61,6 +70,29 @@ enum StatusMenuBuilder {
         menu.addItem(.separator())
         menu.addItem(actionItem("设置…", onSettings))
         menu.addItem(actionItem("退出", onQuit))
+    }
+
+    static func workspaceMenu(
+        items: [WorkspaceMenuItem],
+        onSelect: @escaping (String) -> Void,
+        onCreate: @escaping () -> Void
+    ) -> NSMenuItem {
+        let item = NSMenuItem(title: "工作区", action: nil, keyEquivalent: "")
+        let submenu = NSMenu()
+        for workspace in items {
+            let entry = NSMenuItem(title: workspace.name, action: nil, keyEquivalent: "")
+            entry.state = workspace.isActive ? .on : .off
+            entry.representedObject = ClosureBox { onSelect(workspace.id) }
+            entry.target = MenuActionRelay.shared
+            entry.action = #selector(MenuActionRelay.invoke(_:))
+            submenu.addItem(entry)
+        }
+        if !items.isEmpty {
+            submenu.addItem(.separator())
+        }
+        submenu.addItem(actionItem("新建工作区…", onCreate))
+        item.submenu = submenu
+        return item
     }
 
     private static func actionItem(
