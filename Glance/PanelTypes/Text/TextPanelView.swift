@@ -14,11 +14,12 @@ final class TextPanelView: NSView, PanelContentControlling, NSTextViewDelegate {
         didSet { textView.allowsContentMutation = allowsContentMutation }
     }
 
+    private let formatChrome = FormatBarChrome()
     private let formatBar = NSStackView()
+    private let formatSeparator = NSView()
     private let scrollView = NSScrollView()
     private let textView: GlanceTextView
     private let placeholder = NSTextField(labelWithString: GlanceEmptyCopy.textPlaceholder)
-    private var formatBarHeight: NSLayoutConstraint!
 
     init() {
         textView = GlanceTextView(usingTextLayoutManager: false)
@@ -71,6 +72,10 @@ final class TextPanelView: NSView, PanelContentControlling, NSTextViewDelegate {
     func handlePaste() -> Bool { false }
     func primaryEditMenuTitle() -> String? { "编辑" }
 
+    var automaticDisplayTitle: String? {
+        PanelSummaryText.firstNonEmptyLine(textView.string)
+    }
+
     func textDidChange(_ notification: Notification) {
         refreshPlaceholder()
         onPayloadChange?()
@@ -79,13 +84,19 @@ final class TextPanelView: NSView, PanelContentControlling, NSTextViewDelegate {
     private func setup() {
         translatesAutoresizingMaskIntoConstraints = false
 
+        formatChrome.translatesAutoresizingMaskIntoConstraints = false
+        formatChrome.wantsLayer = true
+        formatChrome.layer?.backgroundColor = NSColor.labelColor.withAlphaComponent(0.04).cgColor
+        formatChrome.ignoresHits = true
+        formatChrome.alphaValue = 0
+
         formatBar.orientation = .horizontal
         formatBar.alignment = .centerY
         formatBar.spacing = GlanceTheme.Space.xs
         formatBar.edgeInsets = NSEdgeInsets(
             top: GlanceTheme.Space.xs,
             left: GlanceTheme.Space.md,
-            bottom: 0,
+            bottom: GlanceTheme.Space.xs,
             right: GlanceTheme.Space.md
         )
         formatBar.translatesAutoresizingMaskIntoConstraints = false
@@ -96,6 +107,13 @@ final class TextPanelView: NSView, PanelContentControlling, NSTextViewDelegate {
         let spacer = NSView()
         spacer.setContentHuggingPriority(.defaultLow, for: .horizontal)
         formatBar.addArrangedSubview(spacer)
+
+        formatSeparator.wantsLayer = true
+        formatSeparator.layer?.backgroundColor = GlanceTheme.Fill.panelBorder.cgColor
+        formatSeparator.translatesAutoresizingMaskIntoConstraints = false
+
+        formatChrome.addSubview(formatBar)
+        formatChrome.addSubview(formatSeparator)
 
         textView.delegate = self
         textView.isRichText = true
@@ -131,6 +149,7 @@ final class TextPanelView: NSView, PanelContentControlling, NSTextViewDelegate {
         scrollView.hasVerticalScroller = true
         scrollView.hasHorizontalScroller = false
         scrollView.autohidesScrollers = true
+        scrollView.automaticallyAdjustsContentInsets = false
         scrollView.documentView = textView
         scrollView.translatesAutoresizingMaskIntoConstraints = false
 
@@ -141,24 +160,30 @@ final class TextPanelView: NSView, PanelContentControlling, NSTextViewDelegate {
         placeholder.isBordered = false
         placeholder.drawsBackground = false
 
-        addSubview(formatBar)
         addSubview(scrollView)
+        addSubview(formatChrome)
         addSubview(placeholder)
 
-        formatBarHeight = formatBar.heightAnchor.constraint(equalToConstant: GlanceTheme.Size.formatBarHeight)
-
         NSLayoutConstraint.activate([
-            formatBar.leadingAnchor.constraint(equalTo: leadingAnchor),
-            formatBar.trailingAnchor.constraint(equalTo: trailingAnchor),
-            formatBar.topAnchor.constraint(equalTo: topAnchor),
-            formatBarHeight,
             scrollView.leadingAnchor.constraint(equalTo: leadingAnchor),
             scrollView.trailingAnchor.constraint(equalTo: trailingAnchor),
-            scrollView.topAnchor.constraint(equalTo: formatBar.bottomAnchor),
+            scrollView.topAnchor.constraint(equalTo: topAnchor),
             scrollView.bottomAnchor.constraint(equalTo: bottomAnchor),
+            formatChrome.leadingAnchor.constraint(equalTo: leadingAnchor),
+            formatChrome.trailingAnchor.constraint(equalTo: trailingAnchor),
+            formatChrome.topAnchor.constraint(equalTo: topAnchor),
+            formatChrome.heightAnchor.constraint(equalToConstant: GlanceTheme.Size.formatBarHeight),
+            formatBar.leadingAnchor.constraint(equalTo: formatChrome.leadingAnchor),
+            formatBar.trailingAnchor.constraint(equalTo: formatChrome.trailingAnchor),
+            formatBar.topAnchor.constraint(equalTo: formatChrome.topAnchor),
+            formatBar.bottomAnchor.constraint(equalTo: formatSeparator.topAnchor),
+            formatSeparator.leadingAnchor.constraint(equalTo: formatChrome.leadingAnchor),
+            formatSeparator.trailingAnchor.constraint(equalTo: formatChrome.trailingAnchor),
+            formatSeparator.bottomAnchor.constraint(equalTo: formatChrome.bottomAnchor),
+            formatSeparator.heightAnchor.constraint(equalToConstant: GlanceTheme.Size.hairline),
             placeholder.leadingAnchor.constraint(equalTo: leadingAnchor, constant: GlanceTheme.Size.readingInset.width + 4),
             placeholder.topAnchor.constraint(
-                equalTo: formatBar.bottomAnchor,
+                equalTo: topAnchor,
                 constant: GlanceTheme.Size.readingInset.height
             )
         ])
@@ -166,16 +191,27 @@ final class TextPanelView: NSView, PanelContentControlling, NSTextViewDelegate {
     }
 
     private func applyFormatBar(visible: Bool) {
-        formatBar.alphaValue = visible ? 1 : 0
-        formatBarHeight.constant = GlanceTheme.Size.formatBarHeight
+        formatChrome.ignoresHits = !visible
+        formatChrome.setAccessibilityElement(visible)
+        applyScrollTopInset(visible)
         for case let button as NSButton in formatBar.arrangedSubviews {
             button.isEnabled = visible
         }
+        GlanceMotion.setAlpha(formatChrome, visible ? 1 : 0)
+    }
+
+    private func applyScrollTopInset(_ editing: Bool) {
+        let inset = TextFormatBarLayout.scrollTopInset(isEditing: editing)
+        scrollView.contentInsets = NSEdgeInsets(top: inset, left: 0, bottom: 0, right: 0)
+        scrollView.scrollerInsets = NSEdgeInsets(top: inset, left: 0, bottom: 0, right: 0)
     }
 
     private func makeFormatButton(symbol: String, tooltip: String, action: Selector) -> NSButton {
-        let image = NSImage(systemSymbolName: symbol, accessibilityDescription: tooltip)
-        let button = NSButton(image: image ?? NSImage(), target: self, action: action)
+        let button = NSButton(
+            image: GlanceTheme.chromeSymbol(symbol, accessibilityDescription: tooltip) ?? NSImage(),
+            target: self,
+            action: action
+        )
         button.bezelStyle = .toolbar
         button.isBordered = false
         button.toolTip = tooltip
@@ -203,6 +239,14 @@ final class TextPanelView: NSView, PanelContentControlling, NSTextViewDelegate {
     private func refreshPlaceholder() {
         let empty = (textView.string.trimmingCharacters(in: .whitespacesAndNewlines)).isEmpty
         placeholder.isHidden = !empty || !textView.isReadingMode
+    }
+}
+
+private final class FormatBarChrome: NSView {
+    var ignoresHits = true
+
+    override func hitTest(_ point: NSPoint) -> NSView? {
+        ignoresHits ? nil : super.hitTest(point)
     }
 }
 
