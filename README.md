@@ -20,13 +20,17 @@ There is no Windows client yet. Shared data contracts are documented so a future
 - Per-panel hide/show
 - Workspaces
 - Panel Manager
+- Multi-select in Panel Manager
+- Batch visibility
+- Batch workspace move
+- Batch tag editing
 - Custom panel titles
 - Panel Tags
 - No account
 - No cloud
 - Open source
 
-## V0.14.1 已支持
+## V0.15 已支持
 
 - Text panel
 - Markdown panel (rendered preview, double-click to edit raw UTF-8 `.md`)
@@ -35,7 +39,7 @@ There is no Windows client yet. Shared data contracts are documented so a future
 - PDF panel
 - Quick Capture — capture text or a Todo without first creating an empty panel. Default: `⌥⌘J`
 - Clipboard Capture — create a Text or Image panel from the current clipboard. Default: `⌥⌘B`
-- Panel Manager — browse, search, reveal, hide, delete, and move existing panels; the sidebar switches the active workspace
+- Panel Manager — browse, search, reveal, hide, delete, and move existing panels; the sidebar switches the active workspace. Multi-select a filtered result set and apply atomic batch hide/show, workspace move, and tag add/remove.
 - Workspaces — organize panels by workspace and switch the visible set of panels without changing their content or per-panel hidden state
 - Custom panel titles — give long-lived panels a stable custom name without modifying their underlying content. Clearing a custom title restores the automatic content-derived title
 - Panel Tags — add multiple lightweight tags to panels for search and filtering without affecting workspace membership or visibility. The tag editor commits pending input when Save is pressed.

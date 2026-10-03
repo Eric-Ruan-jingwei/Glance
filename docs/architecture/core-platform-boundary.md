@@ -57,7 +57,7 @@ Workspace = single membership, visibility context
 Tags      = zero or many string values, search/filter only
 ```
 
-`PanelRecord.tags`, `PanelTags` normalization/validation, schema migration, tag filtering, tag search, and derived tag catalogs stay in Core. There is no `TagRecord`, `tags.json`, or tag UUID. The tag editor, tag chips, Manager tag filter menu, and context-menu “编辑标签…” action stay on macOS. Tag editor keeps unsaved draft/input local until explicit Save; Save flushes pending input into the committed tag list.
+`PanelRecord.tags`, `PanelTags` normalization/validation, schema migration, tag filtering, tag search, and derived tag catalogs stay in Core. There is no `TagRecord`, `tags.json`, or tag UUID. The tag editor, tag chips, Manager tag filter menu, and context-menu “编辑标签…” action stay on macOS. Tag editor keeps unsaved draft/input local until explicit Save; Save flushes pending input into the committed tag list. Panel Manager multi-selection is session-only UI state. Batch metadata operations (hide/show, workspace move, add/remove tags) are atomic at the `panels.json` level: one in-memory mutation, one save, full rollback on failure.
 
 ## macOS Platform
 
