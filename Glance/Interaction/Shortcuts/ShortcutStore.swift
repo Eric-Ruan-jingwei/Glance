@@ -14,16 +14,20 @@ final class ShortcutStore {
     }
 
     func shortcut(for action: ShortcutAction) -> GlanceShortcut {
-        let fallback = ShortcutDefaults.shortcut(for: action)
-        guard let data = storedData(for: action) else { return fallback }
+        explicitShortcut(for: action) ?? ShortcutDefaults.shortcut(for: action)
+    }
+
+    /// Preference actually stored, decoded, and valid. Missing or invalid payload is `nil`.
+    func explicitShortcut(for action: ShortcutAction) -> GlanceShortcut? {
+        guard let data = storedData(for: action) else { return nil }
         do {
             let decoded = try decoder.decode(GlanceShortcut.self, from: data)
             if ShortcutValidator.problem(with: decoded) != nil {
-                return fallback
+                return nil
             }
             return decoded
         } catch {
-            return fallback
+            return nil
         }
     }
 

@@ -1,6 +1,6 @@
 import Foundation
 
-enum ShortcutAction: String, CaseIterable, Equatable {
+enum ShortcutAction: String, CaseIterable, Equatable, Hashable {
     case quickCapture
     case globalSearch
     case clipboardHistory
@@ -28,7 +28,7 @@ enum ShortcutAction: String, CaseIterable, Equatable {
     }
 }
 
-struct GlanceShortcut: Codable, Equatable {
+struct GlanceShortcut: Codable, Equatable, Hashable {
     var key: String
     var command: Bool
     var option: Bool
@@ -68,6 +68,14 @@ struct GlanceShortcut: Codable, Equatable {
             && lhs.option == rhs.option
             && lhs.control == rhs.control
             && lhs.shift == rhs.shift
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(canonicalKey)
+        hasher.combine(command)
+        hasher.combine(option)
+        hasher.combine(control)
+        hasher.combine(shift)
     }
 }
 
@@ -227,7 +235,9 @@ enum ShortcutValidator {
         excluding action: ShortcutAction,
         in shortcuts: [ShortcutAction: GlanceShortcut]
     ) -> ShortcutAction? {
-        shortcuts.first { $0.key != action && $0.value == shortcut }?.key
+        ShortcutAction.allCases.first { candidate in
+            candidate != action && shortcuts[candidate] == shortcut
+        }
     }
 
     private static func isReserved(_ shortcut: GlanceShortcut) -> Bool {
