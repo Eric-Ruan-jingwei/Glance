@@ -3,16 +3,32 @@ import UniformTypeIdentifiers
 
 final class MediaStore {
     func writePNG(_ image: NSImage, to directory: URL) throws -> URL {
-        let url = directory.appendingPathComponent("image.png")
-        guard
-            let tiff = image.tiffRepresentation,
-            let bitmap = NSBitmapImageRep(data: tiff),
-            let png = bitmap.representation(using: .png, properties: [:])
-        else {
+        guard let png = Self.pngData(from: image) else {
             throw MediaStoreError.writeFailed
         }
-        try png.write(to: url, options: .atomic)
+        return try writePNGData(png, to: directory)
+    }
+
+    func writePNGData(_ data: Data, to directory: URL) throws -> URL {
+        let url = directory.appendingPathComponent("image.png")
+        guard !data.isEmpty else { throw MediaStoreError.writeFailed }
+        try data.write(to: url, options: .atomic)
         return url
+    }
+
+    static func pngData(from image: NSImage) -> Data? {
+        guard
+            let tiff = image.tiffRepresentation,
+            let bitmap = NSBitmapImageRep(data: tiff)
+        else {
+            return nil
+        }
+        return bitmap.representation(using: .png, properties: [:])
+    }
+
+    static func looksLikePNG(_ data: Data) -> Bool {
+        let signature: [UInt8] = [137, 80, 78, 71, 13, 10, 26, 10]
+        return data.count >= 8 && Array(data.prefix(8)) == signature
     }
 
     func loadImage(from directory: URL) throws -> NSImage? {
