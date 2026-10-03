@@ -17,10 +17,8 @@ final class GlanceTextView: NSTextView {
     }
 
     override func mouseDown(with event: NSEvent) {
-        if isReadingMode, event.clickCount >= 2 {
-            if allowsContentMutation {
-                onBeginEditing?()
-            }
+        if isReadingMode {
+            handleReadingMouseDown(event)
             return
         }
         if event.clickCount == 1, allowsContentMutation {
@@ -29,18 +27,38 @@ final class GlanceTextView: NSTextView {
                 return
             }
         }
-        if isReadingMode {
-            if isPointInText(event) {
-                prepareReadingSelection()
-                super.mouseDown(with: event)
-                return
-            }
+        super.mouseDown(with: event)
+    }
+
+    private func handleReadingMouseDown(_ event: NSEvent) {
+        let viewPoint = convert(event.locationInWindow, from: nil)
+        switch PanelReadingClick.textAction(
+            isInText: isPointInText(event),
+            hitsChecklist: checklistChange(atViewPoint: viewPoint) != nil,
+            allowsContentMutation: allowsContentMutation
+        ) {
+        case .toggleChecklist:
+            _ = toggleChecklist(atViewPoint: viewPoint)
+        case .beginEditing:
+            beginEditing(at: viewPoint)
+        case .selectText:
+            prepareReadingSelection()
+            super.mouseDown(with: event)
+        case .followLink:
+            prepareReadingSelection()
+            super.mouseDown(with: event)
+        case .movePanel:
             if allowsMove, let window {
                 PanelWindowDrag.moveThenFinishInteractive(window, with: event)
             }
-            return
         }
-        super.mouseDown(with: event)
+    }
+
+    private func beginEditing(at viewPoint: NSPoint) {
+        let index = characterIndexForInsertion(at: viewPoint)
+        onBeginEditing?()
+        let length = (string as NSString).length
+        setSelectedRange(NSRange(location: min(max(0, index), length), length: 0))
     }
 
     override func performKeyEquivalent(with event: NSEvent) -> Bool {
@@ -133,7 +151,15 @@ final class GlanceTextView: NSTextView {
     }
 
     func toggleChecklist(atViewPoint viewPoint: NSPoint) -> Bool {
-        guard let layoutManager, let textContainer, let textStorage else { return false }
+        guard let change = checklistChange(atViewPoint: viewPoint), let textStorage else { return false }
+        textStorage.replaceCharacters(in: change.range, with: change.replacement)
+        didChangeText()
+        onChecklistToggled?()
+        return true
+    }
+
+    func checklistChange(atViewPoint viewPoint: NSPoint) -> (range: NSRange, replacement: String)? {
+        guard let layoutManager, let textContainer, let textStorage else { return nil }
         var fraction: CGFloat = 0
         let containerPoint = TextChecklistToggle.containerPoint(
             viewPoint: viewPoint,
@@ -144,22 +170,46 @@ final class GlanceTextView: NSTextView {
             in: textContainer,
             fractionOfDistanceThroughGlyph: &fraction
         )
-        guard glyphIndex < layoutManager.numberOfGlyphs else { return false }
+        guard glyphIndex < layoutManager.numberOfGlyphs else { return nil }
         let glyphBounds = layoutManager.boundingRect(
             forGlyphRange: NSRange(location: glyphIndex, length: 1),
             in: textContainer
         )
         guard TextChecklistToggle.hitsGlyph(containerPoint: containerPoint, glyphBounds: glyphBounds) else {
-            return false
+            return nil
         }
         let charIndex = layoutManager.characterIndexForGlyph(at: glyphIndex)
-        guard let change = TextChecklistToggle.replacement(in: textStorage.string as NSString, at: charIndex) else {
-            return false
-        }
-        textStorage.replaceCharacters(in: change.range, with: change.replacement)
-        didChangeText()
-        onChecklistToggled?()
-        return true
+        return TextChecklistToggle.replacement(in: textStorage.string as NSString, at: charIndex)
+    }
+}
+
+enum PanelReadingClick: Equatable {
+    case toggleChecklist
+    case beginEditing
+    case followLink
+    case selectText
+    case movePanel
+
+    static func textAction(
+        isInText: Bool,
+        hitsChecklist: Bool,
+        allowsContentMutation: Bool
+    ) -> PanelReadingClick {
+        if hitsChecklist, allowsContentMutation { return .toggleChecklist }
+        if isInText, allowsContentMutation { return .beginEditing }
+        if isInText { return .selectText }
+        return .movePanel
+    }
+
+    static func markdownAction(
+        isInText: Bool,
+        hitsLink: Bool,
+        allowsContentMutation: Bool
+    ) -> PanelReadingClick {
+        if !isInText { return .movePanel }
+        if hitsLink { return .followLink }
+        if allowsContentMutation { return .beginEditing }
+        return .selectText
     }
 }
 

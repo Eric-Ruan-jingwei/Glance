@@ -19,7 +19,7 @@ final class TextPanelView: NSView, PanelContentControlling, NSTextViewDelegate {
     private let formatSeparator = NSView()
     private let scrollView = NSScrollView()
     private let textView: GlanceTextView
-    private let placeholder = NSTextField(labelWithString: GlanceEmptyCopy.textPlaceholder)
+    private let placeholder = GlanceClickThroughLabel(labelWithString: GlanceEmptyCopy.textPlaceholder)
 
     init() {
         textView = GlanceTextView(usingTextLayoutManager: false)

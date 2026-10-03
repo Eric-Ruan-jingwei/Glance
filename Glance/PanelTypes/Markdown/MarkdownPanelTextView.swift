@@ -17,19 +17,22 @@ final class MarkdownPanelTextView: NSTextView {
 
     override func mouseDown(with event: NSEvent) {
         if isReadingMode {
-            if event.clickCount >= 2 {
-                if allowsContentMutation {
-                    onBeginEditing?()
-                }
-                return
-            }
-            if isPointInText(event) {
+            switch PanelReadingClick.markdownAction(
+                isInText: isPointInText(event),
+                hitsLink: isPointOnLink(event),
+                allowsContentMutation: allowsContentMutation
+            ) {
+            case .followLink, .selectText:
                 prepareReadingSelection()
                 super.mouseDown(with: event)
-                return
-            }
-            if allowsMove, let window {
-                PanelWindowDrag.moveThenFinishInteractive(window, with: event)
+            case .beginEditing:
+                onBeginEditing?()
+            case .movePanel:
+                if allowsMove, let window {
+                    PanelWindowDrag.moveThenFinishInteractive(window, with: event)
+                }
+            case .toggleChecklist:
+                break
             }
             return
         }
@@ -69,5 +72,13 @@ final class MarkdownPanelTextView: NSTextView {
         let inset = textContainerInset
         let textRect = used.offsetBy(dx: inset.width, dy: inset.height).insetBy(dx: -4, dy: -4)
         return textRect.contains(point)
+    }
+
+    private func isPointOnLink(_ event: NSEvent) -> Bool {
+        guard let textStorage else { return false }
+        let point = convert(event.locationInWindow, from: nil)
+        let index = characterIndexForInsertion(at: point)
+        guard index >= 0, index < textStorage.length else { return false }
+        return textStorage.attribute(.link, at: index, effectiveRange: nil) != nil
     }
 }

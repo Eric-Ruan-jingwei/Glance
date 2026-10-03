@@ -17,7 +17,7 @@ final class MarkdownPanelView: NSView, PanelContentControlling, NSTextViewDelega
 
     private let scrollView = NSScrollView()
     private let textView: MarkdownPanelTextView
-    private let placeholder = NSTextField(labelWithString: GlanceEmptyCopy.markdownPlaceholder)
+    private let placeholder = GlanceClickThroughLabel(labelWithString: GlanceEmptyCopy.markdownPlaceholder)
     private var source = ""
     private var isEditing = false
     private var isApplyingContent = false

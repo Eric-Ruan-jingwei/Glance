@@ -43,7 +43,7 @@ struct GuideGettingStartedPage: View {
             )
             VStack(spacing: GlanceTheme.Space.sm) {
                 GuideInstructionRow(symbol: "arrow.up.and.down.and.arrow.left.and.right", title: "拖动顶部", detail: "移动面板")
-                GuideInstructionRow(symbol: "character.cursor.ibeam", title: "双击文字", detail: "编辑内容")
+                GuideInstructionRow(symbol: "character.cursor.ibeam", title: "单击文字", detail: "编辑内容")
                 GuideInstructionRow(symbol: "rectangle.split.2x1", title: "拖到屏幕边缘", detail: "自动吸附")
             }
         }

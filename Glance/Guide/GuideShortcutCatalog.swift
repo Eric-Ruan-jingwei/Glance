@@ -138,7 +138,7 @@ enum GuideShortcutCatalog {
             id: "editTextMarkdown",
             title: "编辑文字 / Markdown",
             detail: nil,
-            source: .mouseGesture("双击内容")
+            source: .mouseGesture("单击内容")
         ),
         GuideShortcutItem(
             id: "editTodo",

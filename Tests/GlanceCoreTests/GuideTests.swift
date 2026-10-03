@@ -167,12 +167,12 @@ final class GuideTests: XCTestCase {
         )
     }
 
-    func testCatalogDescribesDoubleClickEditingAccurately() {
+    func testCatalogDescribesClickEditingAccurately() {
         let provider = ShortcutDefaults.shortcut(for:)
         let textMarkdown = GuideShortcutCatalog.item(id: "editTextMarkdown")
         let todo = GuideShortcutCatalog.item(id: "editTodo")
         XCTAssertEqual(textMarkdown?.title, "编辑文字 / Markdown")
-        XCTAssertEqual(textMarkdown?.tokens(using: provider).map(\.display), ["双击内容"])
+        XCTAssertEqual(textMarkdown?.tokens(using: provider).map(\.display), ["单击内容"])
         XCTAssertEqual(todo?.title, "编辑待办")
         XCTAssertEqual(todo?.tokens(using: provider).map(\.display), ["双击待办项"])
         XCTAssertEqual(GuideShortcutCatalog.groups.first { $0.id == "panel" }?.title, "面板操作")

@@ -107,3 +107,47 @@ final class TextChecklistClickTests: XCTestCase {
         return NSPoint(x: origin.x + bounds.midX, y: origin.y + bounds.midY)
     }
 }
+
+final class PanelReadingClickTests: XCTestCase {
+    func testTextContentClickBeginsEditing() {
+        XCTAssertEqual(
+            PanelReadingClick.textAction(isInText: true, hitsChecklist: false, allowsContentMutation: true),
+            .beginEditing
+        )
+    }
+
+    func testTextChecklistClickTogglesInsteadOfEditing() {
+        XCTAssertEqual(
+            PanelReadingClick.textAction(isInText: true, hitsChecklist: true, allowsContentMutation: true),
+            .toggleChecklist
+        )
+    }
+
+    func testTextPaddingClickMovesThePanel() {
+        XCTAssertEqual(
+            PanelReadingClick.textAction(isInText: false, hitsChecklist: false, allowsContentMutation: true),
+            .movePanel
+        )
+    }
+
+    func testLockedTextClickSelects() {
+        XCTAssertEqual(
+            PanelReadingClick.textAction(isInText: true, hitsChecklist: false, allowsContentMutation: false),
+            .selectText
+        )
+    }
+
+    func testMarkdownLinkClickOpensTheLink() {
+        XCTAssertEqual(
+            PanelReadingClick.markdownAction(isInText: true, hitsLink: true, allowsContentMutation: true),
+            .followLink
+        )
+    }
+
+    func testMarkdownContentClickBeginsEditing() {
+        XCTAssertEqual(
+            PanelReadingClick.markdownAction(isInText: true, hitsLink: false, allowsContentMutation: true),
+            .beginEditing
+        )
+    }
+}
