@@ -56,6 +56,59 @@ struct GlobalSearchActionDependencies {
     var revealPanel: (UUID) -> Bool
 }
 
+enum GlobalSearchRevealTarget: Equatable {
+    case clipboard(UUID)
+    case fileShelf(UUID)
+    case snippets(UUID)
+    case links(UUID)
+    case panels(UUID)
+}
+
+enum GlobalSearchRevealPlan: Equatable {
+    case reveal(GlobalSearchRevealTarget)
+    case failed(String)
+}
+
+enum GlobalSearchRevealRouter {
+    static func plan(
+        id: GlobalSearchResultID,
+        clipboardExists: (UUID) -> Bool,
+        fileExists: (UUID) -> Bool,
+        snippetExists: (UUID) -> Bool,
+        linkExists: (UUID) -> Bool,
+        panelExists: (UUID) -> Bool
+    ) -> GlobalSearchRevealPlan {
+        let exists: Bool
+        switch id.source {
+        case .clipboard:
+            exists = clipboardExists(id.itemID)
+        case .fileShelf:
+            exists = fileExists(id.itemID)
+        case .snippets:
+            exists = snippetExists(id.itemID)
+        case .links:
+            exists = linkExists(id.itemID)
+        case .panels:
+            exists = panelExists(id.itemID)
+        }
+        guard exists else {
+            return .failed(GlanceNoticeCopy.staleItem)
+        }
+        switch id.source {
+        case .clipboard:
+            return .reveal(.clipboard(id.itemID))
+        case .fileShelf:
+            return .reveal(.fileShelf(id.itemID))
+        case .snippets:
+            return .reveal(.snippets(id.itemID))
+        case .links:
+            return .reveal(.links(id.itemID))
+        case .panels:
+            return .reveal(.panels(id.itemID))
+        }
+    }
+}
+
 enum GlobalSearchActionRouter {
     static func perform(
         id: GlobalSearchResultID,

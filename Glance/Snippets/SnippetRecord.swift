@@ -183,6 +183,7 @@ enum SnippetCopy {
     static let closeHint = "Esc 关闭"
     static let copyLabel = "复制"
     static let editLabel = "编辑…"
+    static let createPanelLabel = "创建面板"
     static let pinLabel = "置顶"
     static let unpinLabel = "取消置顶"
     static let deleteLabel = "删除…"

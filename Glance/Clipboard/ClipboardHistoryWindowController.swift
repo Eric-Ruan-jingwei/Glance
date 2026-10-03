@@ -9,6 +9,7 @@ final class ClipboardHistoryWindowController: NSWindowController {
 
     private let model: ClipboardHistoryViewModel
     private let monitor: ClipboardHistoryMonitor
+    private let clipboardWriter: GlanceClipboardWriter
     private var keyMonitor: Any?
     private var resignObserver: NSObjectProtocol?
 
@@ -19,6 +20,7 @@ final class ClipboardHistoryWindowController: NSWindowController {
     init(service: ClipboardHistoryService, monitor: ClipboardHistoryMonitor) {
         self.model = ClipboardHistoryViewModel(service: service)
         self.monitor = monitor
+        self.clipboardWriter = GlanceClipboardWriter(monitor: monitor)
         let panel = ClipboardHistoryPanel(
             contentRect: NSRect(origin: .zero, size: GlanceConstants.clipboardHistorySize)
         )
@@ -41,17 +43,20 @@ final class ClipboardHistoryWindowController: NSWindowController {
 
     func present() {
         model.resetPresentation()
-        positionOnWorkingScreen()
-        NSApp.activate(ignoringOtherApps: true)
-        window?.makeKeyAndOrderFront(nil)
+        UtilityWindowPresentation.present(window, size: GlanceConstants.clipboardHistorySize)
         installDismissalMonitors()
     }
 
-    func dismiss() {
+    @discardableResult
+    func present(selecting id: UUID) -> Bool {
+        present()
+        return model.selectForReveal(id)
+    }
+
+    func dismiss(deactivate: Bool = true) {
         removeDismissalMonitors()
-        window?.orderOut(nil)
         model.resetPresentation()
-        NSApp.deactivate()
+        UtilityWindowPresentation.dismiss(window, deactivate: deactivate)
     }
 
     private func installContent() {
@@ -87,9 +92,11 @@ final class ClipboardHistoryWindowController: NSWindowController {
 
     private func reuse(_ id: UUID) {
         guard let content = model.service.reuse(id) else { return }
-        let count = MacClipboardWriter.write(content)
-        monitor.adopt(changeCount: count)
-        dismiss()
+        guard clipboardWriter.write(content) else {
+            NSSound.beep()
+            return
+        }
+        dismiss(deactivate: true)
     }
 
     private func saveAsSnippet(_ id: UUID) {
@@ -108,22 +115,10 @@ final class ClipboardHistoryWindowController: NSWindowController {
         guard let content = model.service.content(for: id) else { return }
         let screen = window?.screen ?? DisplayManager.screenContainingMouse()
         if onCreatePanel(content, screen) {
-            dismiss()
+            dismiss(deactivate: false)
         } else {
             NSSound.beep()
         }
-    }
-
-    private func positionOnWorkingScreen() {
-        let screen = DisplayManager.screenContainingMouse()
-        let size = GlanceConstants.clipboardHistorySize
-        let visible = screen.visibleFrame
-        let x = visible.midX - size.width / 2
-        let y = visible.midY - size.height / 2 + visible.height * 0.08
-        window?.setFrame(
-            NSRect(x: x, y: max(visible.minY, y), width: size.width, height: size.height),
-            display: true
-        )
     }
 
     private func installDismissalMonitors() {

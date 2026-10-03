@@ -3,10 +3,13 @@ import SwiftUI
 
 @MainActor
 final class GlobalSearchWindowController: NSWindowController {
+    var onRevealInSource: ((GlobalSearchResultID) -> GlanceActionOutcome)?
+
     private let model: GlobalSearchViewModel
     private let environment: AppEnvironment
     private let panelManager: PanelManager
     private let opener: LinkOpening
+    private let clipboardWriter: GlanceClipboardWriter
     private var keyMonitor: Any?
     private var resignObserver: NSObjectProtocol?
 
@@ -23,6 +26,7 @@ final class GlobalSearchWindowController: NSWindowController {
         self.environment = environment
         self.panelManager = panelManager
         self.opener = opener
+        self.clipboardWriter = GlanceClipboardWriter(monitor: environment.clipboardHistoryMonitor)
         self.model = GlobalSearchViewModel(summaryLoader: summaryLoader)
         let panel = GlobalSearchPanel(
             contentRect: NSRect(origin: .zero, size: GlanceConstants.globalSearchSize)
@@ -47,27 +51,23 @@ final class GlobalSearchWindowController: NSWindowController {
     func present() {
         model.resetPresentation()
         model.applyImmediateSnapshot(currentSnapshot())
-        positionOnWorkingScreen()
-        NSApp.activate(ignoringOtherApps: true)
-        window?.makeKeyAndOrderFront(nil)
+        UtilityWindowPresentation.present(window, size: GlanceConstants.globalSearchSize)
         installDismissalMonitors()
     }
 
     func dismiss(deactivate: Bool) {
         model.cancelPanelLoading()
         removeDismissalMonitors()
-        window?.orderOut(nil)
         model.resetPresentation()
-        if deactivate {
-            NSApp.deactivate()
-        }
+        UtilityWindowPresentation.dismiss(window, deactivate: deactivate)
     }
 
     private func installContent() {
         guard let window else { return }
         let view = GlobalSearchView(
             model: model,
-            onActivate: { [weak self] id in self?.activate(id) }
+            onActivate: { [weak self] id in self?.activate(id) },
+            onRevealInSource: { [weak self] id in self?.revealInSource(id) }
         )
         let hosting = NSHostingController(rootView: view)
         hosting.view.frame = NSRect(origin: .zero, size: GlanceConstants.globalSearchSize)
@@ -158,11 +158,19 @@ final class GlobalSearchWindowController: NSWindowController {
         )
     }
 
+    private func revealInSource(_ id: GlobalSearchResultID) {
+        switch onRevealInSource?(id) ?? .failed(GlanceNoticeCopy.staleItem) {
+        case .succeeded:
+            dismiss(deactivate: false)
+        case .failed(let notice):
+            NSSound.beep()
+            model.showNotice(notice)
+        }
+    }
+
     private func restoreClipboard(_ id: UUID) -> Bool {
         guard let content = environment.clipboardHistoryService.reuse(id) else { return false }
-        let count = MacClipboardWriter.write(content)
-        environment.clipboardHistoryMonitor.adopt(changeCount: count)
-        return true
+        return clipboardWriter.write(content)
     }
 
     private func openFile(_ id: UUID) -> Bool {
@@ -177,8 +185,7 @@ final class GlobalSearchWindowController: NSWindowController {
         guard let record = environment.snippetService.records.first(where: { $0.id == id }) else {
             return false
         }
-        let count = MacClipboardWriter.write(.text(record.content))
-        environment.clipboardHistoryMonitor.adopt(changeCount: count)
+        guard clipboardWriter.write(.text(record.content)) else { return false }
         _ = environment.snippetService.markUsed(id: id)
         return true
     }
@@ -193,18 +200,6 @@ final class GlobalSearchWindowController: NSWindowController {
         ) { [weak self] openedID in
             self?.environment.linkService.markOpened(id: openedID) ?? false
         }
-    }
-
-    private func positionOnWorkingScreen() {
-        let screen = DisplayManager.screenContainingMouse()
-        let size = GlanceConstants.globalSearchSize
-        let visible = screen.visibleFrame
-        let x = visible.midX - size.width / 2
-        let y = visible.midY - size.height / 2 + visible.height * 0.08
-        window?.setFrame(
-            NSRect(x: x, y: max(visible.minY, y), width: size.width, height: size.height),
-            display: true
-        )
     }
 
     private func installDismissalMonitors() {
@@ -237,7 +232,10 @@ final class GlobalSearchWindowController: NSWindowController {
     private func handleKey(_ event: NSEvent) -> NSEvent? {
         guard isSearchVisible else { return event }
         if isComposingIME() { return event }
-        guard let action = GlobalSearchActionPolicy.action(keyCode: event.keyCode) else {
+        guard let action = GlobalSearchActionPolicy.action(
+            keyCode: event.keyCode,
+            command: event.modifierFlags.intersection(.deviceIndependentFlagsMask).contains(.command)
+        ) else {
             return event
         }
         switch action {
@@ -245,6 +243,8 @@ final class GlobalSearchWindowController: NSWindowController {
             model.moveSelection(delta)
         case .activate:
             if let id = model.selection { activate(id) }
+        case .revealInSource:
+            if let id = model.selection { revealInSource(id) }
         case .dismiss:
             dismiss(deactivate: true)
         }

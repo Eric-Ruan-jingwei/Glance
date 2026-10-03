@@ -50,6 +50,15 @@ final class LinkLibraryViewModel: ObservableObject {
         presentationID += 1
     }
 
+    @discardableResult
+    func selectForReveal(_ id: UUID) -> Bool {
+        query = ""
+        editor = nil
+        guard service.records.contains(where: { $0.id == id }) else { return false }
+        selection = id
+        return displayed.contains(where: { $0.id == id })
+    }
+
     func moveSelection(_ delta: Int) {
         let items = displayed
         guard !items.isEmpty else {
@@ -175,6 +184,7 @@ struct LinkLibraryView: View {
     var onCreate: () -> Void
     var onTogglePin: (UUID) -> Void
     var onDelete: (UUID) -> Void
+    var onCreatePanel: (UUID) -> Void
     var onDropItems: ([LinkDropItem]) -> Void
     var relativeNow: Date = Date()
 
@@ -327,6 +337,7 @@ struct LinkLibraryView: View {
                     Button(LinkCopy.openLabel) { onOpen(record.id) }
                     Button(LinkCopy.copyLabel) { onCopy(record.id) }
                     Button(LinkCopy.editLabel) { onEdit(record.id) }
+                    Button(LinkCopy.createPanelLabel) { onCreatePanel(record.id) }
                     Button(record.isPinned ? LinkCopy.unpinLabel : LinkCopy.pinLabel) {
                         onTogglePin(record.id)
                     }

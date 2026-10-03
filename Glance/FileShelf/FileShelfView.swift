@@ -54,6 +54,15 @@ final class FileShelfViewModel: ObservableObject {
         service.notice = nil
     }
 
+    @discardableResult
+    func selectForReveal(_ id: UUID) -> Bool {
+        query = ""
+        tab = .recent
+        guard service.records.contains(where: { $0.id == id }) else { return false }
+        selection = id
+        return displayed.contains(where: { $0.id == id })
+    }
+
     func moveSelection(_ delta: Int) {
         let items = displayed
         guard !items.isEmpty else {
@@ -115,6 +124,7 @@ struct FileShelfView: View {
     var onToggleFavorite: (UUID) -> Void
     var onRemove: (UUID) -> Void
     var onRelink: (UUID) -> Void
+    var onCreatePanel: (UUID) -> Void
     var onDropPaths: ([String]) -> Void
     var relativeNow: Date = Date()
 
@@ -284,6 +294,9 @@ struct FileShelfView: View {
             Button(FileShelfCopy.previewLabel) { onPreview(record.id) }
             Button(FileShelfCopy.copyFileLabel) { onCopyFile(record.id) }
             Button(FileShelfCopy.copyPathLabel) { onCopyPath(record.id) }
+            if let kind = FileShelfPanelSupport.kind(for: record) {
+                Button(FileShelfPanelSupport.menuTitle(for: kind)) { onCreatePanel(record.id) }
+            }
         }
         Button(record.isFavorite ? FileShelfCopy.unfavoriteLabel : FileShelfCopy.favoriteLabel) {
             onToggleFavorite(record.id)

@@ -51,6 +51,15 @@ final class ClipboardHistoryViewModel: ObservableObject {
         presentationID += 1
     }
 
+    @discardableResult
+    func selectForReveal(_ id: UUID) -> Bool {
+        query = ""
+        tab = .recent
+        guard service.records.contains(where: { $0.id == id }) else { return false }
+        selection = id
+        return displayed.contains(where: { $0.id == id })
+    }
+
     func moveSelection(_ delta: Int) {
         let items = displayed
         guard !items.isEmpty else {

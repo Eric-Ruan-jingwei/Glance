@@ -82,6 +82,13 @@ final class PanelLibraryWindowController: NSWindowController, NSWindowDelegate {
         window?.makeKeyAndOrderFront(nil)
     }
 
+    @discardableResult
+    func present(selecting id: UUID) -> Bool {
+        present()
+        model.revealInLibrary(id)
+        return true
+    }
+
     func windowDidBecomeKey(_ notification: Notification) {
         model.reload()
     }

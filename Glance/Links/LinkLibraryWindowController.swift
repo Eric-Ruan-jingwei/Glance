@@ -111,8 +111,10 @@ enum MacLinkDropCollector {
 
 @MainActor
 final class LinkLibraryWindowController: NSWindowController {
+    var onCreatePanel: ((LinkRecord, NSScreen?) -> GlanceActionOutcome)?
+
     private let model: LinkLibraryViewModel
-    private let monitor: ClipboardHistoryMonitor
+    private let clipboardWriter: GlanceClipboardWriter
     private let opener: LinkOpening
     private var keyMonitor: Any?
     private var resignObserver: NSObjectProtocol?
@@ -128,7 +130,7 @@ final class LinkLibraryWindowController: NSWindowController {
         opener: LinkOpening = MacLinkOpener()
     ) {
         self.model = LinkLibraryViewModel(service: service)
-        self.monitor = monitor
+        self.clipboardWriter = GlanceClipboardWriter(monitor: monitor)
         self.opener = opener
         let panel = LinkLibraryPanel(
             contentRect: NSRect(origin: .zero, size: GlanceConstants.linkLibrarySize)
@@ -152,10 +154,14 @@ final class LinkLibraryWindowController: NSWindowController {
 
     func present() {
         model.resetPresentation()
-        positionOnWorkingScreen()
-        NSApp.activate(ignoringOtherApps: true)
-        window?.makeKeyAndOrderFront(nil)
+        UtilityWindowPresentation.present(window, size: GlanceConstants.linkLibrarySize)
         installDismissalMonitors()
+    }
+
+    @discardableResult
+    func present(selecting id: UUID) -> Bool {
+        present()
+        return model.selectForReveal(id)
     }
 
     func presentEditor(prefilledURL urlString: String) {
@@ -173,12 +179,11 @@ final class LinkLibraryWindowController: NSWindowController {
         }
     }
 
-    func dismiss() {
+    func dismiss(deactivate: Bool = true) {
         model.cancelEditor()
         removeDismissalMonitors()
-        window?.orderOut(nil)
         model.resetPresentation()
-        NSApp.deactivate()
+        UtilityWindowPresentation.dismiss(window, deactivate: deactivate)
     }
 
     private func installContent() {
@@ -193,6 +198,7 @@ final class LinkLibraryWindowController: NSWindowController {
                 _ = self?.model.service.togglePin(id: id)
             },
             onDelete: { [weak self] id in self?.delete(id) },
+            onCreatePanel: { [weak self] id in self?.createPanel(id) },
             onDropItems: { [weak self] items in self?.handleDrop(items) }
         )
         let hosting = NSHostingController(rootView: view)
@@ -210,17 +216,33 @@ final class LinkLibraryWindowController: NSWindowController {
             }
         )
         if opened {
-            dismiss()
+            dismiss(deactivate: false)
         } else {
             NSSound.beep()
+            model.showNotice(GlanceNoticeCopy.linkInvalid)
         }
     }
 
     private func copy(_ id: UUID) {
         guard let record = model.service.records.first(where: { $0.id == id }) else { return }
-        let count = MacClipboardWriter.write(.text(record.urlString))
-        monitor.adopt(changeCount: count)
-        dismiss()
+        guard clipboardWriter.write(.text(record.urlString)) else {
+            NSSound.beep()
+            model.showNotice(GlanceNoticeCopy.clipboardWriteFailed)
+            return
+        }
+        dismiss(deactivate: true)
+    }
+
+    private func createPanel(_ id: UUID) {
+        guard let record = model.service.records.first(where: { $0.id == id }) else { return }
+        let screen = window?.screen ?? DisplayManager.screenContainingMouse()
+        switch onCreatePanel?(record, screen) ?? .failed(GlanceNoticeCopy.panelCreateFailed) {
+        case .succeeded:
+            dismiss(deactivate: false)
+        case .failed(let message):
+            NSSound.beep()
+            model.showNotice(message)
+        }
     }
 
     private func edit(_ id: UUID) {
@@ -249,18 +271,6 @@ final class LinkLibraryWindowController: NSWindowController {
         suppressResignDismiss = false
         guard response == .alertFirstButtonReturn else { return }
         _ = model.service.delete(id: id)
-    }
-
-    private func positionOnWorkingScreen() {
-        let screen = DisplayManager.screenContainingMouse()
-        let size = GlanceConstants.linkLibrarySize
-        let visible = screen.visibleFrame
-        let x = visible.midX - size.width / 2
-        let y = visible.midY - size.height / 2 + visible.height * 0.08
-        window?.setFrame(
-            NSRect(x: x, y: max(visible.minY, y), width: size.width, height: size.height),
-            display: true
-        )
     }
 
     private func installDismissalMonitors() {

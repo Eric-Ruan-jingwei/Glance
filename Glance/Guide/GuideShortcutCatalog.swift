@@ -227,6 +227,12 @@ enum GuideShortcutCatalog {
             source: .keys([.enter])
         ),
         GuideShortcutItem(
+            id: "globalSearchReveal",
+            title: "在来源中显示",
+            detail: nil,
+            source: .keys([.command, .enter])
+        ),
+        GuideShortcutItem(
             id: "globalSearchCancel",
             title: "关闭",
             detail: nil,

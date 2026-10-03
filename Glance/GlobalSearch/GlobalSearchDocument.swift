@@ -105,14 +105,16 @@ enum GlobalSearchCopy {
     static let partialUnavailable = "部分 Glance 内容暂不可搜索"
     static let selectHint = "↑↓ 选择"
     static let actHint = "↩ 执行"
+    static let revealHint = "⌘↩ 在来源中显示"
     static let closeHint = "Esc 关闭"
-    static let fileMissing = "文件已移动或不存在"
+    static let fileMissing = GlanceNoticeCopy.fileMissing
     static let fileMissingRow = "⚠ 文件已移动或不存在"
-    static let globallyHidden = "面板当前已全局隐藏"
+    static let globallyHidden = GlanceNoticeCopy.globallyHidden
     static let clipboardMissing = "无法恢复剪贴板内容"
-    static let snippetMissing = "该片段已不存在"
-    static let linkFailed = "无法打开链接"
+    static let snippetMissing = GlanceNoticeCopy.staleItem
+    static let linkFailed = GlanceNoticeCopy.linkInvalid
     static let panelMissing = "无法打开面板"
+    static let staleItem = GlanceNoticeCopy.staleItem
     static let clipboardImageTitle = "剪贴板图片"
     static let clipboardImageAlias = "图片"
 }
@@ -219,15 +221,16 @@ enum GlobalSearchEngine {
 enum GlobalSearchKeyboardAction: Equatable {
     case moveSelection(Int)
     case activate
+    case revealInSource
     case dismiss
 }
 
 enum GlobalSearchActionPolicy {
-    static func action(keyCode: UInt16) -> GlobalSearchKeyboardAction? {
+    static func action(keyCode: UInt16, command: Bool = false) -> GlobalSearchKeyboardAction? {
         switch keyCode {
         case 125: return .moveSelection(1)
         case 126: return .moveSelection(-1)
-        case 36, 76: return .activate
+        case 36, 76: return command ? .revealInSource : .activate
         case 53: return .dismiss
         default: return nil
         }

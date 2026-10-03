@@ -19,9 +19,11 @@ final class SnippetLibraryViewModel: ObservableObject {
     @Published var selection: UUID?
     @Published var presentationID = 0
     @Published var editor: SnippetEditorSession?
+    @Published var notice: String?
 
     let service: SnippetService
     private var cancellables = Set<AnyCancellable>()
+    private var noticeTask: Task<Void, Never>?
 
     init(service: SnippetService) {
         self.service = service
@@ -39,8 +41,28 @@ final class SnippetLibraryViewModel: ObservableObject {
     func resetPresentation() {
         query = ""
         editor = nil
+        notice = nil
         selection = displayed.first?.id
         presentationID += 1
+    }
+
+    @discardableResult
+    func selectForReveal(_ id: UUID) -> Bool {
+        query = ""
+        editor = nil
+        guard service.records.contains(where: { $0.id == id }) else { return false }
+        selection = id
+        return displayed.contains(where: { $0.id == id })
+    }
+
+    func showNotice(_ message: String) {
+        noticeTask?.cancel()
+        notice = message
+        noticeTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(nanoseconds: 2_000_000_000)
+            guard !Task.isCancelled else { return }
+            self?.notice = nil
+        }
     }
 
     func moveSelection(_ delta: Int) {
@@ -133,6 +155,7 @@ struct SnippetLibraryView: View {
     var onCreate: () -> Void
     var onTogglePin: (UUID) -> Void
     var onDelete: (UUID) -> Void
+    var onCreatePanel: (UUID) -> Void
     var relativeNow: Date = Date()
 
     var body: some View {
@@ -145,6 +168,17 @@ struct SnippetLibraryView: View {
         }
         .frame(minWidth: 560, minHeight: 460)
         .background(Color(nsColor: .windowBackgroundColor))
+        .overlay(alignment: .bottom) {
+            if let notice = model.notice {
+                Text(notice)
+                    .font(.caption)
+                    .padding(.horizontal, GlanceTheme.Space.md)
+                    .padding(.vertical, GlanceTheme.Space.xs)
+                    .background(.thinMaterial, in: Capsule())
+                    .padding(.bottom, 44)
+                    .allowsHitTesting(false)
+            }
+        }
         .sheet(item: editorBinding) { session in
             SnippetEditorView(
                 session: binding(for: session),
@@ -257,6 +291,7 @@ struct SnippetLibraryView: View {
                 .contextMenu {
                     Button(SnippetCopy.copyLabel) { onCopy(record.id) }
                     Button(SnippetCopy.editLabel) { onEdit(record.id) }
+                    Button(SnippetCopy.createPanelLabel) { onCreatePanel(record.id) }
                     Button(record.isPinned ? SnippetCopy.unpinLabel : SnippetCopy.pinLabel) {
                         onTogglePin(record.id)
                     }

@@ -52,7 +52,7 @@ enum GuideFeatureCatalog {
         GuideFeatureCopy(
             title: "全局搜索",
             symbol: "magnifyingglass",
-            body: "全局搜索会在本机同时搜索剪贴板、文件架、片段库、链接库和全部工作区中的面板。搜索不会访问网络，也不会扫描 Glance 之外的文件。"
+            body: "全局搜索会在本机同时搜索剪贴板、文件架、片段库、链接库和全部工作区中的面板。回车执行结果，⌘↩ 在来源中显示以便继续整理。搜索不会访问网络，也不会扫描 Glance 之外的文件。"
         ),
         GuideFeatureCopy(
             title: "剪贴板",
@@ -62,17 +62,17 @@ enum GuideFeatureCatalog {
         GuideFeatureCopy(
             title: "文件架",
             symbol: "tray",
-            body: "把稍后还要用的文件暂存在文件架里。Glance 只保存文件引用，不会复制原文件。从文件架移除记录也不会删除原文件。"
+            body: "把稍后还要用的文件暂存在文件架里。Glance 只保存文件引用，不会复制原文件。图片和 PDF 可以创建为面板；从文件架移除记录也不会删除原文件。"
         ),
         GuideFeatureCopy(
             title: "片段库",
             symbol: "text.quote",
-            body: "把会反复使用的文字主动保存为片段。片段可以编辑和置顶，复制后自己粘贴。它不是剪贴板历史，也不会被自动淘汰。"
+            body: "把会反复使用的文字主动保存为片段。片段可以编辑和置顶，也可以创建为面板以便持续参考。复制后自己粘贴。它不是剪贴板历史，也不会被自动淘汰。"
         ),
         GuideFeatureCopy(
             title: "链接库",
             symbol: "link",
-            body: "把经常访问的网页和在线资源主动保存下来。Glance 不会抓取网页标题或图标，打开时使用系统默认浏览器。"
+            body: "把经常访问的网页和在线资源主动保存下来。Glance 不会抓取网页标题或图标，打开时使用系统默认浏览器。也可以把链接创建为文字面板。"
         ),
         GuideFeatureCopy(
             title: "Workspaces",

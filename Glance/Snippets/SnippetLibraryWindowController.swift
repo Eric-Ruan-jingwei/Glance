@@ -3,8 +3,10 @@ import SwiftUI
 
 @MainActor
 final class SnippetLibraryWindowController: NSWindowController {
+    var onCreatePanel: ((SnippetRecord, NSScreen?) -> GlanceActionOutcome)?
+
     private let model: SnippetLibraryViewModel
-    private let monitor: ClipboardHistoryMonitor
+    private let clipboardWriter: GlanceClipboardWriter
     private var keyMonitor: Any?
     private var resignObserver: NSObjectProtocol?
     private var suppressResignDismiss = false
@@ -15,7 +17,7 @@ final class SnippetLibraryWindowController: NSWindowController {
 
     init(service: SnippetService, monitor: ClipboardHistoryMonitor) {
         self.model = SnippetLibraryViewModel(service: service)
-        self.monitor = monitor
+        self.clipboardWriter = GlanceClipboardWriter(monitor: monitor)
         let panel = SnippetLibraryPanel(
             contentRect: NSRect(origin: .zero, size: GlanceConstants.snippetLibrarySize)
         )
@@ -38,10 +40,14 @@ final class SnippetLibraryWindowController: NSWindowController {
 
     func present() {
         model.resetPresentation()
-        positionOnWorkingScreen()
-        NSApp.activate(ignoringOtherApps: true)
-        window?.makeKeyAndOrderFront(nil)
+        UtilityWindowPresentation.present(window, size: GlanceConstants.snippetLibrarySize)
         installDismissalMonitors()
+    }
+
+    @discardableResult
+    func present(selecting id: UUID) -> Bool {
+        present()
+        return model.selectForReveal(id)
     }
 
     func presentEditor(prefilled content: String) {
@@ -59,12 +65,11 @@ final class SnippetLibraryWindowController: NSWindowController {
         }
     }
 
-    func dismiss() {
+    func dismiss(deactivate: Bool = true) {
         model.cancelEditor()
         removeDismissalMonitors()
-        window?.orderOut(nil)
         model.resetPresentation()
-        NSApp.deactivate()
+        UtilityWindowPresentation.dismiss(window, deactivate: deactivate)
     }
 
     private func installContent() {
@@ -77,7 +82,8 @@ final class SnippetLibraryWindowController: NSWindowController {
             onTogglePin: { [weak self] id in
                 _ = self?.model.service.togglePin(id: id)
             },
-            onDelete: { [weak self] id in self?.delete(id) }
+            onDelete: { [weak self] id in self?.delete(id) },
+            onCreatePanel: { [weak self] id in self?.createPanel(id) }
         )
         let hosting = NSHostingController(rootView: view)
         hosting.view.frame = NSRect(origin: .zero, size: GlanceConstants.snippetLibrarySize)
@@ -86,10 +92,25 @@ final class SnippetLibraryWindowController: NSWindowController {
 
     private func copy(_ id: UUID) {
         guard let record = model.service.records.first(where: { $0.id == id }) else { return }
-        let count = MacClipboardWriter.write(.text(record.content))
-        monitor.adopt(changeCount: count)
+        guard clipboardWriter.write(.text(record.content)) else {
+            NSSound.beep()
+            model.showNotice(GlanceNoticeCopy.clipboardWriteFailed)
+            return
+        }
         _ = model.service.markUsed(id: id)
-        dismiss()
+        dismiss(deactivate: true)
+    }
+
+    private func createPanel(_ id: UUID) {
+        guard let record = model.service.records.first(where: { $0.id == id }) else { return }
+        let screen = window?.screen ?? DisplayManager.screenContainingMouse()
+        switch onCreatePanel?(record, screen) ?? .failed(GlanceNoticeCopy.panelCreateFailed) {
+        case .succeeded:
+            dismiss(deactivate: false)
+        case .failed(let message):
+            NSSound.beep()
+            model.showNotice(message)
+        }
     }
 
     private func edit(_ id: UUID) {
@@ -113,18 +134,6 @@ final class SnippetLibraryWindowController: NSWindowController {
         suppressResignDismiss = false
         guard response == .alertFirstButtonReturn else { return }
         _ = model.service.delete(id: id)
-    }
-
-    private func positionOnWorkingScreen() {
-        let screen = DisplayManager.screenContainingMouse()
-        let size = GlanceConstants.snippetLibrarySize
-        let visible = screen.visibleFrame
-        let x = visible.midX - size.width / 2
-        let y = visible.midY - size.height / 2 + visible.height * 0.08
-        window?.setFrame(
-            NSRect(x: x, y: max(visible.minY, y), width: size.width, height: size.height),
-            display: true
-        )
     }
 
     private func installDismissalMonitors() {
