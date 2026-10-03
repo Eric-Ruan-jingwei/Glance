@@ -17,16 +17,19 @@ final class GlanceTextView: NSTextView {
     }
 
     override func mouseDown(with event: NSEvent) {
+        if isReadingMode, event.clickCount >= 2 {
+            if allowsContentMutation {
+                onBeginEditing?()
+            }
+            return
+        }
+        if event.clickCount == 1, allowsContentMutation {
+            let viewPoint = convert(event.locationInWindow, from: nil)
+            if toggleChecklist(atViewPoint: viewPoint) {
+                return
+            }
+        }
         if isReadingMode {
-            if event.clickCount >= 2 {
-                if allowsContentMutation {
-                    onBeginEditing?()
-                }
-                return
-            }
-            if allowsContentMutation, toggleChecklist(at: event) {
-                return
-            }
             if isPointInText(event) {
                 prepareReadingSelection()
                 super.mouseDown(with: event)
@@ -129,26 +132,67 @@ final class GlanceTextView: NSTextView {
         didChangeText()
     }
 
-    private func toggleChecklist(at event: NSEvent) -> Bool {
+    func toggleChecklist(atViewPoint viewPoint: NSPoint) -> Bool {
         guard let layoutManager, let textContainer, let textStorage else { return false }
         var fraction: CGFloat = 0
-        let point = convert(event.locationInWindow, from: nil)
-        let glyphIndex = layoutManager.glyphIndex(for: point, in: textContainer, fractionOfDistanceThroughGlyph: &fraction)
+        let containerPoint = TextChecklistToggle.containerPoint(
+            viewPoint: viewPoint,
+            containerOrigin: textContainerOrigin
+        )
+        let glyphIndex = layoutManager.glyphIndex(
+            for: containerPoint,
+            in: textContainer,
+            fractionOfDistanceThroughGlyph: &fraction
+        )
         guard glyphIndex < layoutManager.numberOfGlyphs else { return false }
+        let glyphBounds = layoutManager.boundingRect(
+            forGlyphRange: NSRange(location: glyphIndex, length: 1),
+            in: textContainer
+        )
+        guard TextChecklistToggle.hitsGlyph(containerPoint: containerPoint, glyphBounds: glyphBounds) else {
+            return false
+        }
         let charIndex = layoutManager.characterIndexForGlyph(at: glyphIndex)
-        let ns = textStorage.string as NSString
-        guard charIndex < ns.length else { return false }
-        let ch = ns.character(at: charIndex)
-        if ch == 0x2610 { // ☐
-            textStorage.replaceCharacters(in: NSRange(location: charIndex, length: 1), with: "☑")
-            onChecklistToggled?()
-            return true
+        guard let change = TextChecklistToggle.replacement(in: textStorage.string as NSString, at: charIndex) else {
+            return false
         }
-        if ch == 0x2611 { // ☑
-            textStorage.replaceCharacters(in: NSRange(location: charIndex, length: 1), with: "☐")
-            onChecklistToggled?()
-            return true
+        textStorage.replaceCharacters(in: change.range, with: change.replacement)
+        didChangeText()
+        onChecklistToggled?()
+        return true
+    }
+}
+
+enum TextChecklistToggle {
+    static let unchecked: unichar = 0x2610
+    static let checked: unichar = 0x2611
+    static let hitSlop: CGFloat = 6
+
+    static func containerPoint(viewPoint: NSPoint, containerOrigin: NSPoint) -> NSPoint {
+        NSPoint(x: viewPoint.x - containerOrigin.x, y: viewPoint.y - containerOrigin.y)
+    }
+
+    static func hitsGlyph(containerPoint: NSPoint, glyphBounds: NSRect) -> Bool {
+        glyphBounds.insetBy(dx: -hitSlop, dy: -hitSlop).contains(containerPoint)
+    }
+
+    static func replacement(in string: NSString, at charIndex: Int) -> (range: NSRange, replacement: String)? {
+        guard charIndex >= 0, charIndex < string.length else { return nil }
+        let markIndex: Int
+        let ch = string.character(at: charIndex)
+        if ch == unchecked || ch == checked {
+            markIndex = charIndex
+        } else if ch == 0x20, charIndex > 0 {
+            let previous = string.character(at: charIndex - 1)
+            guard previous == unchecked || previous == checked else { return nil }
+            markIndex = charIndex - 1
+        } else {
+            return nil
         }
-        return false
+        let mark = string.character(at: markIndex)
+        return (
+            NSRange(location: markIndex, length: 1),
+            mark == unchecked ? "☑" : "☐"
+        )
     }
 }

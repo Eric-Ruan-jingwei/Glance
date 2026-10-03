@@ -149,7 +149,7 @@ enum GuideShortcutCatalog {
         GuideShortcutItem(
             id: "textChecklistToggle",
             title: "切换文字清单",
-            detail: "阅读模式下点击清单符号",
+            detail: "阅读或编辑时点击清单符号",
             source: .mouseGesture("单击清单符号")
         ),
         GuideShortcutItem(
