@@ -70,10 +70,10 @@ final class MarkdownPanelProviderTests: XCTestCase {
         XCTAssertEqual(titles[1], "从剪贴板创建…")
         XCTAssertEqual(titles[3], "工作区")
         XCTAssertEqual(titles[5], "管理面板…")
-        XCTAssertEqual(titles[7], "新建文字面板")
-        XCTAssertEqual(titles[8], "新建 Markdown 面板")
-        XCTAssertEqual(titles[9], "新建待办面板")
-        XCTAssertEqual(titles[10], "新建图片面板")
-        XCTAssertEqual(titles[11], "新建 PDF 面板…")
+        XCTAssertEqual(titles[6], "新建面板")
+        XCTAssertEqual(
+            menu.items[6].submenu?.items.map(\.title),
+            ["文字", "Markdown", "待办", "图片", "PDF…"]
+        )
     }
 }

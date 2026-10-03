@@ -47,20 +47,18 @@ final class GlanceVisualSystemTests: XCTestCase {
         XCTAssertEqual(titles[1], "从剪贴板创建…")
         XCTAssertEqual(titles[3], "工作区")
         XCTAssertEqual(titles[5], "管理面板…")
-        XCTAssertEqual(titles[6], "新建")
-        XCTAssertEqual(titles[7], "新建文字面板")
-        XCTAssertEqual(titles[8], "新建 Markdown 面板")
-        XCTAssertEqual(titles[9], "新建待办面板")
-        XCTAssertEqual(titles[10], "新建图片面板")
-        XCTAssertEqual(titles[11], "新建 PDF 面板…")
-        XCTAssertEqual(titles[12], "状态")
-        XCTAssertEqual(titles[13], "隐藏全部")
+        XCTAssertEqual(titles[6], "新建面板")
+        XCTAssertEqual(titles[7], "状态")
+        XCTAssertEqual(titles[8], "隐藏全部")
         XCTAssertEqual(titles.last, "退出")
         XCTAssertNotNil(menu.items[0].image)
         XCTAssertNotNil(menu.items[5].image)
-        XCTAssertNotNil(menu.items[7].image)
-        XCTAssertTrue(menu.items[6].isSectionHeader)
-        XCTAssertTrue(menu.items[12].isSectionHeader)
+        XCTAssertNotNil(menu.items[6].image)
+        XCTAssertEqual(
+            menu.items[6].submenu?.items.map(\.title),
+            ["文字", "Markdown", "待办", "图片", "PDF…"]
+        )
+        XCTAssertTrue(menu.items[7].isSectionHeader)
     }
 
     func testWorkspacePanelCountIsDerivedFromSummaries() {
@@ -155,6 +153,70 @@ final class GlanceVisualSystemTests: XCTestCase {
         }
         XCTAssertEqual(uncheckedColor, NSColor.secondaryLabelColor)
         XCTAssertEqual(checkedColor, NSColor.tertiaryLabelColor)
+    }
+
+    func testChromeTitlePrefersCustomThenAutomaticThenKind() {
+        XCTAssertEqual(
+            PanelChromeTitle.resolved(
+                customTitle: "工作笔记",
+                automaticTitle: "项目计划",
+                kindIdentifier: PanelKind.text
+            ),
+            "工作笔记"
+        )
+        XCTAssertEqual(
+            PanelChromeTitle.resolved(
+                customTitle: nil,
+                automaticTitle: "产品规划",
+                kindIdentifier: PanelKind.text
+            ),
+            "产品规划"
+        )
+        XCTAssertEqual(
+            PanelChromeTitle.resolved(
+                customTitle: "  ",
+                automaticTitle: "VLA Training Notes",
+                kindIdentifier: PanelKind.markdown
+            ),
+            "VLA Training Notes"
+        )
+        XCTAssertEqual(
+            PanelChromeTitle.resolved(
+                customTitle: nil,
+                automaticTitle: "完成课程大纲",
+                kindIdentifier: PanelKind.todo
+            ),
+            "完成课程大纲"
+        )
+        XCTAssertEqual(
+            PanelChromeTitle.resolved(
+                customTitle: "必读论文",
+                automaticTitle: "Robot Learning Survey",
+                kindIdentifier: PanelKind.pdf
+            ),
+            "必读论文"
+        )
+        XCTAssertEqual(
+            PanelChromeTitle.resolved(
+                customTitle: nil,
+                automaticTitle: nil,
+                kindIdentifier: PanelKind.image
+            ),
+            "图片"
+        )
+        XCTAssertEqual(
+            PanelChromeTitle.resolved(
+                customTitle: nil,
+                automaticTitle: "Robot Learning Survey",
+                kindIdentifier: PanelKind.pdf
+            ),
+            "Robot Learning Survey"
+        )
+    }
+
+    func testTextFormatBarReservesOffsetOnlyWhileEditing() {
+        XCTAssertEqual(TextFormatBarLayout.scrollTopInset(isEditing: false), 0)
+        XCTAssertEqual(TextFormatBarLayout.scrollTopInset(isEditing: true), GlanceTheme.Size.formatBarHeight)
     }
 
     private func dummySummary(workspaceID: String) -> PanelSummary {

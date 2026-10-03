@@ -313,8 +313,8 @@ final class PDFPanelProviderTests: XCTestCase {
             onQuit: {}
         )
         let titles = menu.items.map(\.title)
-        XCTAssertEqual(titles[10], "新建图片面板")
-        XCTAssertEqual(titles[11], "新建 PDF 面板…")
+        XCTAssertEqual(titles[6], "新建面板")
+        XCTAssertEqual(menu.items[6].submenu?.items.map(\.title).last, "PDF…")
     }
 }
 

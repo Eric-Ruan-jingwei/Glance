@@ -30,6 +30,14 @@ There is no Windows client yet. Shared data contracts are documented so a future
 - No cloud
 - Open source
 
+## V0.17.2
+
+Final UI and interaction polish before 1.0 release engineering. No schema or feature change.
+
+- Tighter Text reading layout
+- Automatic titles in floating panel chrome
+- Quieter status menu and shared interaction details
+
 ## V0.17.1
 
 Content and interaction polish on the P0 visual shell. No schema or feature change.
@@ -117,12 +125,12 @@ Status-item menu (defaults shown):
   新建工作区…
 ────────────
 管理面板…
-新建
-新建文字面板
-新建 Markdown 面板
-新建待办面板
-新建图片面板
-新建 PDF 面板…
+新建面板
+  文字
+  Markdown
+  待办
+  图片
+  PDF…
 状态
 显示全部 / 隐藏全部    ⌥⌘G
 ────────────
