@@ -146,6 +146,68 @@ final class PanelRepositoryTests: XCTestCase {
         }
     }
 
+    func testInsertSaveFailureRestoresEmptyMemory() throws {
+        try withTempRepository { _, metadataURL in
+            let writer = ControllableMetadataWriter()
+            let repository = try PanelRepository(
+                fileURL: metadataURL,
+                writePrimaryMetadata: writer.write
+            )
+            writer.shouldFail = true
+            XCTAssertThrowsError(try repository.insert(GlanceTestFixtures.sampleRecord())) { error in
+                XCTAssertTrue(error is ForcedMetadataWriteError)
+            }
+            XCTAssertTrue(try repository.all().isEmpty)
+            XCTAssertFalse(FileManager.default.fileExists(atPath: metadataURL.path))
+        }
+    }
+
+    func testDeleteSaveFailureRestoresPreviousRecord() throws {
+        try withTempRepository { _, metadataURL in
+            let writer = ControllableMetadataWriter()
+            let repository = try PanelRepository(
+                fileURL: metadataURL,
+                writePrimaryMetadata: writer.write
+            )
+            let record = GlanceTestFixtures.sampleRecord()
+            try repository.insert(record)
+            writer.shouldFail = true
+            XCTAssertThrowsError(try repository.delete(id: record.id)) { error in
+                XCTAssertTrue(error is ForcedMetadataWriteError)
+            }
+            let restored = try XCTUnwrap(try repository.record(id: record.id))
+            XCTAssertTrue(restored === record)
+            XCTAssertEqual(restored.frame, record.frame)
+            XCTAssertEqual(restored.payloadPath, record.payloadPath)
+        }
+    }
+
+    func testReplacementInsertSaveFailureRestoresPreviousRecord() throws {
+        try withTempRepository { _, metadataURL in
+            let writer = ControllableMetadataWriter()
+            let repository = try PanelRepository(
+                fileURL: metadataURL,
+                writePrimaryMetadata: writer.write
+            )
+            let id = UUID()
+            let original = GlanceTestFixtures.sampleRecord(id: id)
+            original.frame.x = 10
+            try repository.insert(original)
+            writer.shouldFail = true
+            let replacement = GlanceTestFixtures.sampleRecord(id: id)
+            replacement.frame.x = 99
+            replacement.payloadPath = "Panels/replaced"
+            XCTAssertThrowsError(try repository.insert(replacement)) { error in
+                XCTAssertTrue(error is ForcedMetadataWriteError)
+            }
+            let restored = try XCTUnwrap(try repository.record(id: id))
+            XCTAssertTrue(restored === original)
+            XCTAssertEqual(restored.frame.x, 10)
+            XCTAssertEqual(restored.payloadPath, original.payloadPath)
+            XCTAssertNotEqual(restored.payloadPath, "Panels/replaced")
+        }
+    }
+
     private func withTempRepository(_ body: (URL, URL) throws -> Void) throws {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("GlanceRepoTests-\(UUID().uuidString)", isDirectory: true)

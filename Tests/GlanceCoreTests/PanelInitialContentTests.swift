@@ -158,6 +158,40 @@ final class PanelInitialContentTests: XCTestCase {
         }
     }
 
+    func testCaptureSessionRollsBackPayloadWhenInsertSaveFails() throws {
+        try withTempRoot { root in
+            let store = try PayloadStore(applicationSupportRoot: root)
+            let writer = ControllableMetadataWriter()
+            let repository = try PanelRepository(
+                fileURL: store.metadataURL,
+                writePrimaryMetadata: writer.write
+            )
+            writer.shouldFail = true
+            let id = UUID()
+            XCTAssertThrowsError(
+                try PanelCreationSession.materialize(
+                    id: id,
+                    store: store,
+                    writePayload: { directory in
+                        try PanelInitialPayloadWriter.write(.plainText("Hello Glance"), to: directory)
+                    },
+                    insert: {
+                        try repository.insert(GlanceTestFixtures.sampleRecord(id: id))
+                    }
+                )
+            ) { error in
+                XCTAssertTrue(error is ForcedMetadataWriteError)
+            }
+            XCTAssertTrue(try repository.all().isEmpty)
+            XCTAssertFalse(
+                FileManager.default.fileExists(
+                    atPath: store.panelsRoot.appendingPathComponent(id.uuidString).path
+                )
+            )
+            XCTAssertFalse(FileManager.default.fileExists(atPath: store.metadataURL.path))
+        }
+    }
+
     func testNewlyCreatedPanelFollowsGlobalVisibility() {
         XCTAssertFalse(PanelRevealPolicy.shouldPresentNewlyCreatedPanel(isGloballyConcealed: true))
         XCTAssertTrue(PanelRevealPolicy.shouldPresentNewlyCreatedPanel(isGloballyConcealed: false))

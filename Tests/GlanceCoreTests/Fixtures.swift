@@ -86,3 +86,16 @@ enum GlanceTestFixtures {
     }
     """
 }
+
+struct ForcedMetadataWriteError: Error {}
+
+final class ControllableMetadataWriter {
+    var shouldFail = false
+
+    func write(_ data: Data, to url: URL) throws {
+        if shouldFail {
+            throw ForcedMetadataWriteError()
+        }
+        try data.write(to: url, options: .atomic)
+    }
+}
