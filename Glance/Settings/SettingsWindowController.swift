@@ -24,7 +24,7 @@ final class SettingsWindowController: NSWindowController {
         let window = NSWindow(contentViewController: hosting)
         window.title = "设置"
         window.styleMask = [.titled, .closable]
-        window.setContentSize(NSSize(width: 440, height: 680))
+        window.setContentSize(NSSize(width: 440, height: 720))
         window.center()
         window.isReleasedWhenClosed = false
         self.init(window: window)

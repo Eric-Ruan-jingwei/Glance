@@ -8,6 +8,7 @@ final class StatusBarController: NSObject, NSMenuDelegate {
     private let onOpenGuide: () -> Void
     private let onShowClipboardHistory: () -> Void
     private let onShowFileShelf: () -> Void
+    private let onShowSnippets: () -> Void
     private let shortcutSnapshot: () -> [ShortcutAction: GlanceShortcut]
     private var statusItem: NSStatusItem?
 
@@ -18,6 +19,7 @@ final class StatusBarController: NSObject, NSMenuDelegate {
         onOpenGuide: @escaping () -> Void = {},
         onShowClipboardHistory: @escaping () -> Void = {},
         onShowFileShelf: @escaping () -> Void = {},
+        onShowSnippets: @escaping () -> Void = {},
         shortcutSnapshot: @escaping () -> [ShortcutAction: GlanceShortcut] = { ShortcutDefaults.all }
     ) {
         self.manager = manager
@@ -26,6 +28,7 @@ final class StatusBarController: NSObject, NSMenuDelegate {
         self.onOpenGuide = onOpenGuide
         self.onShowClipboardHistory = onShowClipboardHistory
         self.onShowFileShelf = onShowFileShelf
+        self.onShowSnippets = onShowSnippets
         self.shortcutSnapshot = shortcutSnapshot
     }
 
@@ -52,6 +55,7 @@ final class StatusBarController: NSObject, NSMenuDelegate {
             onQuickCapture: { [weak self] in self?.manager.toggleQuickCapture() },
             onShowClipboardHistory: { [weak self] in self?.onShowClipboardHistory() },
             onShowFileShelf: { [weak self] in self?.onShowFileShelf() },
+            onShowSnippets: { [weak self] in self?.onShowSnippets() },
             onCaptureClipboard: { [weak self] in self?.manager.captureClipboard() },
             onSelectWorkspace: { [weak self] id in
                 _ = self?.manager.switchWorkspace(id: id)
