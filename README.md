@@ -38,6 +38,10 @@ There is no Windows client yet. Shared data contracts are documented so a future
 - No cloud
 - Open source
 
+## V0.23.1
+
+0.23.1 preserves existing custom shortcuts when new actions introduce conflicting defaults. The status menu and Guide display only active registered global shortcuts. Inactive shortcut conflicts are surfaced in Settings.
+
 ## V0.23.0
 
 Global Search: one in-memory recall layer across Clipboard, File Shelf, Snippets, Links, and every workspace’s panels. Empty query shows recent activity. Enter runs the natural action for that source. Panel summaries load asynchronously and only once per search session. Global Search has no persisted schema and does not add a Search directory. Panel, Clipboard, File Shelf, Snippets, and Links schemas are unchanged.
