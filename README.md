@@ -33,6 +33,10 @@ There is no Windows client yet. Shared data contracts are documented so a future
 - No cloud
 - Open source
 
+## V0.18.6
+
+Clicking anywhere in a Text or Markdown body enters edit mode. Drag the panel from the title bar.
+
 ## V0.18.5
 
 Clicking Text or Markdown content enters edit mode. Todo items still use a double-click.
