@@ -58,6 +58,12 @@ Source records are not deleted or rewritten when you create a derived Panel. Fil
 - No cloud
 - Open source
 
+## V0.25.0
+
+Real-use polish and pre-release hardening. No seventh top-level tool, no schema changes, and no Release Engineering.
+
+Corrupt metadata that cannot be quarantined stays on disk and the affected domain becomes read-only. Off-screen panels are recovered only when they are no longer operable. Utility-window shortcuts bring an already-visible window forward instead of closing it, and Panel Manager scrolls the revealed search target into view.
+
 ## V0.24.0
 
 Workflow integration and product hardening. No seventh top-level tool, no schema changes, and no Search database.
