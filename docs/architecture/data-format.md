@@ -114,6 +114,10 @@ The Panel Manager / Library window is a derived view of existing metadata and pa
 
 Edge snap and layout presets are interaction-only. They write the resulting `x` / `y` / `width` / `height` and do not add `isSnapped`, `layoutPreset`, or similar fields. `schemaVersion` remains `1`.
 
+## Clipboard Capture
+
+Clipboard Capture is a user-triggered one-shot read. It is **not** stored as clipboard history and does not add a `source` field. A successful capture creates a normal Text (`content.rtf`) or Image (`image.png`) panel. `schemaVersion` remains `1`.
+
 ## Future clients
 
 Any future Windows (or other) client should read and write this JSON + RTF + Markdown + Todo JSON + PNG layout. Windowing, shortcuts, and tray code are platform-specific; the files are not.
