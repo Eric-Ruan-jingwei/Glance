@@ -13,8 +13,8 @@ enum GlanceConstants {
     static let slogan = "Pin what matters. Keep it in sight."
     static let hideShowShortcutDisplay = "⌥⌘G"
     static let hideShowKeyEquivalent = "g"
-    static let quickCaptureShortcutDisplay = "⌥⌘Space"
-    static let quickCaptureKeyEquivalent = " "
+    static let quickCaptureShortcutDisplay = "⌥⌘J"
+    static let quickCaptureKeyEquivalent = "j"
 
     static var versionDisplay: String {
         let short = (Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String)?

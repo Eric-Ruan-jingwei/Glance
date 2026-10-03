@@ -15,11 +15,12 @@ final class GlanceGlobalShortcutTests: XCTestCase {
         XCTAssertFalse(GlanceConstants.hideShowShortcutDisplay.contains("H"))
     }
 
-    func testQuickCaptureShortcutIsOptionCommandSpace() {
-        XCTAssertEqual(GlanceConstants.quickCaptureKeyEquivalent, " ")
-        XCTAssertEqual(GlanceConstants.quickCaptureShortcutDisplay, "⌥⌘Space")
+    func testQuickCaptureShortcutIsOptionCommandJ() {
+        XCTAssertEqual(GlanceConstants.quickCaptureKeyEquivalent, "j")
+        XCTAssertEqual(GlanceConstants.quickCaptureShortcutDisplay, "⌥⌘J")
         XCTAssertNotEqual(GlanceConstants.quickCaptureKeyEquivalent, GlanceConstants.hideShowKeyEquivalent)
         XCTAssertNotEqual(GlanceHotKeyID.quickCapture, GlanceHotKeyID.hideShow)
+        XCTAssertFalse(GlanceConstants.quickCaptureShortcutDisplay.contains("Space"))
     }
 
     func testMenuBarVisibilityItemUsesOptionCommandG() {
@@ -27,11 +28,11 @@ final class GlanceGlobalShortcutTests: XCTestCase {
         assertVisibilityShortcut(allHidden: true, title: "显示全部")
     }
 
-    func testMenuBarQuickCaptureItemUsesOptionCommandSpace() {
+    func testMenuBarQuickCaptureItemUsesOptionCommandJ() {
         let menu = NSMenu()
         populate(menu, allHidden: false)
         let item = menu.items.first { $0.title == "快速记录…" }
-        XCTAssertEqual(item?.keyEquivalent, " ")
+        XCTAssertEqual(item?.keyEquivalent, "j")
         XCTAssertEqual(item?.keyEquivalentModifierMask, [.option, .command])
         XCTAssertEqual(menu.items.first?.title, "快速记录…")
     }

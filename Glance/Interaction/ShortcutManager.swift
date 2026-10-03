@@ -6,7 +6,7 @@ enum GlanceHotKeyID: UInt32 {
     case quickCapture = 2
 }
 
-/// Registers ⌥⌘G and ⌥⌘Space without Accessibility permission.
+/// Registers ⌥⌘G and ⌥⌘J without Accessibility permission.
 final class ShortcutManager: @unchecked Sendable {
     var onToggleVisibility: (() -> Void)?
     var onQuickCapture: (() -> Void)?
@@ -25,7 +25,7 @@ final class ShortcutManager: @unchecked Sendable {
             storage: &hideShowHotKeyRef
         )
         registerHotKey(
-            virtualKey: UInt32(kVK_Space),
+            virtualKey: UInt32(kVK_ANSI_J),
             id: GlanceHotKeyID.quickCapture,
             displayName: GlanceConstants.quickCaptureShortcutDisplay,
             storage: &quickCaptureHotKeyRef

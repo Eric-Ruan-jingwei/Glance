@@ -25,7 +25,7 @@ There is no Windows client yet. Shared data contracts are documented so a future
 - Markdown panel (rendered preview, double-click to edit raw UTF-8 `.md`)
 - Todo panel (interactive checklist with inline add/edit/complete/delete)
 - Image panel
-- Quick Capture (`⌥⌘Space`) — capture text or a Todo without first creating an empty panel
+- Quick Capture (`⌥⌘J`) — capture text or a Todo without first creating an empty panel
 - Always on top
 - Lock
 - Click-through
@@ -38,12 +38,12 @@ There is no Windows client yet. Shared data contracts are documented so a future
 
 The core loop is still: create a panel → put content in it → drag it where you want → it stays floating → quit and reopen, everything is still there.
 
-Quick Capture skips the empty-panel step: press `⌥⌘Space` from any app, type, press Enter.
+Quick Capture skips the empty-panel step: press `⌥⌘J` from any app, type, press Enter.
 
 Status-item menu:
 
 ```text
-快速记录…              ⌥⌘Space
+快速记录…              ⌥⌘J
 ────────────
 新建文字面板
 新建 Markdown 面板
@@ -60,7 +60,7 @@ The Dock icon is hidden. There is no traditional main window.
 
 ### Quick Capture
 
-`⌥⌘Space` opens a transient capture window on the display under the pointer. It is not a panel: it is not stored in `panels.json`, has no payload directory, and is discarded on close.
+`⌥⌘J` opens a transient capture window on the display under the pointer. It is not a panel: it is not stored in `panels.json`, has no payload directory, and is discarded on close.
 
 - Default mode is **Text**. `⌘2` (or the 待办 segment) switches to **Todo**. `⌘1` returns to Text.
 - `Enter` creates one panel and closes capture. `Shift+Enter` inserts a newline in Text mode.
@@ -80,7 +80,7 @@ Each panel can be pinned, locked, made click-through, and faded independently. T
 
 ### App settings
 
-Glance settings include launch at login (`SMAppService.mainApp`), the `⌥⌘Space` and `⌥⌘G` shortcuts (not customizable), the local data folder, and the version from the app bundle.
+Glance settings include launch at login (`SMAppService.mainApp`), the `⌥⌘J` and `⌥⌘G` shortcuts (not customizable), the local data folder, and the version from the app bundle.
 
 ## Download
 
