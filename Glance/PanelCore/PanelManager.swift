@@ -80,7 +80,8 @@ final class PanelManager {
         )
     }
 
-    func deletePanel(id: UUID) {
+    @discardableResult
+    func deletePanel(id: UUID) -> Bool {
         controllers[id]?.persistAllNow()
         do {
             try PanelDeletionTransaction.perform(
@@ -99,8 +100,11 @@ final class PanelManager {
                     environment.payloadStore.delete(id: id)
                 }
             )
+            notifyPanelsDidChange()
+            return true
         } catch {
             NSLog("Glance persistence: failed to delete panel metadata: %@", error.localizedDescription)
+            return false
         }
     }
 
@@ -163,6 +167,7 @@ final class PanelManager {
                 }
             )
             present(record: record)
+            notifyPanelsDidChange()
             return true
         } catch {
             NSLog("Glance: create panel failed: \(error.localizedDescription)")
@@ -202,5 +207,31 @@ final class PanelManager {
             NotificationCenter.default.removeObserver(screenObserver)
             self.screenObserver = nil
         }
+    }
+
+    func panelSummaries() -> [PanelSummary] {
+        let records = (try? environment.repository.all()) ?? []
+        return records.map { record in
+            let directory = environment.payloadStore.panelsRoot
+                .appendingPathComponent(record.id.uuidString, isDirectory: true)
+            return PanelSummaryBuilder.summarize(record: record, payloadDirectory: directory)
+        }
+    }
+
+    func revealPanel(id: UUID) {
+        guard let controller = controllers[id] else { return }
+        controller.showFront()
+        controller.window?.makeKey()
+        NSApp.activate(ignoringOtherApps: true)
+    }
+
+    func openPayloadFolder(id: UUID) {
+        let directory = environment.payloadStore.panelsRoot
+            .appendingPathComponent(id.uuidString, isDirectory: true)
+        NSWorkspace.shared.activateFileViewerSelecting([directory])
+    }
+
+    func notifyPanelsDidChange() {
+        NotificationCenter.default.post(name: .glancePanelCollectionDidChange, object: nil)
     }
 }

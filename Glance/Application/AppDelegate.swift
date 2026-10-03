@@ -20,6 +20,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var panelManager: PanelManager?
     private var statusBar: StatusBarController?
     private var settingsWindow: SettingsWindowController?
+    private var panelLibrary: PanelLibraryWindowController?
     private var quickCapture: QuickCaptureWindowController?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -30,7 +31,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self.panelManager = manager
             let statusBar = StatusBarController(
                 manager: manager,
-                onSettings: { [weak self] in self?.showSettings() }
+                onSettings: { [weak self] in self?.showSettings() },
+                onManagePanels: { [weak self] in self?.showPanelLibrary() }
             )
             statusBar.install()
             self.statusBar = statusBar
@@ -61,6 +63,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
         false
+    }
+
+    private func showPanelLibrary() {
+        if panelLibrary == nil, let panelManager {
+            panelLibrary = PanelLibraryWindowController(panelManager: panelManager)
+        }
+        panelLibrary?.present()
     }
 
     private func showSettings() {

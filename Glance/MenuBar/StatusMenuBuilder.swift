@@ -5,6 +5,7 @@ enum StatusMenuBuilder {
         _ menu: NSMenu,
         allHidden: Bool,
         onQuickCapture: @escaping () -> Void,
+        onManagePanels: @escaping () -> Void,
         onNewText: @escaping () -> Void,
         onNewMarkdown: @escaping () -> Void,
         onNewTodo: @escaping () -> Void,
@@ -23,6 +24,8 @@ enum StatusMenuBuilder {
                 modifiers: [.option, .command]
             )
         )
+        menu.addItem(.separator())
+        menu.addItem(actionItem("管理面板…", onManagePanels))
         menu.addItem(.separator())
         menu.addItem(actionItem("新建文字面板", onNewText))
         menu.addItem(actionItem("新建 Markdown 面板", onNewMarkdown))

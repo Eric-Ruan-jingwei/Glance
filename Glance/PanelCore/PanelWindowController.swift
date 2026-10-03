@@ -96,6 +96,7 @@ final class PanelWindowController: NSWindowController, NSWindowDelegate {
             record.isPinned = pinned
         }
         syncSettingsModel()
+        environment.panelManager?.notifyPanelsDidChange()
     }
 
     func setLocked(_ locked: Bool) {
@@ -108,6 +109,7 @@ final class PanelWindowController: NSWindowController, NSWindowDelegate {
         }
         applyPolicyToViews()
         syncSettingsModel()
+        environment.panelManager?.notifyPanelsDidChange()
     }
 
     func setPassThrough(_ enabled: Bool) {
@@ -133,6 +135,7 @@ final class PanelWindowController: NSWindowController, NSWindowDelegate {
         }
         applyPolicyToViews()
         syncSettingsModel()
+        environment.panelManager?.notifyPanelsDidChange()
     }
 
     func setOpacity(_ value: Double) {
@@ -445,6 +448,7 @@ final class PanelWindowController: NSWindowController, NSWindowDelegate {
                 mutateRecord { record in
                     record.payloadPath = environment.payloadStore.relativePath(for: recordID)
                 }
+                environment.panelManager?.notifyPanelsDidChange()
             }
         } catch {
             NSLog("Glance persistence: failed to save payload: %@", error.localizedDescription)

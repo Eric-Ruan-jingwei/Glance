@@ -4,11 +4,17 @@ import AppKit
 final class StatusBarController: NSObject, NSMenuDelegate {
     private let manager: PanelManager
     private let onSettings: () -> Void
+    private let onManagePanels: () -> Void
     private var statusItem: NSStatusItem?
 
-    init(manager: PanelManager, onSettings: @escaping () -> Void) {
+    init(
+        manager: PanelManager,
+        onSettings: @escaping () -> Void,
+        onManagePanels: @escaping () -> Void
+    ) {
         self.manager = manager
         self.onSettings = onSettings
+        self.onManagePanels = onManagePanels
     }
 
     func install() {
@@ -30,6 +36,7 @@ final class StatusBarController: NSObject, NSMenuDelegate {
             menu,
             allHidden: manager.allHidden,
             onQuickCapture: { [weak self] in self?.manager.toggleQuickCapture() },
+            onManagePanels: { [weak self] in self?.onManagePanels() },
             onNewText: { [weak self] in self?.manager.createTextPanel() },
             onNewMarkdown: { [weak self] in self?.manager.createMarkdownPanel() },
             onNewTodo: { [weak self] in self?.manager.createTodoPanel() },
