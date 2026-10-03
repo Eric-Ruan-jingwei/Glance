@@ -16,20 +16,21 @@ There is no Windows client yet. Shared data contracts are documented so a future
 - Text, Markdown, Todo, images, and PDF
 - Quick Capture from any app
 - Clipboard Capture
+- Customizable global shortcuts
 - Panel Manager
 - No account
 - No cloud
 - Open source
 
-## V0.9 已支持
+## V0.10 已支持
 
 - Text panel
 - Markdown panel (rendered preview, double-click to edit raw UTF-8 `.md`)
 - Todo panel (interactive checklist with inline add/edit/complete/delete)
 - Image panel
 - PDF panel
-- Quick Capture (`⌥⌘J`) — capture text or a Todo without first creating an empty panel
-- Clipboard Capture (`⌥⌘B`) — create a Text or Image panel from the current clipboard
+- Quick Capture — capture text or a Todo without first creating an empty panel. Default: `⌥⌘J`
+- Clipboard Capture — create a Text or Image panel from the current clipboard. Default: `⌥⌘B`
 - Panel Manager — browse, search, reveal, and delete existing panels from one place
 - Panel edge snapping
 - Panel layout presets
@@ -38,18 +39,29 @@ There is no Windows client yet. Shared data contracts are documented so a future
 - Click-through
 - Option temporary interaction
 - Opacity
-- Global hide/show shortcut (`⌥⌘G`)
+- Global hide/show. Default: `⌥⌘G`
+- Customizable global shortcuts
 - Launch at login
 - Local persistence
 - Multi-display recovery
 
 The core loop is still: create a panel → put content in it → drag it where you want → it stays floating → quit and reopen, everything is still there.
 
-Quick Capture skips the empty-panel step: press `⌥⌘J` from any app, type, press Enter.
+Quick Capture skips the empty-panel step: use the Quick Capture shortcut from any app, type, press Enter.
 
-Clipboard Capture skips typing: copy in another app, then press `⌥⌘B`.
+Clipboard Capture skips typing: copy in another app, then use Clipboard Capture.
 
-Status-item menu:
+Default shortcuts:
+
+```text
+Quick Capture       ⌥⌘J
+Clipboard Capture   ⌥⌘B
+Hide / Show         ⌥⌘G
+```
+
+These can be changed in Settings.
+
+Status-item menu (defaults shown):
 
 ```text
 快速记录…              ⌥⌘J
@@ -73,13 +85,13 @@ The Dock icon is hidden. There is no traditional main window.
 
 ### Quick Capture
 
-`⌥⌘J` opens a transient capture window on the display under the pointer. It is not a panel: it is not stored in `panels.json`, has no payload directory, and is discarded on close.
+The default shortcut `⌥⌘J` opens a transient capture window on the display under the pointer. It is not a panel: it is not stored in `panels.json`, has no payload directory, and is discarded on close.
 
 - Default mode is **Text**. `⌘2` (or the 待办 segment) switches to **Todo**. `⌘1` returns to Text.
 - `Enter` creates one panel and closes capture. `Shift+Enter` inserts a newline in Text mode.
 - Empty or whitespace-only input does not create a panel.
 - `Escape` or a click outside capture closes it and drops the draft.
-- If Glance is globally hidden (`⌥⌘G`), capture still appears. A submitted panel is created but stays hidden until you show all panels again.
+- If Glance is globally hidden (Hide / Show, default `⌥⌘G`), capture still appears. A submitted panel is created but stays hidden until you show all panels again.
 
 ### Clipboard Capture
 
@@ -87,7 +99,7 @@ Copy text or an image in any app, then trigger Clipboard Capture to create a Gla
 
 Clipboard is only read when you invoke the command. Glance does not maintain clipboard history.
 
-- `⌥⌘B` (not `⌥⌘V`) so Finder’s Move Item Here / Paste Style keeps working.
+- Default: `⌥⌘B` (not `⌥⌘V`) so Finder’s Move Item Here / Paste Style keeps working.
 - A valid image takes priority over text. If an image representation is unreadable but valid text is also present, Glance falls back to the text.
 - Empty or unsupported clipboard content does not create a panel.
 - If Glance is globally hidden, the new panel is created but stays concealed.
@@ -107,7 +119,13 @@ PDFs are copied into Glance's local data directory. Deleting the original file d
 
 `管理面板…` opens a regular macOS window (not a floating panel). It is not stored in `panels.json`. Browse panels, filter by type, search titles, bring a panel forward, or delete it with the same confirmation as the panel menu. Titles are derived from existing payload content; there is no separate rename field.
 
-If all floating panels are hidden with `⌥⌘G`, the manager stays visible. Revealing one panel from the manager shows only that panel and does not turn Show All back on.
+If all floating panels are hidden with Hide / Show, the manager stays visible. Revealing one panel from the manager shows only that panel and does not turn Show All back on.
+
+### Shortcuts
+
+Global shortcuts can be customized in Settings. Glance does not request Accessibility permission.
+
+Click a shortcut, press the new combination, and it takes effect immediately. Escape cancels. Restore defaults returns to `⌥⌘J` / `⌥⌘B` / `⌥⌘G`. Combinations must include at least two of Command, Option, and Control. Glance will not assign the same combination to two commands.
 
 ### Layout
 
@@ -135,7 +153,7 @@ Each panel can be pinned, locked, made click-through, and faded independently. T
 
 ### App settings
 
-Glance settings include launch at login (`SMAppService.mainApp`), the `⌥⌘J`, `⌥⌘B`, and `⌥⌘G` shortcuts (not customizable), the local data folder, and the version from the app bundle.
+Glance settings include launch at login (`SMAppService.mainApp`), customizable global shortcuts (defaults `⌥⌘J`, `⌥⌘B`, and `⌥⌘G`), the local data folder, and the version from the app bundle.
 
 ## Download
 
