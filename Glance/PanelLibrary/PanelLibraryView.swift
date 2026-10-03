@@ -62,9 +62,19 @@ struct PanelLibraryView: View {
                         }
                         .menuStyle(.borderlessButton)
                         Spacer()
+                        if !model.visible.isEmpty {
+                            Button("全选当前结果") {
+                                model.selectAllVisible()
+                            }
+                            .controlSize(.small)
+                        }
                     }
                     .padding(.horizontal, 16)
                     .padding(.bottom, 8)
+
+                    if !model.selectedPanelIDs.isEmpty {
+                        batchToolbar
+                    }
 
                     Divider()
 
@@ -73,21 +83,25 @@ struct PanelLibraryView: View {
                     } else if model.hasNoMatches {
                         emptyState("没有匹配的面板")
                     } else {
-                        List(model.visible) { summary in
-                            PanelLibraryRow(
-                                summary: summary,
-                                workspaces: model.workspaces,
-                                onReveal: { model.revealPanel(summary.id) },
-                                onHide: { model.hidePanel(summary.id) },
-                                onRename: { model.promptRename(summary) },
-                                onEditTags: { model.promptEditTags(summary) },
-                                onDelete: { model.confirmDelete(summary.id) },
-                                onOpenFolder: { model.openPayloadFolder(summary.id) },
-                                onMove: { model.movePanelToWorkspace(summary.id, workspaceID: $0) }
-                            )
-                            .contentShape(Rectangle())
-                            .onTapGesture(count: 2) {
-                                model.revealPanel(summary.id)
+                        List(selection: $model.selectedPanelIDs) {
+                            ForEach(model.visible) { summary in
+                                PanelLibraryRow(
+                                    summary: summary,
+                                    workspaces: model.workspaces,
+                                    onReveal: { model.revealPanel(summary.id) },
+                                    onHide: { model.hidePanel(summary.id) },
+                                    onRename: { model.promptRename(summary) },
+                                    onEditTags: { model.promptEditTags(summary) },
+                                    onDelete: { model.confirmDelete(summary.id) },
+                                    onOpenFolder: { model.openPayloadFolder(summary.id) },
+                                    onMove: { model.movePanelToWorkspace(summary.id, workspaceID: $0) }
+                                )
+                                .tag(summary.id)
+                                .contentShape(Rectangle())
+                                .onTapGesture(count: 2) {
+                                    model.selectSingle(summary.id)
+                                    model.revealPanel(summary.id)
+                                }
                             }
                         }
                         .listStyle(.inset)
@@ -102,12 +116,53 @@ struct PanelLibraryView: View {
         .onChange(of: model.selectedWorkspaceID) { _, newValue in
             model.activateWorkspace(newValue)
         }
+        .onChange(of: model.query) { _, _ in
+            model.reconcileSelection()
+        }
+        .onChange(of: model.filter) { _, _ in
+            model.reconcileSelection()
+        }
         .onReceive(NotificationCenter.default.publisher(for: .glancePanelCollectionDidChange)) { _ in
             model.reload()
         }
         .onReceive(NotificationCenter.default.publisher(for: .glanceWorkspaceDidChange)) { _ in
             model.reload()
         }
+    }
+
+    private var batchToolbar: some View {
+        HStack(spacing: 8) {
+            Text("已选择 \(model.selectedPanelIDs.count) 个")
+                .font(.callout.weight(.medium))
+            Button("隐藏") { model.batchHide() }
+                .disabled(!model.canBatchHide)
+            Button("显示") { model.batchShow() }
+                .disabled(!model.canBatchShow)
+            Menu("移动到工作区…") {
+                ForEach(model.workspaces) { workspace in
+                    Button {
+                        model.batchMove(to: workspace.id)
+                    } label: {
+                        if model.allSelectedBelong(to: workspace.id) {
+                            Label(workspace.name, systemImage: "checkmark")
+                        } else {
+                            Text(workspace.name)
+                        }
+                    }
+                    .disabled(model.allSelectedBelong(to: workspace.id))
+                }
+            }
+            Menu("标签…") {
+                Button("添加标签…") { model.promptBatchAddTags() }
+                Button("移除标签…") { model.promptBatchRemoveTags() }
+                    .disabled(model.selectedTagUnion.isEmpty)
+            }
+            Button("取消选择") { model.clearSelection() }
+            Spacer(minLength: 0)
+        }
+        .controlSize(.small)
+        .padding(.horizontal, 16)
+        .padding(.bottom, 8)
     }
 
     private func emptyState(_ message: String) -> some View {

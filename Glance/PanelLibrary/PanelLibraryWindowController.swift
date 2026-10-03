@@ -35,6 +35,18 @@ final class PanelLibraryWindowController: NSWindowController, NSWindowDelegate {
             try panelManager.setTags(id: id, tags: tags)
         }
         model.loadTagCatalog = { panelManager.allTagNames() }
+        model.setHiddenMany = { ids, hidden in
+            try panelManager.setPanelsHidden(ids: ids, hidden: hidden)
+        }
+        model.movePanels = { ids, workspaceID in
+            try panelManager.movePanels(ids: ids, toWorkspaceID: workspaceID)
+        }
+        model.addTagsToPanels = { ids, tags in
+            try panelManager.addTags(ids: ids, tags: tags)
+        }
+        model.removeTagsFromPanels = { ids, tags in
+            try panelManager.removeTags(ids: ids, tags: tags)
+        }
         let hosting = NSHostingController(rootView: PanelLibraryView(model: model))
         let window = NSWindow(contentViewController: hosting)
         window.title = "管理面板"

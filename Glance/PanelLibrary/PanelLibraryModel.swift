@@ -9,6 +9,7 @@ final class PanelLibraryModel: ObservableObject {
     @Published var workspaces: [WorkspaceRecord] = []
     @Published var selectedWorkspaceID: String = WorkspaceRecord.defaultID
     @Published var selectedTag: String? = nil
+    @Published var selectedPanelIDs: Set<UUID> = []
 
     var loadSummaries: () -> [PanelSummary] = { [] }
     var loadWorkspaces: () -> [WorkspaceRecord] = { [WorkspaceRecord.makeDefault()] }
@@ -25,6 +26,11 @@ final class PanelLibraryModel: ObservableObject {
     var rename: (UUID, String?) throws -> Void = { _, _ in }
     var setTags: (UUID, [String]) throws -> Void = { _, _ in }
     var loadTagCatalog: () -> [String] = { [] }
+    var setHiddenMany: (Set<UUID>, Bool) throws -> Void = { _, _ in }
+    var movePanels: (Set<UUID>, String) throws -> Void = { _, _ in }
+    var addTagsToPanels: (Set<UUID>, [String]) throws -> Void = { _, _ in }
+    var removeTagsFromPanels: (Set<UUID>, [String]) throws -> Void = { _, _ in }
+    var presentBatchError: (Error) -> Void = { PanelBatchTagPrompt.presentError($0) }
 
     var workspaceSummaries: [PanelSummary] {
         summaries.filter { $0.workspaceID == selectedWorkspaceID }
@@ -56,10 +62,33 @@ final class PanelLibraryModel: ObservableObject {
     var isCompletelyEmpty: Bool { workspaceSummaries.isEmpty }
     var hasNoMatches: Bool { !workspaceSummaries.isEmpty && visible.isEmpty }
 
+    var selectedSummaries: [PanelSummary] {
+        let ids = selectedPanelIDs
+        return visible.filter { ids.contains($0.id) }
+    }
+
+    var canBatchHide: Bool {
+        selectedSummaries.contains { !$0.isHidden }
+    }
+
+    var canBatchShow: Bool {
+        selectedSummaries.contains { $0.isHidden }
+    }
+
+    var selectedTagUnion: [String] {
+        PanelTags.catalog(selectedSummaries.flatMap(\.tags))
+    }
+
+    func allSelectedBelong(to workspaceID: String) -> Bool {
+        let selected = selectedSummaries
+        return !selected.isEmpty && selected.allSatisfy { $0.workspaceID == workspaceID }
+    }
+
     func resetSessionState() {
         query = ""
         filter = .all
         selectedTag = nil
+        selectedPanelIDs = []
     }
 
     func reload() {
@@ -67,23 +96,101 @@ final class PanelLibraryModel: ObservableObject {
         let active = loadActiveWorkspaceID()
         if selectedWorkspaceID != active {
             selectedTag = nil
+            selectedPanelIDs = []
         }
         selectedWorkspaceID = active
         summaries = loadSummaries()
+        reconcileSelection()
         reconcileSelectedTag()
     }
 
     func selectTagFilter(_ tag: String?) {
         selectedTag = tag
         reconcileSelectedTag()
+        reconcileSelection()
     }
 
     func activateWorkspace(_ id: String) {
         if id != loadActiveWorkspaceID() {
             selectedTag = nil
+            selectedPanelIDs = []
         }
         guard id != loadActiveWorkspaceID() else { return }
         switchWorkspace(id)
+    }
+
+    func selectSingle(_ id: UUID) {
+        selectedPanelIDs = [id]
+    }
+
+    func toggleSelection(_ id: UUID) {
+        if selectedPanelIDs.contains(id) {
+            selectedPanelIDs.remove(id)
+        } else {
+            selectedPanelIDs.insert(id)
+        }
+    }
+
+    func selectAllVisible() {
+        selectedPanelIDs = Set(visible.map(\.id))
+    }
+
+    func clearSelection() {
+        selectedPanelIDs.removeAll()
+    }
+
+    func reconcileSelection() {
+        selectedPanelIDs.formIntersection(Set(visible.map(\.id)))
+    }
+
+    func batchHide() {
+        performBatch(ids: selectedPanelIDs) { ids in
+            try setHiddenMany(ids, true)
+        }
+    }
+
+    func batchShow() {
+        performBatch(ids: selectedPanelIDs) { ids in
+            try setHiddenMany(ids, false)
+        }
+    }
+
+    func batchMove(to workspaceID: String) {
+        performBatch(ids: selectedPanelIDs) { ids in
+            try movePanels(ids, workspaceID)
+        }
+    }
+
+    func addTagsToSelection(_ tags: [String]) {
+        performBatch(ids: selectedPanelIDs) { ids in
+            try addTagsToPanels(ids, tags)
+        }
+    }
+
+    func removeTagsFromSelection(_ tags: [String]) {
+        performBatch(ids: selectedPanelIDs) { ids in
+            try removeTagsFromPanels(ids, tags)
+        }
+    }
+
+    func promptBatchAddTags() {
+        switch PanelBatchTagPrompt.runAddModal() {
+        case .cancelled:
+            return
+        case .submitted(let tags):
+            guard !tags.isEmpty else { return }
+            addTagsToSelection(tags)
+        }
+    }
+
+    func promptBatchRemoveTags() {
+        switch PanelBatchTagPrompt.runRemoveModal(tags: selectedTagUnion) {
+        case .cancelled:
+            return
+        case .submitted(let tags):
+            guard !tags.isEmpty else { return }
+            removeTagsFromSelection(tags)
+        }
     }
 
     func revealPanel(_ id: UUID) {
@@ -191,6 +298,16 @@ final class PanelLibraryModel: ObservableObject {
         guard let selectedTag else { return }
         if !availableFilterTags.contains(where: { PanelTag.isEqual($0, selectedTag) }) {
             self.selectedTag = nil
+        }
+    }
+
+    private func performBatch(ids: Set<UUID>, _ work: (Set<UUID>) throws -> Void) {
+        guard !ids.isEmpty else { return }
+        do {
+            try work(ids)
+            reload()
+        } catch {
+            presentBatchError(error)
         }
     }
 }

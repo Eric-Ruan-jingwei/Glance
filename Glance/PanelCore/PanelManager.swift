@@ -218,17 +218,45 @@ final class PanelManager {
     @discardableResult
     func movePanel(id: UUID, toWorkspaceID: String) -> Bool {
         do {
-            guard let record = try environment.repository.record(id: id) else { return false }
-            let previousID = record.workspaceID
-            try environment.repository.movePanel(id: id, toWorkspaceID: toWorkspaceID)
-            if record.workspaceID != previousID {
-                applyEffectiveVisibility(id: id)
-                notifyPanelsDidChange()
-            }
+            try movePanels(ids: [id], toWorkspaceID: toWorkspaceID)
             return true
         } catch {
             NSLog("Glance persistence: failed to move panel: %@", error.localizedDescription)
             return false
+        }
+    }
+
+    func setPanelsHidden(ids: Set<UUID>, hidden: Bool) throws {
+        let changed = try environment.repository.setHidden(ids: ids, hidden: hidden)
+        for id in changed {
+            applyEffectiveVisibility(id: id)
+        }
+        if !changed.isEmpty {
+            notifyPanelsDidChange()
+        }
+    }
+
+    func movePanels(ids: Set<UUID>, toWorkspaceID: String) throws {
+        let changed = try environment.repository.movePanels(ids: ids, toWorkspaceID: toWorkspaceID)
+        for id in changed {
+            applyEffectiveVisibility(id: id)
+        }
+        if !changed.isEmpty {
+            notifyPanelsDidChange()
+        }
+    }
+
+    func addTags(ids: Set<UUID>, tags: [String]) throws {
+        let changed = try environment.repository.addTags(ids: ids, tags: tags)
+        if !changed.isEmpty {
+            notifyPanelsDidChange()
+        }
+    }
+
+    func removeTags(ids: Set<UUID>, tags: [String]) throws {
+        let changed = try environment.repository.removeTags(ids: ids, tags: tags)
+        if !changed.isEmpty {
+            notifyPanelsDidChange()
         }
     }
 
