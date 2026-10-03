@@ -25,7 +25,8 @@ let package = Package(
                 .linkedFramework("Carbon"),
                 .linkedFramework("PDFKit"),
                 .linkedFramework("ImageIO"),
-                .linkedFramework("ServiceManagement")
+                .linkedFramework("ServiceManagement"),
+                .linkedFramework("Quartz")
             ]
         ),
         .executableTarget(
