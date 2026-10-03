@@ -8,6 +8,7 @@ final class PanelLibraryModel: ObservableObject {
     @Published var summaries: [PanelSummary] = []
     @Published var workspaces: [WorkspaceRecord] = []
     @Published var selectedWorkspaceID: String = WorkspaceRecord.defaultID
+    @Published var selectedTag: String? = nil
 
     var loadSummaries: () -> [PanelSummary] = { [] }
     var loadWorkspaces: () -> [WorkspaceRecord] = { [WorkspaceRecord.makeDefault()] }
@@ -22,6 +23,8 @@ final class PanelLibraryModel: ObservableObject {
     var delete: (UUID) -> Bool = { _ in false }
     var openFolder: (UUID) -> Void = { _ in }
     var rename: (UUID, String?) throws -> Void = { _, _ in }
+    var setTags: (UUID, [String]) throws -> Void = { _, _ in }
+    var loadTagCatalog: () -> [String] = { [] }
 
     var workspaceSummaries: [PanelSummary] {
         summaries.filter { $0.workspaceID == selectedWorkspaceID }
@@ -33,9 +36,21 @@ final class PanelLibraryModel: ObservableObject {
                 summaries,
                 query: query,
                 kind: filter,
-                workspaceID: selectedWorkspaceID
+                workspaceID: selectedWorkspaceID,
+                tag: selectedTag
             )
         )
+    }
+
+    var availableFilterTags: [String] {
+        PanelTags.catalog(workspaceSummaries.flatMap(\.tags))
+    }
+
+    var tagFilterTitle: String {
+        if let selectedTag {
+            return "标签：\(selectedTag)"
+        }
+        return "标签：全部"
     }
 
     var isCompletelyEmpty: Bool { workspaceSummaries.isEmpty }
@@ -44,15 +59,29 @@ final class PanelLibraryModel: ObservableObject {
     func resetSessionState() {
         query = ""
         filter = .all
+        selectedTag = nil
     }
 
     func reload() {
         workspaces = WorkspaceCatalog.sorted(loadWorkspaces())
-        selectedWorkspaceID = loadActiveWorkspaceID()
+        let active = loadActiveWorkspaceID()
+        if selectedWorkspaceID != active {
+            selectedTag = nil
+        }
+        selectedWorkspaceID = active
         summaries = loadSummaries()
+        reconcileSelectedTag()
+    }
+
+    func selectTagFilter(_ tag: String?) {
+        selectedTag = tag
+        reconcileSelectedTag()
     }
 
     func activateWorkspace(_ id: String) {
+        if id != loadActiveWorkspaceID() {
+            selectedTag = nil
+        }
         guard id != loadActiveWorkspaceID() else { return }
         switchWorkspace(id)
     }
@@ -104,6 +133,23 @@ final class PanelLibraryModel: ObservableObject {
         }
     }
 
+    func promptEditTags(_ summary: PanelSummary) {
+        switch PanelTagEditorPrompt.runModal(
+            currentTags: summary.tags,
+            catalog: loadTagCatalog()
+        ) {
+        case .cancelled:
+            return
+        case .submitted(let tags):
+            do {
+                try setTags(summary.id, tags)
+                reload()
+            } catch {
+                PanelTagEditorPrompt.presentError(error)
+            }
+        }
+    }
+
     func promptCreateWorkspace() {
         guard let raw = WorkspaceNamePrompt.runModal(
             title: "新建工作区",
@@ -138,6 +184,13 @@ final class PanelLibraryModel: ObservableObject {
             reload()
         } catch {
             WorkspaceNamePrompt.presentError(error)
+        }
+    }
+
+    private func reconcileSelectedTag() {
+        guard let selectedTag else { return }
+        if !availableFilterTags.contains(where: { PanelTag.isEqual($0, selectedTag) }) {
+            self.selectedTag = nil
         }
     }
 }

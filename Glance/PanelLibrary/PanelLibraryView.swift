@@ -44,6 +44,28 @@ struct PanelLibraryView: View {
                     .padding(.top, 12)
                     .padding(.bottom, 8)
 
+                    HStack {
+                        Menu {
+                            Button("全部") {
+                                model.selectTagFilter(nil)
+                            }
+                            if !model.availableFilterTags.isEmpty {
+                                Divider()
+                                ForEach(model.availableFilterTags, id: \.self) { tag in
+                                    Button(tag) {
+                                        model.selectTagFilter(tag)
+                                    }
+                                }
+                            }
+                        } label: {
+                            Text(model.tagFilterTitle)
+                        }
+                        .menuStyle(.borderlessButton)
+                        Spacer()
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 8)
+
                     Divider()
 
                     if model.isCompletelyEmpty {
@@ -58,6 +80,7 @@ struct PanelLibraryView: View {
                                 onReveal: { model.revealPanel(summary.id) },
                                 onHide: { model.hidePanel(summary.id) },
                                 onRename: { model.promptRename(summary) },
+                                onEditTags: { model.promptEditTags(summary) },
                                 onDelete: { model.confirmDelete(summary.id) },
                                 onOpenFolder: { model.openPayloadFolder(summary.id) },
                                 onMove: { model.movePanelToWorkspace(summary.id, workspaceID: $0) }
@@ -104,6 +127,7 @@ private struct PanelLibraryRow: View {
     let onReveal: () -> Void
     let onHide: () -> Void
     let onRename: () -> Void
+    let onEditTags: () -> Void
     let onDelete: () -> Void
     let onOpenFolder: () -> Void
     let onMove: (String) -> Void
@@ -143,6 +167,18 @@ private struct PanelLibraryRow: View {
                             .foregroundStyle(.secondary)
                     }
                 }
+                if !summary.tags.isEmpty {
+                    HStack(spacing: 4) {
+                        ForEach(tagPreview.shown, id: \.self) { tag in
+                            PanelTagChip(text: tag)
+                        }
+                        if tagPreview.overflow > 0 {
+                            Text("+\(tagPreview.overflow)")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
             }
             Spacer(minLength: 8)
             Button(PanelVisibilityMenu.libraryActionTitle(isHidden: summary.isHidden), action: primaryAction)
@@ -150,6 +186,7 @@ private struct PanelLibraryRow: View {
             Menu {
                 Button(PanelVisibilityMenu.libraryActionTitle(isHidden: summary.isHidden), action: primaryAction)
                 Button("重命名…", action: onRename)
+                Button("编辑标签…", action: onEditTags)
                 Menu(PanelVisibilityMenu.moveToWorkspace) {
                     ForEach(workspaces) { workspace in
                         Button {
@@ -175,6 +212,10 @@ private struct PanelLibraryRow: View {
             .buttonStyle(.borderless)
         }
         .padding(.vertical, 4)
+    }
+
+    private var tagPreview: (shown: [String], overflow: Int) {
+        PanelTags.rowPreview(summary.tags)
     }
 
     private func primaryAction() {

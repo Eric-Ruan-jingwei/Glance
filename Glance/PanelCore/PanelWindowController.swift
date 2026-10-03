@@ -341,6 +341,9 @@ final class PanelWindowController: NSWindowController, NSWindowDelegate {
         let rename = NSMenuItem(title: "重命名…", action: #selector(renameClicked), keyEquivalent: "")
         rename.target = self
         menu.addItem(rename)
+        let editTags = NSMenuItem(title: "编辑标签…", action: #selector(editTagsClicked), keyEquivalent: "")
+        editTags.target = self
+        menu.addItem(editTags)
         menu.addItem(makeMoveToWorkspaceItem())
 
         let hide = NSMenuItem(
@@ -385,6 +388,10 @@ final class PanelWindowController: NSWindowController, NSWindowDelegate {
 
     @objc private func renameClicked() {
         environment.panelManager?.promptRenamePanel(id: recordID)
+    }
+
+    @objc private func editTagsClicked() {
+        environment.panelManager?.promptEditTags(id: recordID)
     }
 
     private func makeMoveToWorkspaceItem() -> NSMenuItem {

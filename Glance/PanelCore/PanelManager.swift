@@ -457,6 +457,32 @@ final class PanelManager {
         notifyPanelsDidChange()
     }
 
+    func setTags(id: UUID, tags: [String]) throws {
+        try environment.repository.setTags(id: id, tags: tags)
+        notifyPanelsDidChange()
+    }
+
+    func allTagNames() -> [String] {
+        environment.repository.allTagNames()
+    }
+
+    func promptEditTags(id: UUID) {
+        guard let record = try? environment.repository.record(id: id) else { return }
+        switch PanelTagEditorPrompt.runModal(
+            currentTags: record.tags,
+            catalog: environment.repository.allTagNames()
+        ) {
+        case .cancelled:
+            return
+        case .submitted(let tags):
+            do {
+                try setTags(id: id, tags: tags)
+            } catch {
+                PanelTagEditorPrompt.presentError(error)
+            }
+        }
+    }
+
     func notifyPanelsDidChange() {
         NotificationCenter.default.post(name: .glancePanelCollectionDidChange, object: nil)
     }

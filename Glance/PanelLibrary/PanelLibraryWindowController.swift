@@ -31,6 +31,10 @@ final class PanelLibraryWindowController: NSWindowController, NSWindowDelegate {
         model.rename = { id, title in
             try panelManager.setCustomTitle(id: id, title: title)
         }
+        model.setTags = { id, tags in
+            try panelManager.setTags(id: id, tags: tags)
+        }
+        model.loadTagCatalog = { panelManager.allTagNames() }
         let hosting = NSHostingController(rootView: PanelLibraryView(model: model))
         let window = NSWindow(contentViewController: hosting)
         window.title = "管理面板"
