@@ -83,6 +83,7 @@ final class ShortcutRecorderNSView: NSView {
 
     override func resignFirstResponder() -> Bool {
         if isRecording {
+            isRecording = false
             onDecision?(.cancel)
         }
         return true
@@ -100,7 +101,13 @@ final class ShortcutRecorderNSView: NSView {
             control: modifiers.control,
             shift: modifiers.shift
         )
-        if decision != .ignore {
+        switch decision {
+        case .ignore:
+            break
+        case .cancel, .capture:
+            isRecording = false
+            onDecision?(decision)
+        case .reject:
             onDecision?(decision)
         }
     }

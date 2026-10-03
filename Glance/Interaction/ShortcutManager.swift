@@ -128,17 +128,30 @@ final class ShortcutManager: @unchecked Sendable {
         }
     }
 
+    func isSuspended(_ action: ShortcutAction) -> Bool {
+        ignoredAction == action
+    }
+
     func suspend(_ action: ShortcutAction) {
         ignoredAction = action
         registrar.unregister(id: carbonID(for: action))
     }
 
-    func resume(_ action: ShortcutAction) {
+    func finishSuspension(_ action: ShortcutAction) {
         if ignoredAction == action {
             ignoredAction = nil
         }
+    }
+
+    func resume(_ action: ShortcutAction) throws {
+        guard ignoredAction == action else { return }
+        ignoredAction = nil
         guard let shortcut = registered[action] else { return }
-        _ = register(shortcut, for: action)
+        try registerThrowing(shortcut, for: action)
+    }
+
+    func handleHotKeyForTesting(_ action: ShortcutAction) {
+        handleHotKey(id: carbonID(for: action))
     }
 
     func unregister() {
