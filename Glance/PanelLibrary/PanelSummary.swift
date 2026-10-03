@@ -20,6 +20,7 @@ struct PanelSummary: Identifiable, Equatable {
     var workspaceID: String = WorkspaceRecord.defaultID
     var automaticTitle: String = ""
     var customTitle: String? = nil
+    var tags: [String] = []
     var isUnreadable: Bool
 }
 
@@ -180,20 +181,25 @@ enum PanelSummaryQuery {
         if let subtitle = summary.subtitle, subtitle.localizedCaseInsensitiveContains(needle) {
             return true
         }
-        return summary.preview.localizedCaseInsensitiveContains(needle)
+        if summary.preview.localizedCaseInsensitiveContains(needle) { return true }
+        return summary.tags.contains { $0.localizedCaseInsensitiveContains(needle) }
     }
 
     static func filtered(
         _ summaries: [PanelSummary],
         query: String,
         kind: PanelSummaryKindFilter,
-        workspaceID: String? = nil
+        workspaceID: String? = nil,
+        tag: String? = nil
     ) -> [PanelSummary] {
         summaries.filter { summary in
             if let workspaceID, summary.workspaceID != workspaceID {
                 return false
             }
             if let identifier = kind.kindIdentifier, summary.kindIdentifier != identifier {
+                return false
+            }
+            if let tag, !PanelTags.containsExact(summary.tags, tag: tag) {
                 return false
             }
             return matches(summary, query: query)

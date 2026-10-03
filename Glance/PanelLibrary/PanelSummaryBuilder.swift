@@ -2,7 +2,7 @@ import AppKit
 
 enum PanelSummaryBuilder {
     static func summarize(record: PanelRecord, payloadDirectory: URL) -> PanelSummary {
-        let base = PanelSummary(
+        var base = PanelSummary(
             id: record.id,
             kindIdentifier: record.kindIdentifier,
             title: fallbackTitle(for: record.kindIdentifier),
@@ -17,6 +17,7 @@ enum PanelSummaryBuilder {
             workspaceID: record.workspaceID,
             isUnreadable: false
         )
+        base.tags = record.tags
         let automatic: PanelSummary
         switch record.kindIdentifier {
         case PanelKind.text:
