@@ -232,6 +232,18 @@ The envelope is `{ "schemaVersion": 1, "items": [ ... ] }`. This schema is indep
 
 Each item stores `id`, `title`, `content`, `createdAt`, `updatedAt`, `lastUsedAt`, and `isPinned`.
 
+## Links
+
+Links are a separate data domain. They are explicitly saved HTTP/HTTPS resources, not browser history.
+
+```text
+Links/links.json
+```
+
+The envelope is `{ "schemaVersion": 1, "items": [ ... ] }`. This schema is independent of Panel schema **5**, Clipboard schema **1**, File Shelf schema **1**, and Snippets schema **1**. Future link schemas are rejected without rewriting the file. Glance does not fetch webpage metadata, favicons, or HTML. There is no automatic eviction or URL dedupe.
+
+Each item stores `id`, `title`, `urlString`, `createdAt`, `updatedAt`, `lastOpenedAt`, and `isPinned`.
+
 ## Future clients
 
 Any future Windows (or other) client should read and write this JSON + RTF + Markdown + Todo JSON + PNG + PDF layout. Windowing, shortcuts, and tray code are platform-specific; the files are not.

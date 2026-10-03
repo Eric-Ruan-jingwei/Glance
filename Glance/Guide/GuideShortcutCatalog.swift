@@ -110,6 +110,7 @@ enum GuideShortcutCatalog {
             GuideShortcutGroup(id: "clipboard", title: "剪贴板", items: clipboard),
             GuideShortcutGroup(id: "fileShelf", title: "文件架", items: fileShelf),
             GuideShortcutGroup(id: "snippets", title: "片段库", items: snippets),
+            GuideShortcutGroup(id: "links", title: "链接库", items: links),
             GuideShortcutGroup(id: "editing", title: "编辑", items: editing),
             GuideShortcutGroup(id: "dialogs", title: "弹窗", items: dialogs)
         ]
@@ -139,6 +140,12 @@ enum GuideShortcutCatalog {
             title: ShortcutAction.snippets.title,
             detail: nil,
             source: .dynamic(.snippets)
+        ),
+        GuideShortcutItem(
+            id: "links",
+            title: ShortcutAction.links.title,
+            detail: nil,
+            source: .dynamic(.links)
         ),
         GuideShortcutItem(
             id: "clipboardCapture",
@@ -332,6 +339,45 @@ enum GuideShortcutCatalog {
         GuideShortcutItem(
             id: "snippetCancel",
             title: "关闭片段库",
+            detail: nil,
+            source: .keys([.escape])
+        )
+    ]
+
+    static let links: [GuideShortcutItem] = [
+        GuideShortcutItem(
+            id: "linkOpen",
+            title: "打开链接",
+            detail: nil,
+            source: .keys([.enter])
+        ),
+        GuideShortcutItem(
+            id: "linkEdit",
+            title: "编辑链接",
+            detail: nil,
+            source: .keys([.command, .enter])
+        ),
+        GuideShortcutItem(
+            id: "linkCreate",
+            title: "新建链接",
+            detail: nil,
+            source: .keys([.command, .character("N")])
+        ),
+        GuideShortcutItem(
+            id: "linkCopy",
+            title: "复制链接",
+            detail: nil,
+            source: .keys([.command, .character("C")])
+        ),
+        GuideShortcutItem(
+            id: "linkDelete",
+            title: "删除链接",
+            detail: nil,
+            source: .keys([.character("Delete")])
+        ),
+        GuideShortcutItem(
+            id: "linkCancel",
+            title: "关闭链接库",
             detail: nil,
             source: .keys([.escape])
         )

@@ -4,7 +4,7 @@
 
 A lightweight, local-first personal workspace for **macOS**.
 
-Glance keeps four kinds of work nearby: floating panels for things you need to keep seeing, a local clipboard shelf for things you keep copying, a file shelf for files you will need again soon, and snippets for text you will reuse on purpose. Snippets are explicitly saved, editable text fragments for repeated reuse. Clipboard History is not Snippets. Everything stays on this machine.
+Glance keeps five kinds of work nearby: floating panels for things you need to keep seeing, a local clipboard shelf for things you keep copying, a file shelf for files you will need again soon, snippets for text you will reuse on purpose, and a link library for web pages you will open again. Links are explicitly saved web resources. Glance does not fetch webpage metadata or favicons in V0.22. Clipboard History is not Snippets, and Snippets are not Links. Everything stays on this machine.
 
 There is no Windows client yet. Shared data contracts are documented so a future Windows app can reuse them.
 
@@ -18,6 +18,7 @@ There is no Windows client yet. Shared data contracts are documented so a future
 - Clipboard Shelf
 - File Shelf
 - Snippets
+- Links
 - Clipboard Capture
 - Customizable global shortcuts
 - First-run onboarding
@@ -35,6 +36,10 @@ There is no Windows client yet. Shared data contracts are documented so a future
 - No account
 - No cloud
 - Open source
+
+## V0.22.0
+
+Links: save, name, search, pin, and open HTTP/HTTPS pages in the default browser. Drag a URL from a browser into the library, or save a clipboard URL through the editor. Glance does not fetch webpage metadata or favicons. Panel, Clipboard, File Shelf, and Snippets schemas are unchanged.
 
 ## V0.21.0
 
@@ -178,6 +183,8 @@ File Shelf is the file counterpart. Drag a file in, or add it with `+`. Glance s
 
 Snippets are long-lived text you save on purpose: an address, a reply, a prompt, a command. They are editable and never auto-deleted. Enter copies the exact text to the system clipboard; you paste it yourself. Clipboard History still means “what I recently copied.”
 
+Links are long-lived web resources you save on purpose: a GitHub repo, a Figma file, a dashboard, a docs page. Enter opens the URL in the default browser. Glance does not fetch titles, favicons, or page previews.
+
 Default shortcuts:
 
 ```text
@@ -185,6 +192,7 @@ Quick Capture                 ⌥⌘J
 Clipboard                     ⌥⌘V
 File Shelf                    ⌥⌘F
 Snippets                      ⌥⌘S
+Links                         ⌥⌘L
 Create from current clipboard ⌥⌘B
 Hide / Show                   ⌥⌘G
 ```
@@ -199,6 +207,7 @@ Status-item menu (defaults shown):
 剪贴板…                    ⌥⌘V
 文件架…                    ⌥⌘F
 片段库…                    ⌥⌘S
+链接库…                    ⌥⌘L
 面板
   新建面板
     文字
@@ -322,7 +331,7 @@ Each panel can be pinned, locked, made click-through, and faded independently. T
 
 ### App settings
 
-Glance settings include launch at login (`SMAppService.mainApp`), customizable global shortcuts (defaults `⌥⌘J`, `⌥⌘V`, `⌥⌘B`, and `⌥⌘G`), clipboard history recording, the local data folder, and the version from the app bundle.
+Glance settings include launch at login (`SMAppService.mainApp`), customizable global shortcuts (defaults `⌥⌘J`, `⌥⌘V`, `⌥⌘F`, `⌥⌘S`, `⌥⌘L`, `⌥⌘B`, and `⌥⌘G`), clipboard history recording, the local data folder, and the version from the app bundle.
 
 ## Download
 
@@ -374,8 +383,10 @@ Everything lives on disk. See [docs/architecture/data-format.md](docs/architectu
 │   ├── shelf.json           schemaVersion 1 file references
 │   └── Bookmarks/
 │       └── {item-id}.bookmark
-└── Snippets/
-    └── snippets.json        schemaVersion 1 reusable text
+├── Snippets/
+│   └── snippets.json        schemaVersion 1 reusable text
+└── Links/
+    └── links.json           schemaVersion 1 saved web links
 ```
 
 Panel images and PDFs are copied into this directory. File Shelf stores only references and bookmarks; the original files stay where they are. Removing a File Shelf item does not delete the original file.
