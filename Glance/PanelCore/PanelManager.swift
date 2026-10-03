@@ -81,19 +81,27 @@ final class PanelManager {
     }
 
     func deletePanel(id: UUID) {
-        environment.debouncer.cancel(id: "frame-\(id.uuidString)")
-        environment.debouncer.cancel(id: "payload-\(id.uuidString)")
-        environment.debouncer.cancel(id: "opacity-\(id.uuidString)")
-        if let controller = controllers.removeValue(forKey: id) {
-            controller.persistAllNow()
-            controller.window?.close()
-        }
+        controllers[id]?.persistAllNow()
         do {
-            try environment.repository.delete(id: id)
+            try PanelDeletionTransaction.perform(
+                deleteMetadata: {
+                    try environment.repository.delete(id: id)
+                },
+                removeController: {
+                    environment.debouncer.cancel(id: "frame-\(id.uuidString)")
+                    environment.debouncer.cancel(id: "payload-\(id.uuidString)")
+                    environment.debouncer.cancel(id: "opacity-\(id.uuidString)")
+                    if let controller = controllers.removeValue(forKey: id) {
+                        controller.window?.close()
+                    }
+                },
+                deletePayload: {
+                    environment.payloadStore.delete(id: id)
+                }
+            )
         } catch {
             NSLog("Glance persistence: failed to delete panel metadata: %@", error.localizedDescription)
         }
-        environment.payloadStore.delete(id: id)
     }
 
     func persistAllNow() {
