@@ -33,7 +33,6 @@ final class GlanceTextView: NSTextView {
     private func handleReadingMouseDown(_ event: NSEvent) {
         let viewPoint = convert(event.locationInWindow, from: nil)
         switch PanelReadingClick.textAction(
-            isInText: isPointInText(event),
             hitsChecklist: checklistChange(atViewPoint: viewPoint) != nil,
             allowsContentMutation: allowsContentMutation
         ) {
@@ -41,10 +40,7 @@ final class GlanceTextView: NSTextView {
             _ = toggleChecklist(atViewPoint: viewPoint)
         case .beginEditing:
             beginEditing(at: viewPoint)
-        case .selectText:
-            prepareReadingSelection()
-            super.mouseDown(with: event)
-        case .followLink:
+        case .selectText, .followLink:
             prepareReadingSelection()
             super.mouseDown(with: event)
         case .movePanel:
@@ -86,15 +82,6 @@ final class GlanceTextView: NSTextView {
         NSApp.activate(ignoringOtherApps: true)
         panel.makeKey()
         panel.makeFirstResponder(self)
-    }
-
-    private func isPointInText(_ event: NSEvent) -> Bool {
-        guard let layoutManager, let textContainer else { return false }
-        let point = convert(event.locationInWindow, from: nil)
-        let used = layoutManager.usedRect(for: textContainer)
-        let inset = textContainerInset
-        let textRect = used.offsetBy(dx: inset.width, dy: inset.height).insetBy(dx: -4, dy: -4)
-        return textRect.contains(point)
     }
 
     override func keyDown(with event: NSEvent) {
@@ -191,22 +178,18 @@ enum PanelReadingClick: Equatable {
     case movePanel
 
     static func textAction(
-        isInText: Bool,
         hitsChecklist: Bool,
         allowsContentMutation: Bool
     ) -> PanelReadingClick {
         if hitsChecklist, allowsContentMutation { return .toggleChecklist }
-        if isInText, allowsContentMutation { return .beginEditing }
-        if isInText { return .selectText }
-        return .movePanel
+        if allowsContentMutation { return .beginEditing }
+        return .selectText
     }
 
     static func markdownAction(
-        isInText: Bool,
         hitsLink: Bool,
         allowsContentMutation: Bool
     ) -> PanelReadingClick {
-        if !isInText { return .movePanel }
         if hitsLink { return .followLink }
         if allowsContentMutation { return .beginEditing }
         return .selectText

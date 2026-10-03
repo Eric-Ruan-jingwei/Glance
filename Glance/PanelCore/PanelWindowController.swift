@@ -212,9 +212,9 @@ final class PanelWindowController: NSWindowController, NSWindowDelegate {
         interactionState = .editing
         panelWindow.allowsKey = true
         environment.interaction.update(window: panelWindow, passThrough: false)
-        content.enterEditing()
         NSApp.activate(ignoringOtherApps: true)
         panelWindow.makeKeyAndOrderFront(nil)
+        content.enterEditing()
         installClickOutsideMonitor()
         applyPolicyToViews()
     }

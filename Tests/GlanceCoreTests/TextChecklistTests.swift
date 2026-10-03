@@ -111,42 +111,42 @@ final class TextChecklistClickTests: XCTestCase {
 final class PanelReadingClickTests: XCTestCase {
     func testTextContentClickBeginsEditing() {
         XCTAssertEqual(
-            PanelReadingClick.textAction(isInText: true, hitsChecklist: false, allowsContentMutation: true),
+            PanelReadingClick.textAction(hitsChecklist: false, allowsContentMutation: true),
             .beginEditing
         )
     }
 
     func testTextChecklistClickTogglesInsteadOfEditing() {
         XCTAssertEqual(
-            PanelReadingClick.textAction(isInText: true, hitsChecklist: true, allowsContentMutation: true),
+            PanelReadingClick.textAction(hitsChecklist: true, allowsContentMutation: true),
             .toggleChecklist
         )
     }
 
-    func testTextPaddingClickMovesThePanel() {
+    func testTextPaddingClickBeginsEditing() {
         XCTAssertEqual(
-            PanelReadingClick.textAction(isInText: false, hitsChecklist: false, allowsContentMutation: true),
-            .movePanel
+            PanelReadingClick.textAction(hitsChecklist: false, allowsContentMutation: true),
+            .beginEditing
         )
     }
 
     func testLockedTextClickSelects() {
         XCTAssertEqual(
-            PanelReadingClick.textAction(isInText: true, hitsChecklist: false, allowsContentMutation: false),
+            PanelReadingClick.textAction(hitsChecklist: false, allowsContentMutation: false),
             .selectText
         )
     }
 
     func testMarkdownLinkClickOpensTheLink() {
         XCTAssertEqual(
-            PanelReadingClick.markdownAction(isInText: true, hitsLink: true, allowsContentMutation: true),
+            PanelReadingClick.markdownAction(hitsLink: true, allowsContentMutation: true),
             .followLink
         )
     }
 
     func testMarkdownContentClickBeginsEditing() {
         XCTAssertEqual(
-            PanelReadingClick.markdownAction(isInText: true, hitsLink: false, allowsContentMutation: true),
+            PanelReadingClick.markdownAction(hitsLink: false, allowsContentMutation: true),
             .beginEditing
         )
     }
