@@ -62,6 +62,7 @@ final class PanelRepositoryTests: XCTestCase {
         XCTAssertEqual(panel.themeIdentifier, "system")
         XCTAssertEqual(panel.payloadVersion, 1)
         XCTAssertNil(panel.customTitle)
+        XCTAssertEqual(panel.tags, [])
     }
 
     func testCorruptDatabaseDoesNotPreventLaunch() throws {
@@ -119,7 +120,7 @@ final class PanelRepositoryTests: XCTestCase {
 
     func testFutureSchemaIsRejectedByCodec() {
         XCTAssertThrowsError(try PanelDatabaseCodec.decode(from: Data(GlanceTestFixtures.futureSchemaJSON.utf8))) { error in
-            XCTAssertEqual(error as? PanelDatabaseError, .unsupportedFutureSchema(5))
+            XCTAssertEqual(error as? PanelDatabaseError, .unsupportedFutureSchema(6))
         }
     }
 
@@ -128,7 +129,7 @@ final class PanelRepositoryTests: XCTestCase {
             let original = Data(GlanceTestFixtures.futureSchemaJSON.utf8)
             try original.write(to: metadataURL)
             let repository = try PanelRepository(fileURL: metadataURL)
-            XCTAssertEqual(repository.lastLoadOutcome, .unsupportedFutureSchema(5))
+            XCTAssertEqual(repository.lastLoadOutcome, .unsupportedFutureSchema(6))
             XCTAssertTrue(try repository.all().isEmpty)
             XCTAssertTrue(FileManager.default.fileExists(atPath: metadataURL.path))
             let leftovers = try FileManager.default.contentsOfDirectory(atPath: directory.path)
@@ -145,7 +146,7 @@ final class PanelRepositoryTests: XCTestCase {
             try repository.save()
             XCTAssertEqual(try Data(contentsOf: metadataURL), original)
             XCTAssertThrowsError(try repository.insert(GlanceTestFixtures.sampleRecord())) { error in
-                XCTAssertEqual(error as? PanelDatabaseError, .unsupportedFutureSchema(5))
+                XCTAssertEqual(error as? PanelDatabaseError, .unsupportedFutureSchema(6))
             }
             XCTAssertEqual(try Data(contentsOf: metadataURL), original)
             XCTAssertFalse(FileManager.default.fileExists(atPath: repository.backupURL.path))

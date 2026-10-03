@@ -210,7 +210,7 @@ final class WorkspaceMigrationTests: XCTestCase {
             let original = Data(GlanceTestFixtures.futureSchemaJSON.utf8)
             try original.write(to: metadataURL)
             let repository = try PanelRepository(fileURL: metadataURL)
-            XCTAssertEqual(repository.lastLoadOutcome, .unsupportedFutureSchema(5))
+            XCTAssertEqual(repository.lastLoadOutcome, .unsupportedFutureSchema(6))
             XCTAssertEqual(try Data(contentsOf: metadataURL), original)
         }
     }

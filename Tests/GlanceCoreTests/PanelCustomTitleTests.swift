@@ -50,7 +50,7 @@ final class PanelCustomTitleMigrationTests: XCTestCase {
         )
         let decoded = try PanelDatabaseCodec.decode(from: original)
         XCTAssertTrue(decoded.migratedFromLegacy)
-        XCTAssertEqual(decoded.database.schemaVersion, 4)
+        XCTAssertEqual(decoded.database.schemaVersion, PanelDatabase.currentSchemaVersion)
         XCTAssertEqual(decoded.database.workspaces.map(\.id), [WorkspaceRecord.defaultID, "work"])
         let hidden = try XCTUnwrap(decoded.database.panels.first { $0.id.uuidString == "AAAAAAAA-AAAA-AAAA-AAAA-AAAAAAAAAAAA" })
         let pdf = try XCTUnwrap(decoded.database.panels.first { $0.id.uuidString == "BBBBBBBB-BBBB-BBBB-BBBB-BBBBBBBBBBBB" })
@@ -80,7 +80,7 @@ final class PanelCustomTitleMigrationTests: XCTestCase {
 
     func testV2MigratesToV4WithNilCustomTitle() throws {
         let decoded = try PanelDatabaseCodec.decode(from: Data(GlanceTestFixtures.schemaV2EnvelopeJSON.utf8))
-        XCTAssertEqual(decoded.database.schemaVersion, 4)
+        XCTAssertEqual(decoded.database.schemaVersion, PanelDatabase.currentSchemaVersion)
         XCTAssertEqual(decoded.database.workspaces.map(\.id), [WorkspaceRecord.defaultID])
         XCTAssertTrue(decoded.database.panels.contains { $0.isHidden && $0.customTitle == nil })
         XCTAssertEqual(
@@ -92,7 +92,7 @@ final class PanelCustomTitleMigrationTests: XCTestCase {
 
     func testV1MigratesToV4WithNilCustomTitle() throws {
         let decoded = try PanelDatabaseCodec.decode(from: Data(GlanceTestFixtures.schemaV1EnvelopeJSON.utf8))
-        XCTAssertEqual(decoded.database.schemaVersion, 4)
+        XCTAssertEqual(decoded.database.schemaVersion, PanelDatabase.currentSchemaVersion)
         XCTAssertEqual(decoded.database.panels.first?.isHidden, false)
         XCTAssertEqual(decoded.database.panels.first?.workspaceID, WorkspaceRecord.defaultID)
         XCTAssertNil(decoded.database.panels.first?.customTitle)
@@ -100,7 +100,7 @@ final class PanelCustomTitleMigrationTests: XCTestCase {
 
     func testSchema0MigratesToV4WithNilCustomTitle() throws {
         let decoded = try PanelDatabaseCodec.decode(from: Data(GlanceTestFixtures.legacyArrayJSON.utf8))
-        XCTAssertEqual(decoded.database.schemaVersion, 4)
+        XCTAssertEqual(decoded.database.schemaVersion, PanelDatabase.currentSchemaVersion)
         XCTAssertNil(decoded.database.panels.first?.customTitle)
         XCTAssertEqual(decoded.database.panels.first?.workspaceID, WorkspaceRecord.defaultID)
         XCTAssertEqual(decoded.database.panels.first?.isHidden, false)
@@ -108,7 +108,7 @@ final class PanelCustomTitleMigrationTests: XCTestCase {
 
     func testFutureSchema5RejectedAndBytesUnchanged() throws {
         XCTAssertThrowsError(try PanelDatabaseCodec.decode(from: Data(GlanceTestFixtures.futureSchemaJSON.utf8))) { error in
-            XCTAssertEqual(error as? PanelDatabaseError, .unsupportedFutureSchema(5))
+            XCTAssertEqual(error as? PanelDatabaseError, .unsupportedFutureSchema(6))
         }
     }
 }
@@ -124,7 +124,7 @@ final class PanelCustomTitlePersistenceTests: XCTestCase {
             let reloaded = try PanelRepository(fileURL: metadataURL)
             XCTAssertEqual(try reloaded.record(id: record.id)?.customTitle, "API 文档")
             let root = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(contentsOf: metadataURL)) as? [String: Any])
-            XCTAssertEqual(root["schemaVersion"] as? Int, 4)
+            XCTAssertEqual(root["schemaVersion"] as? Int, PanelDatabase.currentSchemaVersion)
             let panel = try XCTUnwrap((root["panels"] as? [[String: Any]])?.first)
             XCTAssertEqual(panel["customTitle"] as? String, "API 文档")
         }
@@ -158,7 +158,7 @@ final class PanelCustomTitlePersistenceTests: XCTestCase {
         let data = try PanelDatabaseCodec.encode(PanelDatabase(panels: [record]))
         let decoded = try PanelDatabaseCodec.decode(from: data)
         XCTAssertEqual(decoded.database.panels.first?.customTitle?.count, 100)
-        XCTAssertEqual(decoded.database.schemaVersion, 4)
+        XCTAssertEqual(decoded.database.schemaVersion, PanelDatabase.currentSchemaVersion)
     }
 
     func testV3FileRewritesAsSchema4WithoutChangingUpdatedAt() throws {
@@ -171,7 +171,7 @@ final class PanelCustomTitlePersistenceTests: XCTestCase {
             XCTAssertEqual(hidden.workspaceID, "work")
             XCTAssertEqual(hidden.updatedAt, ISO8601DateFormatter().date(from: "2026-10-02T16:00:00Z"))
             let rewritten = try PanelDatabaseCodec.decode(from: Data(contentsOf: metadataURL))
-            XCTAssertEqual(rewritten.database.schemaVersion, 4)
+            XCTAssertEqual(rewritten.database.schemaVersion, PanelDatabase.currentSchemaVersion)
             XCTAssertFalse(rewritten.migratedFromLegacy)
             XCTAssertTrue(rewritten.database.panels.allSatisfy { $0.customTitle == nil })
             XCTAssertEqual(rewritten.database.workspaces.map(\.id), [WorkspaceRecord.defaultID, "work"])
