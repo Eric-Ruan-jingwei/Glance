@@ -99,13 +99,27 @@ enum ShortcutDefaults {
 
 enum ShortcutDisplayFormatter {
     static func display(_ shortcut: GlanceShortcut) -> String {
-        var result = ""
-        if shortcut.control { result += "⌃" }
-        if shortcut.option { result += "⌥" }
-        if shortcut.shift { result += "⇧" }
-        if shortcut.command { result += "⌘" }
-        result += shortcut.canonicalKey.uppercased()
+        tokens(shortcut).joined()
+    }
+
+    static func tokens(_ shortcut: GlanceShortcut) -> [String] {
+        var result: [String] = []
+        if shortcut.control { result.append("⌃") }
+        if shortcut.option { result.append("⌥") }
+        if shortcut.shift { result.append("⇧") }
+        if shortcut.command { result.append("⌘") }
+        result.append(shortcut.canonicalKey.uppercased())
         return result
+    }
+
+    static func spoken(_ shortcut: GlanceShortcut) -> String {
+        var parts: [String] = []
+        if shortcut.control { parts.append("Control") }
+        if shortcut.option { parts.append("Option") }
+        if shortcut.shift { parts.append("Shift") }
+        if shortcut.command { parts.append("Command") }
+        parts.append(shortcut.canonicalKey.uppercased())
+        return parts.joined(separator: " ")
     }
 
     static func keyEquivalent(_ shortcut: GlanceShortcut) -> String {
