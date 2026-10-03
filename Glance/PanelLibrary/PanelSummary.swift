@@ -227,8 +227,7 @@ enum PNGImageSize {
     }
 
     static func read(fromFile url: URL) -> (width: Int, height: Int)? {
-        guard let data = try? Data(contentsOf: url) else { return nil }
-        return read(from: data)
+        ImagePixelSize.read(fromFile: url)
     }
 
     private static func int32(_ data: Data, offset: Int) -> Int {

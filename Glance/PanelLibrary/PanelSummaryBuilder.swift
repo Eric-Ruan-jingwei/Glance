@@ -1,46 +1,50 @@
-import AppKit
+import Foundation
 
 enum PanelSummaryBuilder {
     static func summarize(record: PanelRecord, payloadDirectory: URL) -> PanelSummary {
+        summarize(input: PanelSummaryInput(record: record, payloadDirectory: payloadDirectory))
+    }
+
+    static func summarize(input: PanelSummaryInput) -> PanelSummary {
         var base = PanelSummary(
-            id: record.id,
-            kindIdentifier: record.kindIdentifier,
-            title: fallbackTitle(for: record.kindIdentifier),
+            id: input.id,
+            kindIdentifier: input.kindIdentifier,
+            title: fallbackTitle(for: input.kindIdentifier),
             subtitle: nil,
             preview: "",
-            createdAt: record.createdAt,
-            updatedAt: record.updatedAt,
-            isLocked: record.isLocked,
-            isPassThrough: record.isPassThrough,
-            isPinned: record.isPinned,
-            isHidden: record.isHidden,
-            workspaceID: record.workspaceID,
+            createdAt: input.createdAt,
+            updatedAt: input.updatedAt,
+            isLocked: input.isLocked,
+            isPassThrough: input.isPassThrough,
+            isPinned: input.isPinned,
+            isHidden: input.isHidden,
+            workspaceID: input.workspaceID,
             isUnreadable: false
         )
-        base.tags = record.tags
+        base.tags = input.tags
         let automatic: PanelSummary
-        switch record.kindIdentifier {
+        switch input.kindIdentifier {
         case PanelKind.text:
-            automatic = summarizeText(base, directory: payloadDirectory)
+            automatic = summarizeText(base, directory: input.payloadDirectory)
         case PanelKind.markdown:
-            automatic = summarizeMarkdown(base, directory: payloadDirectory)
+            automatic = summarizeMarkdown(base, directory: input.payloadDirectory)
         case PanelKind.todo:
-            automatic = summarizeTodo(base, directory: payloadDirectory)
+            automatic = summarizeTodo(base, directory: input.payloadDirectory)
         case PanelKind.image:
-            automatic = summarizeImage(base, directory: payloadDirectory)
+            automatic = summarizeImage(base, directory: input.payloadDirectory)
         case PanelKind.pdf:
-            automatic = summarizePDF(base, directory: payloadDirectory)
+            automatic = summarizePDF(base, directory: input.payloadDirectory)
         default:
             automatic = base
         }
-        return applyCustomTitle(automatic, from: record)
+        return applyCustomTitle(automatic, customTitle: input.customTitle)
     }
 
-    private static func applyCustomTitle(_ summary: PanelSummary, from record: PanelRecord) -> PanelSummary {
+    private static func applyCustomTitle(_ summary: PanelSummary, customTitle: String?) -> PanelSummary {
         var result = summary
         result.automaticTitle = summary.title
-        result.customTitle = record.customTitle
-        result.title = record.customTitle ?? summary.title
+        result.customTitle = customTitle
+        result.title = customTitle ?? summary.title
         return result
     }
 
@@ -106,10 +110,7 @@ enum PanelSummaryBuilder {
             summary.subtitle = "PNG"
             return summary
         }
-        guard let data = try? Data(contentsOf: url) else {
-            return unreadable(base)
-        }
-        if let size = PNGImageSize.read(from: data) {
+        if let size = ImagePixelSize.read(fromFile: url) {
             summary.subtitle = "\(size.width) × \(size.height)"
             return summary
         }

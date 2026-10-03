@@ -24,6 +24,7 @@ let package = Package(
             linkerSettings: [
                 .linkedFramework("Carbon"),
                 .linkedFramework("PDFKit"),
+                .linkedFramework("ImageIO"),
                 .linkedFramework("ServiceManagement")
             ]
         ),

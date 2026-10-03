@@ -31,6 +31,11 @@ final class PanelLibraryModel: ObservableObject {
     var addTagsToPanels: (Set<UUID>, [String]) throws -> Void = { _, _ in }
     var removeTagsFromPanels: (Set<UUID>, [String]) throws -> Void = { _, _ in }
     var presentBatchError: (Error) -> Void = { PanelBatchTagPrompt.presentError($0) }
+    var loadSummaryInputs: (() -> [PanelSummaryInput])?
+    var summaryLoader: any PanelSummaryLoading = PanelSummaryLoader()
+
+    private var summaryGeneration: UInt64 = 0
+    private var summaryLoadTask: Task<Void, Never>?
 
     var workspaceSummaries: [PanelSummary] {
         summaries.filter { $0.workspaceID == selectedWorkspaceID }
@@ -89,6 +94,7 @@ final class PanelLibraryModel: ObservableObject {
         filter = .all
         selectedTag = nil
         selectedPanelIDs = []
+        cancelSummaryLoading()
     }
 
     func reload() {
@@ -99,9 +105,45 @@ final class PanelLibraryModel: ObservableObject {
             selectedPanelIDs = []
         }
         selectedWorkspaceID = active
-        summaries = loadSummaries()
+        if let loadSummaryInputs {
+            startSummaryLoad(loadSummaryInputs())
+        } else {
+            _ = beginSummaryRequest()
+            summaries = loadSummaries()
+            reconcileSelection()
+            reconcileSelectedTag()
+        }
+    }
+
+    @discardableResult
+    func beginSummaryRequest() -> UInt64 {
+        summaryGeneration += 1
+        summaryLoadTask?.cancel()
+        summaryLoadTask = nil
+        return summaryGeneration
+    }
+
+    func applyLoadedSummaries(_ summaries: [PanelSummary], generation: UInt64) {
+        guard generation == summaryGeneration else { return }
+        self.summaries = summaries
         reconcileSelection()
         reconcileSelectedTag()
+    }
+
+    func cancelSummaryLoading() {
+        summaryGeneration += 1
+        summaryLoadTask?.cancel()
+        summaryLoadTask = nil
+    }
+
+    private func startSummaryLoad(_ inputs: [PanelSummaryInput]) {
+        let generation = beginSummaryRequest()
+        let loader = summaryLoader
+        summaryLoadTask = Task.detached { [weak self] in
+            let summaries = await loader.loadSummaries(inputs: inputs)
+            guard !Task.isCancelled else { return }
+            await self?.applyLoadedSummaries(summaries, generation: generation)
+        }
     }
 
     func selectTagFilter(_ tag: String?) {
