@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 
 @MainActor
@@ -12,6 +13,10 @@ final class AppEnvironment {
     let shortcutStore: ShortcutStore
     let shortcutCoordinator: ShortcutCoordinator
     let workspacePreferences: WorkspacePreferenceStore
+    let clipboardHistoryPreferences: ClipboardHistoryPreferenceStore
+    let clipboardHistoryStore: ClipboardHistoryStore
+    let clipboardHistoryService: ClipboardHistoryService
+    let clipboardHistoryMonitor: ClipboardHistoryMonitor
 
     weak var panelManager: PanelManager?
 
@@ -44,5 +49,37 @@ final class AppEnvironment {
         self.shortcutStore = store
         self.shortcutCoordinator = ShortcutCoordinator(store: store, manager: shortcuts)
         self.workspacePreferences = WorkspacePreferenceStore()
+        let clipboardPreferences = ClipboardHistoryPreferenceStore()
+        let clipboardStore = ClipboardHistoryStore(
+            root: root.appendingPathComponent("Clipboard", isDirectory: true)
+        )
+        let clipboardService = ClipboardHistoryService(
+            store: clipboardStore,
+            preferences: clipboardPreferences
+        )
+        let clipboardMonitor = ClipboardHistoryMonitor(
+            isEnabled: { clipboardService.isRecordingEnabled }
+        )
+        clipboardMonitor.onCapture = { content in
+            _ = clipboardService.record(content)
+        }
+        self.clipboardHistoryPreferences = clipboardPreferences
+        self.clipboardHistoryStore = clipboardStore
+        self.clipboardHistoryService = clipboardService
+        self.clipboardHistoryMonitor = clipboardMonitor
+    }
+
+    func startClipboardMonitoringIfNeeded() {
+        guard clipboardHistoryService.isRecordingEnabled else { return }
+        clipboardHistoryMonitor.start(baselineChangeCount: NSPasteboard.general.changeCount)
+    }
+
+    func setClipboardRecordingEnabled(_ enabled: Bool) {
+        clipboardHistoryPreferences.isRecordingEnabled = enabled
+        if enabled {
+            clipboardHistoryMonitor.start(baselineChangeCount: NSPasteboard.general.changeCount)
+        } else {
+            clipboardHistoryMonitor.stop()
+        }
     }
 }

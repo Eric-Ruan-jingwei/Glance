@@ -23,6 +23,11 @@ struct GuideFeaturesView: View {
                     symbol: "square.stack",
                     body: "Panel Manager 用于集中搜索、筛选和整理已有面板。可以搜索、按类型筛选、移动工作区、批量隐藏或显示，以及批量编辑标签。"
                 )
+                feature(
+                    title: "剪贴板",
+                    symbol: "list.clipboard",
+                    body: "Glance 可以在本机保存你之后复制的文字和图片。常用内容可以收藏，并通过剪贴板窗口快速搜索和再次调用。内容只保存在本机。"
+                )
             }
             .padding(GlanceTheme.Space.xl)
         }

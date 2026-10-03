@@ -7,6 +7,7 @@ enum StatusMenuBuilder {
         clipboardCaptureEnabled: Bool = true,
         workspaces: [WorkspaceMenuItem] = [],
         onQuickCapture: @escaping () -> Void,
+        onShowClipboardHistory: @escaping () -> Void = {},
         onCaptureClipboard: @escaping () -> Void = {},
         onSelectWorkspace: @escaping (String) -> Void = { _ in },
         onCreateWorkspace: @escaping () -> Void = {},
@@ -27,6 +28,7 @@ enum StatusMenuBuilder {
         menu.removeAllItems()
 
         let quickCapture = shortcuts[.quickCapture] ?? ShortcutDefaults.quickCapture
+        let clipboardHistory = shortcuts[.clipboardHistory] ?? ShortcutDefaults.clipboardHistory
         let clipboardCapture = shortcuts[.clipboardCapture] ?? ShortcutDefaults.clipboardCapture
         let hideShow = shortcuts[.hideShow] ?? ShortcutDefaults.hideShow
 
@@ -41,7 +43,16 @@ enum StatusMenuBuilder {
         )
         menu.addItem(
             actionItem(
-                "从剪贴板创建…",
+                "剪贴板…",
+                onShowClipboardHistory,
+                symbol: "list.clipboard",
+                keyEquivalent: ShortcutDisplayFormatter.keyEquivalent(clipboardHistory),
+                modifiers: MacShortcutAdapter.menuModifierMask(for: clipboardHistory)
+            )
+        )
+        menu.addItem(
+            actionItem(
+                "从当前剪贴板创建…",
                 onCaptureClipboard,
                 symbol: "doc.on.clipboard",
                 keyEquivalent: ShortcutDisplayFormatter.keyEquivalent(clipboardCapture),

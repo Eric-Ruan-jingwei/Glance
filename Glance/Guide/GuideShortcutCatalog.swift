@@ -107,6 +107,7 @@ enum GuideShortcutCatalog {
             GuideShortcutGroup(id: "global", title: "全局", items: global),
             GuideShortcutGroup(id: "panel", title: "面板操作", items: panel),
             GuideShortcutGroup(id: "quickCapture", title: "Quick Capture", items: quickCapture),
+            GuideShortcutGroup(id: "clipboard", title: "剪贴板", items: clipboard),
             GuideShortcutGroup(id: "editing", title: "编辑", items: editing),
             GuideShortcutGroup(id: "dialogs", title: "弹窗", items: dialogs)
         ]
@@ -118,6 +119,12 @@ enum GuideShortcutCatalog {
             title: ShortcutAction.quickCapture.title,
             detail: nil,
             source: .dynamic(.quickCapture)
+        ),
+        GuideShortcutItem(
+            id: "clipboardHistory",
+            title: ShortcutAction.clipboardHistory.title,
+            detail: nil,
+            source: .dynamic(.clipboardHistory)
         ),
         GuideShortcutItem(
             id: "clipboardCapture",
@@ -194,6 +201,39 @@ enum GuideShortcutCatalog {
         GuideShortcutItem(
             id: "qcCancel",
             title: "取消 Quick Capture",
+            detail: nil,
+            source: .keys([.escape])
+        )
+    ]
+
+    static let clipboard: [GuideShortcutItem] = [
+        GuideShortcutItem(
+            id: "clipboardReuse",
+            title: "写回系统剪贴板",
+            detail: "关闭窗口后，在原 App 中自行粘贴",
+            source: .keys([.enter])
+        ),
+        GuideShortcutItem(
+            id: "clipboardCreatePanel",
+            title: "从历史创建面板",
+            detail: nil,
+            source: .keys([.command, .enter])
+        ),
+        GuideShortcutItem(
+            id: "clipboardRecentTab",
+            title: "最近",
+            detail: nil,
+            source: .keys([.command, .character("1")])
+        ),
+        GuideShortcutItem(
+            id: "clipboardFavoriteTab",
+            title: "收藏",
+            detail: nil,
+            source: .keys([.command, .character("2")])
+        ),
+        GuideShortcutItem(
+            id: "clipboardCancel",
+            title: "关闭剪贴板",
             detail: nil,
             source: .keys([.escape])
         )

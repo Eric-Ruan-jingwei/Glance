@@ -5,6 +5,7 @@ enum GlanceHotKeyID: UInt32 {
     case hideShow = 1
     case quickCapture = 2
     case clipboardCapture = 3
+    case clipboardHistory = 4
 }
 
 final class CarbonHotKeyRegistrar: HotKeyRegistering {
@@ -46,6 +47,7 @@ final class ShortcutManager: @unchecked Sendable {
     var onToggleVisibility: (() -> Void)?
     var onQuickCapture: (() -> Void)?
     var onCaptureClipboard: (() -> Void)?
+    var onShowClipboardHistory: (() -> Void)?
 
     private let registrar: HotKeyRegistering
     private let bindSystemHandler: Bool
@@ -176,6 +178,8 @@ final class ShortcutManager: @unchecked Sendable {
             onQuickCapture?()
         case .clipboardCapture:
             onCaptureClipboard?()
+        case .clipboardHistory:
+            onShowClipboardHistory?()
         }
     }
 
@@ -196,6 +200,7 @@ final class ShortcutManager: @unchecked Sendable {
         case .hideShow: return GlanceHotKeyID.hideShow.rawValue
         case .quickCapture: return GlanceHotKeyID.quickCapture.rawValue
         case .clipboardCapture: return GlanceHotKeyID.clipboardCapture.rawValue
+        case .clipboardHistory: return GlanceHotKeyID.clipboardHistory.rawValue
         }
     }
 
@@ -204,6 +209,7 @@ final class ShortcutManager: @unchecked Sendable {
         case .hideShow: return .hideShow
         case .quickCapture: return .quickCapture
         case .clipboardCapture: return .clipboardCapture
+        case .clipboardHistory: return .clipboardHistory
         case nil: return nil
         }
     }

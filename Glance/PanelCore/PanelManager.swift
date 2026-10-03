@@ -168,14 +168,21 @@ final class PanelManager {
             NSSound.beep()
             return
         }
-        let created = createPanel(
-            kindIdentifier: ClipboardCaptureRouter.kindIdentifier(for: content),
-            initialContent: ClipboardCaptureRouter.initialContent(for: content),
-            preferredScreen: DisplayManager.screenContainingMouse()
-        )
-        if !created {
+        if !createPanel(fromClipboardContent: content) {
             NSSound.beep()
         }
+    }
+
+    @discardableResult
+    func createPanel(
+        fromClipboardContent content: ClipboardCaptureContent,
+        preferredScreen: NSScreen? = nil
+    ) -> Bool {
+        createPanel(
+            kindIdentifier: ClipboardCaptureRouter.kindIdentifier(for: content),
+            initialContent: ClipboardCaptureRouter.initialContent(for: content),
+            preferredScreen: preferredScreen ?? DisplayManager.screenContainingMouse()
+        )
     }
 
     var allHidden: Bool {

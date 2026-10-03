@@ -4,6 +4,8 @@ enum AppLifecycle {
     @MainActor
     static func handleTerminate(manager: PanelManager?, environment: AppEnvironment?) {
         environment?.debouncer.flush()
+        environment?.clipboardHistoryMonitor.stop()
+        environment?.clipboardHistoryService.flush()
         manager?.shutdown()
         do {
             try environment?.repository.save()

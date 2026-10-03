@@ -22,6 +22,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var settingsWindow: SettingsWindowController?
     private var panelLibrary: PanelLibraryWindowController?
     private var quickCapture: QuickCaptureWindowController?
+    private var clipboardWindow: ClipboardHistoryWindowController?
     private var guideWindow: GuideWindowController?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -35,6 +36,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 onSettings: { [weak self] in self?.showSettings() },
                 onManagePanels: { [weak self] in self?.showPanelLibrary() },
                 onOpenGuide: { [weak self] in self?.showGuide() },
+                onShowClipboardHistory: { [weak self] in self?.toggleClipboardHistory() },
                 shortcutSnapshot: { [weak environment] in
                     environment?.shortcutCoordinator.shortcuts ?? ShortcutDefaults.all
                 }
@@ -58,7 +60,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             environment.shortcuts.onCaptureClipboard = { [weak manager] in
                 manager?.captureClipboard()
             }
+            environment.shortcuts.onShowClipboardHistory = { [weak self] in
+                self?.toggleClipboardHistory()
+            }
             environment.shortcutCoordinator.start()
+            environment.startClipboardMonitoringIfNeeded()
             manager.restoreAll()
             scheduleOnboardingIfNeeded()
         } catch {
@@ -97,6 +103,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             panelLibrary = PanelLibraryWindowController(panelManager: panelManager)
         }
         panelLibrary?.present()
+    }
+
+    private func toggleClipboardHistory() {
+        guard let environment else { return }
+        if clipboardWindow == nil {
+            let window = ClipboardHistoryWindowController(
+                service: environment.clipboardHistoryService,
+                monitor: environment.clipboardHistoryMonitor
+            )
+            window.onCreatePanel = { [weak self] content, screen in
+                self?.panelManager?.createPanel(fromClipboardContent: content, preferredScreen: screen) ?? false
+            }
+            clipboardWindow = window
+        }
+        clipboardWindow?.toggle()
     }
 
     private func showSettings() {
