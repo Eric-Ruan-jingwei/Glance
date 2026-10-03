@@ -34,6 +34,10 @@ There is no Windows client yet. Shared data contracts are documented so a future
 - No cloud
 - Open source
 
+## V0.19.1
+
+The status menu now reads as a utility hub: Quick Capture, Clipboard, and Panels sit side by side. Clipboard history also picks a usable image representation instead of skipping a paste just because another representation is too large.
+
 ## V0.19.0
 
 Clipboard Shelf: recent history, favorites, search, reuse, and create a panel from a saved item. Recording stays local and is off until you turn it on. Panel schema is unchanged.
@@ -175,24 +179,24 @@ Status-item menu (defaults shown):
 
 ```text
 快速记录…                  ⌥⌘J
+────────────
 剪贴板…                    ⌥⌘V
-从当前剪贴板创建…          ⌥⌘B
-────────────
-工作区
-  默认 ✓
-  …
+面板
+  新建面板
+    文字
+    Markdown
+    待办
+    图片
+    PDF…
+  从当前剪贴板创建…        ⌥⌘B
+  管理面板…
+  工作区
+    默认 ✓
+    …
+    ────────
+    新建工作区…
   ────────
-  新建工作区…
-────────────
-管理面板…
-新建面板
-  文字
-  Markdown
-  待办
-  图片
-  PDF…
-状态
-显示全部 / 隐藏全部    ⌥⌘G
+  隐藏全部 / 显示全部      ⌥⌘G
 ────────────
 ⚠ 数据恢复提示…      (only after backup recovery, corrupt metadata, or unsupported schema)
 ────────────
