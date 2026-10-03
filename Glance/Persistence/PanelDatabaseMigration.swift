@@ -1,5 +1,23 @@
 import Foundation
 
+/// Schema 3 envelope. Has workspaces and workspaceID; missing `customTitle`.
+struct PanelDatabaseV3: Decodable {
+    var schemaVersion: Int
+    var workspaces: [WorkspaceRecord]
+    var panels: [PanelRecord]
+
+    func migrated() -> PanelDatabase {
+        for panel in panels {
+            panel.customTitle = nil
+        }
+        return PanelDatabase(
+            schemaVersion: PanelDatabase.currentSchemaVersion,
+            workspaces: workspaces,
+            panels: panels
+        )
+    }
+}
+
 /// Schema 1 envelope. Missing `isHidden` and `workspaceID`.
 struct PanelDatabaseV1: Decodable {
     var schemaVersion: Int
@@ -86,6 +104,7 @@ struct PanelRecordV1: Decodable {
             isPassThrough: isPassThrough,
             isHidden: false,
             workspaceID: WorkspaceRecord.defaultID,
+            customTitle: nil,
             opacity: opacity,
             themeIdentifier: themeIdentifier,
             createdAt: createdAt,
@@ -156,6 +175,7 @@ struct PanelRecordV2: Decodable {
             isPassThrough: isPassThrough,
             isHidden: isHidden,
             workspaceID: WorkspaceRecord.defaultID,
+            customTitle: nil,
             opacity: opacity,
             themeIdentifier: themeIdentifier,
             createdAt: createdAt,
