@@ -15,6 +15,7 @@ final class PanelRecord: Codable, Identifiable {
     var payloadVersion: Int
     var createdAt: Date
     var updatedAt: Date
+    var isHidden: Bool
 
     init(
         id: UUID = UUID(),
@@ -27,6 +28,7 @@ final class PanelRecord: Codable, Identifiable {
         isLocked: Bool = false,
         isCollapsed: Bool = false,
         isPassThrough: Bool = false,
+        isHidden: Bool = false,
         opacity: Double = 1,
         themeIdentifier: String = "system",
         createdAt: Date = Date(),
@@ -40,6 +42,7 @@ final class PanelRecord: Codable, Identifiable {
         self.isLocked = isLocked
         self.isCollapsed = isCollapsed
         self.isPassThrough = isPassThrough
+        self.isHidden = isHidden
         self.opacity = PanelOpacity.clamp(opacity)
         self.themeIdentifier = themeIdentifier
         self.payloadPath = payloadPath
@@ -50,7 +53,7 @@ final class PanelRecord: Codable, Identifiable {
 
     enum CodingKeys: String, CodingKey {
         case id, kindIdentifier, x, y, width, height, displayIdentifier
-        case isPinned, isLocked, isCollapsed, isPassThrough
+        case isPinned, isLocked, isCollapsed, isPassThrough, isHidden
         case opacity, themeIdentifier, payloadPath, payloadVersion
         case createdAt, updatedAt
     }
@@ -74,6 +77,7 @@ final class PanelRecord: Codable, Identifiable {
         isLocked = try container.decodeIfPresent(Bool.self, forKey: .isLocked) ?? false
         isCollapsed = try container.decodeIfPresent(Bool.self, forKey: .isCollapsed) ?? false
         isPassThrough = try container.decodeIfPresent(Bool.self, forKey: .isPassThrough) ?? false
+        isHidden = try container.decodeIfPresent(Bool.self, forKey: .isHidden) ?? false
         opacity = PanelOpacity.clamp(try container.decodeIfPresent(Double.self, forKey: .opacity) ?? 1)
         themeIdentifier = try container.decodeIfPresent(String.self, forKey: .themeIdentifier) ?? "system"
         payloadVersion = try container.decodeIfPresent(Int.self, forKey: .payloadVersion) ?? 1
@@ -92,6 +96,7 @@ final class PanelRecord: Codable, Identifiable {
         try container.encode(isLocked, forKey: .isLocked)
         try container.encode(isCollapsed, forKey: .isCollapsed)
         try container.encode(isPassThrough, forKey: .isPassThrough)
+        try container.encode(isHidden, forKey: .isHidden)
         try container.encode(opacity, forKey: .opacity)
         try container.encode(themeIdentifier, forKey: .themeIdentifier)
         try container.encode(payloadPath, forKey: .payloadPath)

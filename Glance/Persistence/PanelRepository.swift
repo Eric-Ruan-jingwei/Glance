@@ -109,7 +109,7 @@ final class PanelRepository {
             case .ok:
                 if case .loaded(let migrated) = lastLoadOutcome, migrated {
                     NSLog(
-                        "Glance persistence: migrated legacy panels.json array to schema %d",
+                        "Glance persistence: migrated panels.json to schema %d",
                         PanelDatabase.currentSchemaVersion
                     )
                     rewriteRecoveredMetadata()

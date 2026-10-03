@@ -4,7 +4,7 @@ struct PanelDatabase: Codable, Equatable {
     var schemaVersion: Int
     var panels: [PanelRecord]
 
-    static let currentSchemaVersion = 1
+    static let currentSchemaVersion = 2
 }
 
 enum PanelDatabaseError: Error, Equatable, LocalizedError {
@@ -14,7 +14,7 @@ enum PanelDatabaseError: Error, Equatable, LocalizedError {
     var errorDescription: String? {
         switch self {
         case .unreadable:
-            return "panels.json is not a readable schema 0 array or schema 1 envelope"
+            return "panels.json is not a readable schema 0 array, schema 1 envelope, or schema 2 envelope"
         case .unsupportedFutureSchema(let version):
             return "panels.json uses unsupported schema \(version); this app supports schema \(PanelDatabase.currentSchemaVersion)"
         }
@@ -40,8 +40,8 @@ enum PanelDatabaseCodec {
         return decoder
     }
 
-    /// Accepts schema 1 envelopes and V0.1 raw arrays (schema 0).
-    /// Future envelopes are rejected without rewriting them as schema 1.
+    /// Accepts schema 2 envelopes, schema 1 envelopes, and V0.1 raw arrays (schema 0).
+    /// Future envelopes are rejected without rewriting them as schema 2.
     static func decode(from data: Data, decoder: JSONDecoder = makeDecoder()) throws -> (database: PanelDatabase, migratedFromLegacy: Bool) {
         if let peek = try? decoder.decode(PanelDatabaseSchemaPeek.self, from: data) {
             switch peek.schemaVersion {
@@ -49,12 +49,13 @@ enum PanelDatabaseCodec {
                 let envelope = try decoder.decode(PanelDatabase.self, from: data)
                 return (envelope, false)
 
+            case 1:
+                let v1 = try decoder.decode(PanelDatabaseV1.self, from: data)
+                return (v1.migrated(), true)
+
             case 0:
-                let envelope = try decoder.decode(PanelDatabase.self, from: data)
-                return (
-                    PanelDatabase(schemaVersion: PanelDatabase.currentSchemaVersion, panels: envelope.panels),
-                    true
-                )
+                let v1 = try decoder.decode(PanelDatabaseV1.self, from: data)
+                return (v1.migrated(), true)
 
             case let version where version > PanelDatabase.currentSchemaVersion:
                 throw PanelDatabaseError.unsupportedFutureSchema(version)
@@ -63,9 +64,12 @@ enum PanelDatabaseCodec {
                 throw PanelDatabaseError.unreadable
             }
         }
-        if let panels = try? decoder.decode([PanelRecord].self, from: data) {
+        if let panels = try? decoder.decode([PanelRecordV1].self, from: data) {
             return (
-                PanelDatabase(schemaVersion: PanelDatabase.currentSchemaVersion, panels: panels),
+                PanelDatabase(
+                    schemaVersion: PanelDatabase.currentSchemaVersion,
+                    panels: panels.map { $0.migrated() }
+                ),
                 true
             )
         }
@@ -104,6 +108,7 @@ extension PanelRecord: Equatable {
             && lhs.isLocked == rhs.isLocked
             && lhs.isCollapsed == rhs.isCollapsed
             && lhs.isPassThrough == rhs.isPassThrough
+            && lhs.isHidden == rhs.isHidden
             && lhs.opacity == rhs.opacity
             && lhs.themeIdentifier == rhs.themeIdentifier
             && lhs.payloadPath == rhs.payloadPath
