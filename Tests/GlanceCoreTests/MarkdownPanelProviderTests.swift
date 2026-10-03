@@ -73,5 +73,6 @@ final class MarkdownPanelProviderTests: XCTestCase {
         XCTAssertEqual(titles[6], "新建 Markdown 面板")
         XCTAssertEqual(titles[7], "新建待办面板")
         XCTAssertEqual(titles[8], "新建图片面板")
+        XCTAssertEqual(titles[9], "新建 PDF 面板…")
     }
 }

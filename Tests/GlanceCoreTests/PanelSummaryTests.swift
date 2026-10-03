@@ -51,6 +51,11 @@ final class PanelSummaryTests: XCTestCase {
         XCTAssertEqual(PanelSummaryFallback.markdown, "空 Markdown 面板")
         XCTAssertEqual(PanelSummaryFallback.todo, "空待办面板")
         XCTAssertEqual(PanelSummaryFallback.image, "图片面板")
+        XCTAssertEqual(PanelSummaryFallback.pdf, "PDF 文档")
+        XCTAssertEqual(PanelSummaryText.pdfTitle(from: "Robot Learning Survey.pdf"), "Robot Learning Survey")
+        XCTAssertEqual(PanelSummaryText.pdfSubtitle(pageCount: 35), "PDF · 35 页")
+        XCTAssertTrue(PanelSummaryText.pdfSubtitle(pageCount: 35).contains("PDF"))
+        XCTAssertTrue(PanelSummaryText.pdfSubtitle(pageCount: 35).contains("35"))
         XCTAssertEqual(PanelSummaryText.todoTitle(items: []).title, PanelSummaryFallback.todo)
     }
 
@@ -73,8 +78,17 @@ final class PanelSummaryTests: XCTestCase {
             kind: "com.glance.panel.text",
             updatedAt: Date(timeIntervalSince1970: 200)
         )
+        let pdf = sample(
+            title: "Robot Learning Survey",
+            kind: "com.glance.panel.pdf",
+            updatedAt: Date(timeIntervalSince1970: 150)
+        )
         let filtered = PanelSummaryQuery.filtered([older, newer], query: "", kind: .todo)
         XCTAssertEqual(filtered.map(\.title), ["Old Todo"])
+        XCTAssertEqual(
+            PanelSummaryQuery.filtered([older, newer, pdf], query: "", kind: .pdf).map(\.title),
+            ["Robot Learning Survey"]
+        )
         let sorted = PanelSummaryQuery.sortedByUpdatedAtDescending([older, newer])
         XCTAssertEqual(sorted.map(\.title), ["New Text", "Old Todo"])
     }
@@ -184,6 +198,13 @@ final class PanelSummaryBuilderTests: XCTestCase {
         )
         XCTAssertEqual(image.title, PanelSummaryFallback.image)
         XCTAssertEqual(image.subtitle, "PNG")
+        let pdf = PanelSummaryBuilder.summarize(
+            record: record(kind: PanelKind.pdf),
+            payloadDirectory: directory
+        )
+        XCTAssertEqual(pdf.title, PanelSummaryFallback.pdfUnreadable)
+        XCTAssertEqual(pdf.subtitle, "PDF")
+        XCTAssertTrue(pdf.isUnreadable)
     }
 
     func testUnreadableTextLeavesBytes() throws {
@@ -244,6 +265,49 @@ final class PanelSummaryBuilderTests: XCTestCase {
         )
         XCTAssertEqual(summary.title, PanelSummaryFallback.image)
         XCTAssertEqual(summary.subtitle, "1200 × 800")
+    }
+
+    func testPDFSummaryTitlePageCountAndBrokenMetadata() throws {
+        let directory = try makeDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        try GlanceTestPDF.data(pageCount: 2).write(to: PDFPayloadFile.documentURL(in: directory))
+        try PDFPayloadFile.writeMetadata(
+            PDFDocumentMetadata(version: 1, displayName: "Robot Learning Survey.pdf", pageCount: 35),
+            to: directory
+        )
+        let summary = PanelSummaryBuilder.summarize(
+            record: record(kind: PanelKind.pdf),
+            payloadDirectory: directory
+        )
+        XCTAssertEqual(summary.title, "Robot Learning Survey")
+        XCTAssertEqual(summary.subtitle, "PDF · 35 页")
+        XCTAssertTrue(summary.subtitle?.contains("PDF") == true)
+        XCTAssertTrue(summary.subtitle?.contains("35") == true)
+        XCTAssertEqual(summary.preview, "Robot Learning Survey.pdf")
+        XCTAssertFalse(summary.isUnreadable)
+
+        let metadataURL = PDFPayloadFile.metadataURL(in: directory)
+        let original = Data("{not-json".utf8)
+        try original.write(to: metadataURL)
+        let broken = PanelSummaryBuilder.summarize(
+            record: record(kind: PanelKind.pdf),
+            payloadDirectory: directory
+        )
+        XCTAssertEqual(broken.title, PanelSummaryFallback.pdf)
+        XCTAssertEqual(broken.subtitle, "PDF")
+        XCTAssertFalse(broken.isUnreadable)
+        XCTAssertEqual(try Data(contentsOf: metadataURL), original)
+        XCTAssertTrue(PDFPayloadFile.documentExists(in: directory))
+
+        try FileManager.default.removeItem(at: metadataURL)
+        let missingJSON = PanelSummaryBuilder.summarize(
+            record: record(kind: PanelKind.pdf),
+            payloadDirectory: directory
+        )
+        XCTAssertEqual(missingJSON.title, PanelSummaryFallback.pdf)
+        XCTAssertEqual(missingJSON.subtitle, "PDF")
+        XCTAssertFalse(missingJSON.isUnreadable)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: metadataURL.path))
     }
 
     func testLibraryModelRefreshReappliesFilter() {
