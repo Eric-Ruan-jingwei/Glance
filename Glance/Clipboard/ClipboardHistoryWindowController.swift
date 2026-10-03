@@ -4,6 +4,7 @@ import SwiftUI
 @MainActor
 final class ClipboardHistoryWindowController: NSWindowController {
     var onCreatePanel: (ClipboardCaptureContent, NSScreen?) -> Bool = { _, _ in false }
+    var onSaveAsSnippet: ((String) -> Void)?
 
     private let model: ClipboardHistoryViewModel
     private let monitor: ClipboardHistoryMonitor
@@ -65,6 +66,9 @@ final class ClipboardHistoryWindowController: NSWindowController {
             onDelete: { [weak self] id in
                 self?.model.thumbnails.evict(id)
                 self?.model.service.delete(id: id)
+            },
+            onSaveAsSnippet: { [weak self] id in
+                self?.saveAsSnippet(id)
             }
         )
         let hosting = NSHostingController(rootView: view)
@@ -82,6 +86,12 @@ final class ClipboardHistoryWindowController: NSWindowController {
         let count = MacClipboardWriter.write(content)
         monitor.adopt(changeCount: count)
         dismiss()
+    }
+
+    private func saveAsSnippet(_ id: UUID) {
+        guard let record = model.service.records.first(where: { $0.id == id }),
+              let draft = ClipboardSnippetHandoff.draft(from: record) else { return }
+        onSaveAsSnippet?(draft.content)
     }
 
     private func createPanel(_ id: UUID) {

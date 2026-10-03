@@ -86,6 +86,7 @@ struct ClipboardHistoryView: View {
     var onCreatePanel: (UUID) -> Void
     var onToggleFavorite: (UUID) -> Void
     var onDelete: (UUID) -> Void
+    var onSaveAsSnippet: (UUID) -> Void = { _ in }
     var relativeNow: Date = Date()
 
     var body: some View {
@@ -204,6 +205,11 @@ struct ClipboardHistoryView: View {
                     model.selection = record.id
                 }
                 .contextMenu {
+                    if ClipboardSnippetHandoff.isAvailable(for: record) {
+                        Button(ClipboardHistoryCopy.saveAsSnippet) {
+                            onSaveAsSnippet(record.id)
+                        }
+                    }
                     Button(record.isFavorite ? ClipboardHistoryCopy.unfavoriteLabel : ClipboardHistoryCopy.favoriteLabel) {
                         onToggleFavorite(record.id)
                     }

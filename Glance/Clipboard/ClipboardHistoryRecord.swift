@@ -152,6 +152,7 @@ enum ClipboardHistoryCopy {
     static let favoriteLabel = "收藏"
     static let unfavoriteLabel = "取消收藏"
     static let deleteLabel = "删除"
+    static let saveAsSnippet = "保存为片段…"
 }
 
 enum ClipboardHistoryLoadOutcome: Equatable {
