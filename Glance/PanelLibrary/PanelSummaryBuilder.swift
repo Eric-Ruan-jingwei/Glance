@@ -103,7 +103,7 @@ enum PanelSummaryBuilder {
     private static func unreadable(_ base: PanelSummary) -> PanelSummary {
         var summary = base
         summary.title = PanelSummaryFallback.unreadable
-        summary.subtitle = PanelSummaryKindLabel.displayName(for: base.kindIdentifier)
+        summary.subtitle = nil
         summary.isUnreadable = true
         summary.preview = ""
         return summary
