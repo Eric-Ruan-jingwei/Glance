@@ -86,7 +86,7 @@ struct GuideGettingStartedPage: View {
         VStack(alignment: .leading, spacing: GlanceTheme.Space.lg) {
             GuideSectionHeader(
                 title: "不必先找到 Glance",
-                detail: "三个全局快捷键可以随时叫出 Glance。如果之后改过设置，这里会显示你当前的快捷键。"
+                detail: "全局快捷键可以随时叫出 Glance。如果之后改过设置，这里会显示你当前的快捷键。"
             )
             VStack(spacing: 0) {
                 ForEach(GuideShortcutCatalog.global) { item in

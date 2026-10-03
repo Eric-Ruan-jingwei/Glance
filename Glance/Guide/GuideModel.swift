@@ -38,7 +38,7 @@ enum GlanceGuideEntry {
 
 enum GuideGettingStartedCopy {
     static let step1Title = "把常用信息和工具留在手边"
-    static let step1Detail = "Glance 是一个常驻 macOS 的轻量个人办公工具入口。可以固定持续参考的内容，保存最近复制的信息和临时文件，把常用文字整理到片段库，也可以收藏经常访问的网页和在线资源。"
+    static let step1Detail = "Glance 是一个常驻 macOS 的轻量个人办公工具入口。可以固定持续参考的内容，保存最近复制的信息和临时文件，把常用文字整理到片段库，也可以收藏经常访问的网页和在线资源。也可以通过全局搜索跨这些工具快速找回内容。"
 }
 
 struct GuideFeatureCopy: Equatable {
@@ -49,6 +49,11 @@ struct GuideFeatureCopy: Equatable {
 
 enum GuideFeatureCatalog {
     static let items: [GuideFeatureCopy] = [
+        GuideFeatureCopy(
+            title: "全局搜索",
+            symbol: "magnifyingglass",
+            body: "全局搜索会在本机同时搜索剪贴板、文件架、片段库、链接库和全部工作区中的面板。搜索不会访问网络，也不会扫描 Glance 之外的文件。"
+        ),
         GuideFeatureCopy(
             title: "剪贴板",
             symbol: "list.clipboard",

@@ -105,6 +105,7 @@ enum GuideShortcutCatalog {
     static var groups: [GuideShortcutGroup] {
         [
             GuideShortcutGroup(id: "global", title: "全局", items: global),
+            GuideShortcutGroup(id: "globalSearch", title: "全局搜索", items: globalSearch),
             GuideShortcutGroup(id: "panel", title: "面板操作", items: panel),
             GuideShortcutGroup(id: "quickCapture", title: "Quick Capture", items: quickCapture),
             GuideShortcutGroup(id: "clipboard", title: "剪贴板", items: clipboard),
@@ -122,6 +123,12 @@ enum GuideShortcutCatalog {
             title: ShortcutAction.quickCapture.title,
             detail: nil,
             source: .dynamic(.quickCapture)
+        ),
+        GuideShortcutItem(
+            id: "globalSearch",
+            title: ShortcutAction.globalSearch.title,
+            detail: nil,
+            source: .dynamic(.globalSearch)
         ),
         GuideShortcutItem(
             id: "clipboardHistory",
@@ -158,6 +165,33 @@ enum GuideShortcutCatalog {
             title: ShortcutAction.hideShow.title,
             detail: nil,
             source: .dynamic(.hideShow)
+        )
+    ]
+
+    static let globalSearch: [GuideShortcutItem] = [
+        GuideShortcutItem(
+            id: "globalSearchPrevious",
+            title: "选择上一个",
+            detail: nil,
+            source: .keys([.character("↑")])
+        ),
+        GuideShortcutItem(
+            id: "globalSearchNext",
+            title: "选择下一个",
+            detail: nil,
+            source: .keys([.character("↓")])
+        ),
+        GuideShortcutItem(
+            id: "globalSearchActivate",
+            title: "执行结果",
+            detail: nil,
+            source: .keys([.enter])
+        ),
+        GuideShortcutItem(
+            id: "globalSearchCancel",
+            title: "关闭",
+            detail: nil,
+            source: .keys([.escape])
         )
     ]
 
