@@ -215,6 +215,7 @@ final class GuideTests: XCTestCase {
         XCTAssertTrue(GuideGettingStartedCopy.step1Detail.contains("复制"))
         XCTAssertTrue(GuideGettingStartedCopy.step1Detail.contains("临时文件"))
         XCTAssertTrue(GuideGettingStartedCopy.step1Detail.contains("片段库"))
+        XCTAssertTrue(GuideGettingStartedCopy.step1Detail.contains("网页") || GuideGettingStartedCopy.step1Detail.contains("在线资源"))
         XCTAssertEqual(GuideModel.onboardingPageCount, 4)
     }
 
@@ -222,7 +223,7 @@ final class GuideTests: XCTestCase {
         XCTAssertEqual(GuideFeatureCatalog.items.first?.title, "剪贴板")
         XCTAssertEqual(
             GuideFeatureCatalog.items.map(\.title),
-            ["剪贴板", "文件架", "片段库", "Workspaces", "Tags", "Panel Manager"]
+            ["剪贴板", "文件架", "片段库", "链接库", "Workspaces", "Tags", "Panel Manager"]
         )
         XCTAssertNotEqual(GuideFeatureCatalog.items.last?.title, "剪贴板")
     }
@@ -296,6 +297,28 @@ final class GuideTests: XCTestCase {
         XCTAssertEqual(
             GuideShortcutCatalog.groups.first { $0.id == "snippets" }?.items.map(\.id),
             ["snippetCopy", "snippetEdit", "snippetCreate", "snippetDelete", "snippetCancel"]
+        )
+    }
+
+    func testCatalogIncludesLinksDynamicAction() {
+        let item = GuideShortcutCatalog.item(id: "links")
+        XCTAssertEqual(item?.title, "链接库")
+        if case .dynamic(let action) = item?.source {
+            XCTAssertEqual(action, .links)
+        } else {
+            XCTFail("links must read the live shortcut")
+        }
+        let custom = GlanceShortcut(key: "l", command: false, option: true, control: true, shift: false)
+        XCTAssertEqual(
+            item?.tokens { action in
+                action == .links ? custom : ShortcutDefaults.shortcut(for: action)
+            }.map(\.display),
+            ["⌃", "⌥", "L"]
+        )
+        XCTAssertEqual(GuideShortcutCatalog.groups.first { $0.id == "links" }?.title, "链接库")
+        XCTAssertEqual(
+            GuideShortcutCatalog.groups.first { $0.id == "links" }?.items.map(\.id),
+            ["linkOpen", "linkEdit", "linkCreate", "linkCopy", "linkDelete", "linkCancel"]
         )
     }
 

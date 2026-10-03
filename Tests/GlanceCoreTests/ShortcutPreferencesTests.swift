@@ -22,24 +22,28 @@ final class ShortcutPreferencesTests: XCTestCase {
         XCTAssertEqual(ShortcutDefaults.clipboardHistory, GlanceShortcut(key: "v", command: true, option: true, control: false, shift: false))
         XCTAssertEqual(ShortcutDefaults.fileShelf, GlanceShortcut(key: "f", command: true, option: true, control: false, shift: false))
         XCTAssertEqual(ShortcutDefaults.snippets, GlanceShortcut(key: "s", command: true, option: true, control: false, shift: false))
+        XCTAssertEqual(ShortcutDefaults.links, GlanceShortcut(key: "l", command: true, option: true, control: false, shift: false))
         XCTAssertEqual(ShortcutDefaults.clipboardCapture, GlanceShortcut(key: "b", command: true, option: true, control: false, shift: false))
         XCTAssertEqual(ShortcutDefaults.hideShow, GlanceShortcut(key: "g", command: true, option: true, control: false, shift: false))
         XCTAssertEqual(ShortcutDisplayFormatter.display(ShortcutDefaults.quickCapture), "⌥⌘J")
         XCTAssertEqual(ShortcutDisplayFormatter.display(ShortcutDefaults.clipboardHistory), "⌥⌘V")
         XCTAssertEqual(ShortcutDisplayFormatter.display(ShortcutDefaults.fileShelf), "⌥⌘F")
         XCTAssertEqual(ShortcutDisplayFormatter.display(ShortcutDefaults.snippets), "⌥⌘S")
+        XCTAssertEqual(ShortcutDisplayFormatter.display(ShortcutDefaults.links), "⌥⌘L")
         XCTAssertEqual(ShortcutDisplayFormatter.display(ShortcutDefaults.clipboardCapture), "⌥⌘B")
         XCTAssertEqual(ShortcutDisplayFormatter.display(ShortcutDefaults.hideShow), "⌥⌘G")
         XCTAssertEqual(GlanceConstants.quickCaptureShortcutDisplay, "⌥⌘J")
         XCTAssertEqual(GlanceConstants.clipboardHistoryShortcutDisplay, "⌥⌘V")
         XCTAssertEqual(GlanceConstants.fileShelfShortcutDisplay, "⌥⌘F")
         XCTAssertEqual(GlanceConstants.snippetsShortcutDisplay, "⌥⌘S")
+        XCTAssertEqual(GlanceConstants.linksShortcutDisplay, "⌥⌘L")
         XCTAssertEqual(GlanceConstants.clipboardCaptureShortcutDisplay, "⌥⌘B")
         XCTAssertEqual(GlanceConstants.hideShowShortcutDisplay, "⌥⌘G")
         XCTAssertEqual(ShortcutAction.quickCapture.preferenceKey, "com.glance.shortcut.quickCapture")
         XCTAssertEqual(ShortcutAction.clipboardHistory.preferenceKey, "com.glance.shortcut.clipboardHistory")
         XCTAssertEqual(ShortcutAction.fileShelf.preferenceKey, "com.glance.shortcut.fileShelf")
         XCTAssertEqual(ShortcutAction.snippets.preferenceKey, "com.glance.shortcut.snippets")
+        XCTAssertEqual(ShortcutAction.links.preferenceKey, "com.glance.shortcut.links")
         XCTAssertEqual(ShortcutAction.clipboardCapture.preferenceKey, "com.glance.shortcut.clipboardCapture")
         XCTAssertEqual(ShortcutAction.hideShow.preferenceKey, "com.glance.shortcut.hideShow")
     }
@@ -144,6 +148,7 @@ final class ShortcutPreferencesTests: XCTestCase {
         XCTAssertEqual(MacShortcutAdapter.carbonKeyCode(for: ShortcutDefaults.clipboardHistory), UInt32(kVK_ANSI_V))
         XCTAssertEqual(MacShortcutAdapter.carbonKeyCode(for: ShortcutDefaults.fileShelf), UInt32(kVK_ANSI_F))
         XCTAssertEqual(MacShortcutAdapter.carbonKeyCode(for: ShortcutDefaults.snippets), UInt32(kVK_ANSI_S))
+        XCTAssertEqual(MacShortcutAdapter.carbonKeyCode(for: ShortcutDefaults.links), UInt32(kVK_ANSI_L))
         XCTAssertEqual(MacShortcutAdapter.carbonKeyCode(for: ShortcutDefaults.clipboardCapture), UInt32(kVK_ANSI_B))
         XCTAssertEqual(MacShortcutAdapter.carbonKeyCode(for: ShortcutDefaults.hideShow), UInt32(kVK_ANSI_G))
         XCTAssertEqual(MacShortcutAdapter.carbonKeyCode(for: controlOptionK), UInt32(kVK_ANSI_K))
@@ -253,6 +258,58 @@ final class ShortcutPreferencesTests: XCTestCase {
         XCTAssertEqual(restored.shortcut(for: .clipboardHistory), customClipboard)
         XCTAssertEqual(restored.shortcut(for: .fileShelf), customShelf)
         XCTAssertEqual(restored.shortcut(for: .snippets), ShortcutDefaults.snippets)
+        XCTAssertEqual(restored.shortcut(for: .links), ShortcutDefaults.links)
+    }
+
+    func testLinksRegistersReplacesAndDispatchesHotKeySeven() throws {
+        let fake = FakeHotKeyRegistrar()
+        let manager = ShortcutManager(registrar: fake, bindSystemHandler: false)
+        var shown = 0
+        manager.onShowLinks = { shown += 1 }
+        XCTAssertTrue(manager.register(ShortcutDefaults.links, for: .links))
+        XCTAssertEqual(fake.registered[GlanceHotKeyID.links.rawValue]?.keyCode, UInt32(kVK_ANSI_L))
+        XCTAssertEqual(GlanceHotKeyID.links.rawValue, 7)
+        manager.handleHotKeyForTesting(.links)
+        XCTAssertEqual(shown, 1)
+
+        let replaced = GlanceShortcut(key: "l", command: false, option: true, control: true, shift: false)
+        try manager.replaceShortcut(for: .links, with: replaced)
+        XCTAssertEqual(manager.registeredShortcut(for: .links), replaced)
+
+        manager.suspend(.links)
+        manager.handleHotKeyForTesting(.links)
+        XCTAssertEqual(shown, 1)
+        try manager.resume(.links)
+        manager.handleHotKeyForTesting(.links)
+        XCTAssertEqual(shown, 2)
+
+        XCTAssertEqual(
+            ShortcutValidator.duplicate(
+                of: ShortcutDefaults.links,
+                excluding: .quickCapture,
+                in: ShortcutDefaults.all
+            ),
+            .links
+        )
+    }
+
+    func testExistingShortcutPreferencesSurviveLinksMigration() {
+        let (store, defaults, name) = makeStore()
+        defer { defaults.removePersistentDomain(forName: name) }
+        let customCapture = GlanceShortcut(key: "k", command: false, option: true, control: true, shift: false)
+        let customClipboard = GlanceShortcut(key: "v", command: false, option: true, control: true, shift: false)
+        let customShelf = GlanceShortcut(key: "f", command: false, option: true, control: true, shift: false)
+        let customSnippets = GlanceShortcut(key: "s", command: false, option: true, control: true, shift: false)
+        store.setShortcut(customCapture, for: .quickCapture)
+        store.setShortcut(customClipboard, for: .clipboardHistory)
+        store.setShortcut(customShelf, for: .fileShelf)
+        store.setShortcut(customSnippets, for: .snippets)
+        let restored = ShortcutStore(defaults: defaults)
+        XCTAssertEqual(restored.shortcut(for: .quickCapture), customCapture)
+        XCTAssertEqual(restored.shortcut(for: .clipboardHistory), customClipboard)
+        XCTAssertEqual(restored.shortcut(for: .fileShelf), customShelf)
+        XCTAssertEqual(restored.shortcut(for: .snippets), customSnippets)
+        XCTAssertEqual(restored.shortcut(for: .links), ShortcutDefaults.links)
     }
 
     func testReplacementSuccessAndFailureRollback() throws {

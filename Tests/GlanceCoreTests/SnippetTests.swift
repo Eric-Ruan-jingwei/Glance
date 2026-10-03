@@ -12,6 +12,7 @@ final class SnippetPolicyTests: XCTestCase {
         XCTAssertEqual(PanelDatabase.currentSchemaVersion, 5)
         XCTAssertEqual(ClipboardHistoryDatabase.currentSchemaVersion, 1)
         XCTAssertEqual(FileShelfDatabase.currentSchemaVersion, 1)
+        XCTAssertEqual(LinkDatabase.currentSchemaVersion, 1)
         XCTAssertEqual(SnippetPolicy.maximumContentBytes, 256 * 1024)
         XCTAssertEqual(ShortcutAction.snippets.title, "片段库")
         XCTAssertEqual(ShortcutDefaults.snippets.key, "s")
