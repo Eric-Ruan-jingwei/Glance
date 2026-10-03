@@ -5,6 +5,7 @@ struct GlobalSearchView: View {
     @ObservedObject var model: GlobalSearchViewModel
     @FocusState private var searchFocused: Bool
     var onActivate: (GlobalSearchResultID) -> Void
+    var onRevealInSource: (GlobalSearchResultID) -> Void
     var relativeNow: Date = Date()
 
     var body: some View {
@@ -128,6 +129,7 @@ struct GlobalSearchView: View {
         HStack(spacing: GlanceTheme.Space.lg) {
             Text(GlobalSearchCopy.selectHint)
             Text(GlobalSearchCopy.actHint)
+            Text(GlobalSearchCopy.revealHint)
             Text(GlobalSearchCopy.closeHint)
             Spacer()
             if model.isLoadingPanels {

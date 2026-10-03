@@ -37,6 +37,7 @@ final class PanelLibraryModel: ObservableObject {
 
     private var summaryGeneration: UInt64 = 0
     private var summaryLoadTask: Task<Void, Never>?
+    private var pendingRevealID: UUID?
 
     var workspaceSummaries: [PanelSummary] {
         summaries.filter { $0.workspaceID == selectedWorkspaceID }
@@ -117,7 +118,31 @@ final class PanelLibraryModel: ObservableObject {
         filter = .all
         selectedTag = nil
         selectedPanelIDs = []
+        pendingRevealID = nil
         cancelSummaryLoading()
+    }
+
+    @discardableResult
+    func revealInLibrary(_ id: UUID) -> Bool {
+        pendingRevealID = id
+        if selectForReveal(id) {
+            pendingRevealID = nil
+            return true
+        }
+        return true
+    }
+
+    @discardableResult
+    func selectForReveal(_ id: UUID) -> Bool {
+        query = ""
+        filter = .all
+        selectedTag = nil
+        guard let summary = summaries.first(where: { $0.id == id }) else {
+            return false
+        }
+        selectedWorkspaceID = summary.workspaceID
+        selectedPanelIDs = [id]
+        return true
     }
 
     func reload() {
@@ -135,6 +160,7 @@ final class PanelLibraryModel: ObservableObject {
             summaries = loadSummaries()
             reconcileSelection()
             reconcileSelectedTag()
+            finishPendingRevealIfPossible()
         }
     }
 
@@ -152,6 +178,7 @@ final class PanelLibraryModel: ObservableObject {
         self.summaries = summaries
         reconcileSelection()
         reconcileSelectedTag()
+        finishPendingRevealIfPossible()
     }
 
     func cancelSummaryLoading() {
@@ -169,6 +196,15 @@ final class PanelLibraryModel: ObservableObject {
             let summaries = await loader.loadSummaries(inputs: inputs)
             guard !Task.isCancelled else { return }
             await self?.applyLoadedSummaries(summaries, generation: generation)
+        }
+    }
+
+    private func finishPendingRevealIfPossible() {
+        guard let pendingRevealID else { return }
+        if selectForReveal(pendingRevealID) {
+            self.pendingRevealID = nil
+        } else if !isLoadingSummaries {
+            self.pendingRevealID = nil
         }
     }
 

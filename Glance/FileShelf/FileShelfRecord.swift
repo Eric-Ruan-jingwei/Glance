@@ -162,6 +162,8 @@ enum FileShelfCopy {
     static let previewLabel = "快速预览"
     static let copyFileLabel = "复制文件"
     static let copyPathLabel = "复制路径"
+    static let createImagePanelLabel = "创建图片面板"
+    static let createPDFPanelLabel = "创建 PDF 面板"
     static let partialRejected = "部分项目未加入"
     static let removeFavoriteTitle = "从文件架移除？"
     static let removeFavoriteBody = "这只会移除文件架中的记录，不会删除原文件。"

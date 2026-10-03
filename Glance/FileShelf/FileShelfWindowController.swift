@@ -3,6 +3,8 @@ import SwiftUI
 
 @MainActor
 final class FileShelfWindowController: NSWindowController {
+    var onCreatePanel: ((UUID, NSScreen?) -> GlanceActionOutcome)?
+
     private let model: FileShelfViewModel
     private let quickLook = FileShelfQuickLookController()
     private var keyMonitor: Any?
@@ -39,19 +41,22 @@ final class FileShelfWindowController: NSWindowController {
 
     func present() {
         model.resetPresentation()
-        positionOnWorkingScreen()
-        NSApp.activate(ignoringOtherApps: true)
-        window?.makeKeyAndOrderFront(nil)
+        UtilityWindowPresentation.present(window, size: GlanceConstants.fileShelfSize)
         installDismissalMonitors()
     }
 
-    func dismiss() {
+    @discardableResult
+    func present(selecting id: UUID) -> Bool {
+        present()
+        return model.selectForReveal(id)
+    }
+
+    func dismiss(deactivate: Bool = true) {
         quickLook.close()
         endDragAccess()
         removeDismissalMonitors()
-        window?.orderOut(nil)
         model.resetPresentation()
-        NSApp.deactivate()
+        UtilityWindowPresentation.dismiss(window, deactivate: deactivate)
     }
 
     private func installContent() {
@@ -69,6 +74,7 @@ final class FileShelfWindowController: NSWindowController {
             },
             onRemove: { [weak self] id in self?.remove(id) },
             onRelink: { [weak self] id in self?.relink(id) },
+            onCreatePanel: { [weak self] id in self?.createPanel(id) },
             onDropPaths: { [weak self] paths in
                 self?.model.service.add(paths: paths)
             }
@@ -76,6 +82,17 @@ final class FileShelfWindowController: NSWindowController {
         let hosting = NSHostingController(rootView: view)
         hosting.view.frame = NSRect(origin: .zero, size: GlanceConstants.fileShelfSize)
         window.contentViewController = hosting
+    }
+
+    private func createPanel(_ id: UUID) {
+        let screen = window?.screen ?? DisplayManager.screenContainingMouse()
+        switch onCreatePanel?(id, screen) ?? .failed(GlanceNoticeCopy.panelCreateFailed) {
+        case .succeeded:
+            dismiss(deactivate: false)
+        case .failed(let message):
+            NSSound.beep()
+            model.service.notice = message
+        }
     }
 
     private func addFiles() {
@@ -98,14 +115,14 @@ final class FileShelfWindowController: NSWindowController {
         guard let path = resolvedPath(id) else { return }
         model.service.markUsed(id: id)
         _ = MacFileShelfActions.open(path: path)
-        dismiss()
+        dismiss(deactivate: false)
     }
 
     private func reveal(_ id: UUID) {
         guard let path = resolvedPath(id) else { return }
         model.service.markUsed(id: id)
         MacFileShelfActions.reveal(path: path)
-        dismiss()
+        dismiss(deactivate: false)
     }
 
     private func preview(_ id: UUID) {
@@ -175,18 +192,6 @@ final class FileShelfWindowController: NSWindowController {
         dragAccessWork = nil
         dragAccess?.end()
         dragAccess = nil
-    }
-
-    private func positionOnWorkingScreen() {
-        let screen = DisplayManager.screenContainingMouse()
-        let size = GlanceConstants.fileShelfSize
-        let visible = screen.visibleFrame
-        let x = visible.midX - size.width / 2
-        let y = visible.midY - size.height / 2 + visible.height * 0.08
-        window?.setFrame(
-            NSRect(x: x, y: max(visible.minY, y), width: size.width, height: size.height),
-            display: true
-        )
     }
 
     private func installDismissalMonitors() {

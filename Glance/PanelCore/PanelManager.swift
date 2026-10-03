@@ -57,6 +57,20 @@ final class PanelManager {
         _ = createPanel(kindIdentifier: PanelKind.text)
     }
 
+    @discardableResult
+    func createTextPanel(
+        title: String?,
+        content: String,
+        preferredScreen: NSScreen? = nil
+    ) -> Bool {
+        createPanel(
+            kindIdentifier: PanelKind.text,
+            initialContent: .plainText(content),
+            customTitle: title,
+            preferredScreen: preferredScreen
+        )
+    }
+
     func createMarkdownPanel() {
         _ = createPanel(kindIdentifier: PanelKind.markdown)
     }
@@ -76,11 +90,36 @@ final class PanelManager {
         Task { await importPDFResponding(from: url, preferredScreen: screen) }
     }
 
-    func importPDF(from sourceURL: URL, preferredScreen: NSScreen? = nil) throws {
+    @discardableResult
+    func importImage(
+        from sourceURL: URL,
+        customTitle: String? = nil,
+        preferredScreen: NSScreen? = nil
+    ) -> Bool {
+        guard
+            let image = environment.mediaStore.image(fromFileURL: sourceURL),
+            let png = MediaStore.pngData(from: image)
+        else {
+            return false
+        }
+        return createPanel(
+            kindIdentifier: PanelKind.image,
+            initialContent: .imagePNG(png),
+            customTitle: customTitle,
+            preferredScreen: preferredScreen
+        )
+    }
+
+    func importPDF(
+        from sourceURL: URL,
+        customTitle: String? = nil,
+        preferredScreen: NSScreen? = nil
+    ) throws {
         let metadata = try PDFDocumentInspector.inspect(sourceURL)
         try materializePanel(
             kindIdentifier: PanelKind.pdf,
-            preferredScreen: preferredScreen
+            preferredScreen: preferredScreen,
+            customTitle: customTitle
         ) { directory in
             try PDFPayloadFile.importDocument(from: sourceURL, metadata: metadata, to: directory)
         }
@@ -283,12 +322,14 @@ final class PanelManager {
     func createPanel(
         kindIdentifier: String,
         initialContent: PanelInitialContent = .none,
+        customTitle: String? = nil,
         preferredScreen: NSScreen? = nil
     ) -> Bool {
         do {
             try materializePanel(
                 kindIdentifier: kindIdentifier,
-                preferredScreen: preferredScreen
+                preferredScreen: preferredScreen,
+                customTitle: customTitle
             ) { directory in
                 try PanelInitialPayloadWriter.write(initialContent, to: directory)
             }
@@ -302,6 +343,7 @@ final class PanelManager {
     private func materializePanel(
         kindIdentifier: String,
         preferredScreen: NSScreen?,
+        customTitle: String? = nil,
         writePayload: @escaping (URL) throws -> Void
     ) throws {
         let id = UUID()
@@ -320,7 +362,8 @@ final class PanelManager {
             displayIdentifier: DisplayManager.identifier(for: screen),
             payloadPath: payloadPath,
             payloadVersion: PanelProviderRegistry.payloadVersion(for: kindIdentifier),
-            workspaceID: workspaceIDForNewPanel()
+            workspaceID: workspaceIDForNewPanel(),
+            customTitle: customTitle
         )
 
         try PanelCreationSession.materialize(
@@ -356,7 +399,8 @@ final class PanelManager {
             displayIdentifier: DisplayManager.identifier(for: screen),
             payloadPath: payloadPath,
             payloadVersion: PanelProviderRegistry.payloadVersion(for: PanelKind.pdf),
-            workspaceID: workspaceIDForNewPanel()
+            workspaceID: workspaceIDForNewPanel(),
+            customTitle: nil
         )
         let directory = try environment.payloadStore.directory(for: id)
         do {

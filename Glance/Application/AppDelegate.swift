@@ -15,9 +15,10 @@ public enum GlanceMain {
 }
 
 @MainActor
-final class AppDelegate: NSObject, NSApplicationDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate, GlanceWindowHost {
     private var environment: AppEnvironment?
     private var panelManager: PanelManager?
+    private var actionCoordinator: GlanceActionCoordinator?
     private var statusBar: StatusBarController?
     private var settingsWindow: SettingsWindowController?
     private var panelLibrary: PanelLibraryWindowController?
@@ -35,6 +36,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             let manager = PanelManager(environment: environment)
             self.environment = environment
             self.panelManager = manager
+            let coordinator = GlanceActionCoordinator(
+                environment: environment,
+                panelManager: manager,
+                windowHost: self
+            )
+            self.actionCoordinator = coordinator
             let statusBar = StatusBarController(
                 manager: manager,
                 onSettings: { [weak self] in self?.showSettings() },
@@ -100,6 +107,40 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         false
     }
 
+    func presentClipboard(selecting id: UUID) -> Bool {
+        clipboardHistoryWindow().present(selecting: id)
+    }
+
+    func presentFileShelf(selecting id: UUID) -> Bool {
+        fileShelfLibraryWindow().present(selecting: id)
+    }
+
+    func presentSnippets(selecting id: UUID) -> Bool {
+        snippetLibraryWindow().present(selecting: id)
+    }
+
+    func presentLinks(selecting id: UUID) -> Bool {
+        linkLibraryWindow().present(selecting: id)
+    }
+
+    func presentPanelLibrary(selecting id: UUID) -> Bool {
+        panelLibraryWindow().present(selecting: id)
+    }
+
+    func presentSnippetEditor(prefilled text: String) {
+        snippetLibraryWindow().presentEditor(prefilled: text)
+    }
+
+    func presentLinkEditor(prefilledURL urlString: String) {
+        linkLibraryWindow().presentEditor(prefilledURL: urlString)
+    }
+
+    func dismissClipboardIfVisible() {
+        if clipboardWindow?.isShelfVisible == true {
+            clipboardWindow?.dismiss(deactivate: false)
+        }
+    }
+
     private func scheduleOnboardingIfNeeded() {
         guard OnboardingState().shouldPresent else { return }
         DispatchQueue.main.async { [weak self] in
@@ -119,100 +160,118 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func showPanelLibrary() {
-        if panelLibrary == nil, let panelManager {
-            panelLibrary = PanelLibraryWindowController(panelManager: panelManager)
-        }
-        panelLibrary?.present()
+        panelLibraryWindow().present()
     }
 
     private func toggleClipboardHistory() {
-        guard let environment else { return }
-        if clipboardWindow == nil {
-            let window = ClipboardHistoryWindowController(
-                service: environment.clipboardHistoryService,
-                monitor: environment.clipboardHistoryMonitor
-            )
-            window.onCreatePanel = { [weak self] content, screen in
-                self?.panelManager?.createPanel(fromClipboardContent: content, preferredScreen: screen) ?? false
-            }
-            window.onSaveAsSnippet = { [weak self] text in
-                self?.saveClipboardTextAsSnippet(text)
-            }
-            window.onSaveAsLink = { [weak self] url in
-                self?.saveClipboardTextAsLink(url)
-            }
-            clipboardWindow = window
-        }
-        clipboardWindow?.toggle()
+        clipboardHistoryWindow().toggle()
     }
 
     private func toggleSnippets() {
-        guard let environment else { return }
-        if snippetWindow == nil {
-            snippetWindow = SnippetLibraryWindowController(
-                service: environment.snippetService,
-                monitor: environment.clipboardHistoryMonitor
-            )
-        }
-        snippetWindow?.toggle()
-    }
-
-    private func saveClipboardTextAsSnippet(_ text: String) {
-        guard let environment else { return }
-        if snippetWindow == nil {
-            snippetWindow = SnippetLibraryWindowController(
-                service: environment.snippetService,
-                monitor: environment.clipboardHistoryMonitor
-            )
-        }
-        if clipboardWindow?.isShelfVisible == true {
-            clipboardWindow?.dismiss()
-        }
-        snippetWindow?.presentEditor(prefilled: text)
+        snippetLibraryWindow().toggle()
     }
 
     private func toggleLinks() {
-        guard let environment else { return }
-        if linkWindow == nil {
-            linkWindow = LinkLibraryWindowController(
-                service: environment.linkService,
-                monitor: environment.clipboardHistoryMonitor
-            )
-        }
-        linkWindow?.toggle()
-    }
-
-    private func saveClipboardTextAsLink(_ url: String) {
-        guard let environment else { return }
-        if linkWindow == nil {
-            linkWindow = LinkLibraryWindowController(
-                service: environment.linkService,
-                monitor: environment.clipboardHistoryMonitor
-            )
-        }
-        if clipboardWindow?.isShelfVisible == true {
-            clipboardWindow?.dismiss()
-        }
-        linkWindow?.presentEditor(prefilledURL: url)
+        linkLibraryWindow().toggle()
     }
 
     private func toggleGlobalSearch() {
-        guard let environment, let panelManager else { return }
-        if searchWindow == nil {
-            searchWindow = GlobalSearchWindowController(
-                environment: environment,
-                panelManager: panelManager
-            )
-        }
-        searchWindow?.toggle()
+        globalSearchWindow().toggle()
     }
 
     private func toggleFileShelf() {
-        guard let environment else { return }
-        if fileShelfWindow == nil {
-            fileShelfWindow = FileShelfWindowController(service: environment.fileShelfService)
+        fileShelfLibraryWindow().toggle()
+    }
+
+    private func panelLibraryWindow() -> PanelLibraryWindowController {
+        if let panelLibrary {
+            return panelLibrary
         }
-        fileShelfWindow?.toggle()
+        let window = PanelLibraryWindowController(panelManager: panelManager!)
+        panelLibrary = window
+        return window
+    }
+
+    private func clipboardHistoryWindow() -> ClipboardHistoryWindowController {
+        if let clipboardWindow {
+            return clipboardWindow
+        }
+        let environment = environment!
+        let window = ClipboardHistoryWindowController(
+            service: environment.clipboardHistoryService,
+            monitor: environment.clipboardHistoryMonitor
+        )
+        window.onCreatePanel = { [weak self] content, screen in
+            self?.actionCoordinator?.createPanel(fromClipboard: content, screen: screen) ?? false
+        }
+        window.onSaveAsSnippet = { [weak self] text in
+            self?.actionCoordinator?.saveClipboardTextAsSnippet(text)
+        }
+        window.onSaveAsLink = { [weak self] url in
+            self?.actionCoordinator?.saveClipboardTextAsLink(url)
+        }
+        clipboardWindow = window
+        return window
+    }
+
+    private func snippetLibraryWindow() -> SnippetLibraryWindowController {
+        if let snippetWindow {
+            return snippetWindow
+        }
+        let environment = environment!
+        let window = SnippetLibraryWindowController(
+            service: environment.snippetService,
+            monitor: environment.clipboardHistoryMonitor
+        )
+        window.onCreatePanel = { [weak self] record, screen in
+            self?.actionCoordinator?.createPanel(from: record, screen: screen) ?? .failed(GlanceNoticeCopy.panelCreateFailed)
+        }
+        snippetWindow = window
+        return window
+    }
+
+    private func linkLibraryWindow() -> LinkLibraryWindowController {
+        if let linkWindow {
+            return linkWindow
+        }
+        let environment = environment!
+        let window = LinkLibraryWindowController(
+            service: environment.linkService,
+            monitor: environment.clipboardHistoryMonitor
+        )
+        window.onCreatePanel = { [weak self] record, screen in
+            self?.actionCoordinator?.createPanel(from: record, screen: screen) ?? .failed(GlanceNoticeCopy.panelCreateFailed)
+        }
+        linkWindow = window
+        return window
+    }
+
+    private func fileShelfLibraryWindow() -> FileShelfWindowController {
+        if let fileShelfWindow {
+            return fileShelfWindow
+        }
+        let window = FileShelfWindowController(service: environment!.fileShelfService)
+        window.onCreatePanel = { [weak self] id, screen in
+            self?.actionCoordinator?.createPanel(fromFileShelfID: id, screen: screen)
+                ?? .failed(GlanceNoticeCopy.panelCreateFailed)
+        }
+        fileShelfWindow = window
+        return window
+    }
+
+    private func globalSearchWindow() -> GlobalSearchWindowController {
+        if let searchWindow {
+            return searchWindow
+        }
+        let window = GlobalSearchWindowController(
+            environment: environment!,
+            panelManager: panelManager!
+        )
+        window.onRevealInSource = { [weak self] id in
+            self?.actionCoordinator?.revealInSource(id) ?? .failed(GlanceNoticeCopy.staleItem)
+        }
+        searchWindow = window
+        return window
     }
 
     private func showSettings() {
