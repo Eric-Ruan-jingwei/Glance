@@ -66,7 +66,7 @@ AppKit adapters convert `PanelFrame` ↔ `NSRect`. Carbon hotkeys, `SMAppService
 
 Quick Capture itself is not persisted. `QuickCaptureRequest` describes the product intent (create text or a todo). The macOS window writes an initial payload, then inserts a `PanelRecord`, only after a successful submit.
 
-Clipboard Capture is also not persisted as a separate object. `ClipboardCaptureContent` is a one-shot intent. `MacClipboardReader` reads `NSPasteboard` only when the user invokes the command.
+Clipboard Capture is also not persisted as a separate object. `ClipboardCaptureContent` is a one-shot intent. `MacClipboardReader` reads `NSPasteboard` only when the user invokes the command. Capture priority is valid image → valid text → unsupported.
 
 ## Future Windows
 

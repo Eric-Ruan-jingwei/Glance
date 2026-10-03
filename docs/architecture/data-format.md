@@ -116,7 +116,7 @@ Edge snap and layout presets are interaction-only. They write the resulting `x` 
 
 ## Clipboard Capture
 
-Clipboard Capture is a user-triggered one-shot read. It is **not** stored as clipboard history and does not add a `source` field. A successful capture creates a normal Text (`content.rtf`) or Image (`image.png`) panel. `schemaVersion` remains `1`.
+Clipboard Capture is a user-triggered one-shot read. It is **not** stored as clipboard history and does not add a `source` field. Capture priority is valid image → valid text → unsupported. A successful capture creates a normal Text (`content.rtf`) or Image (`image.png`) panel. `schemaVersion` remains `1`.
 
 ## Future clients
 

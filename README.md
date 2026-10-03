@@ -86,7 +86,7 @@ Copy text or an image in any app, then trigger Clipboard Capture to create a Gla
 Clipboard is only read when you invoke the command. Glance does not maintain clipboard history.
 
 - `⌥⌘B` (not `⌥⌘V`) so Finder’s Move Item Here / Paste Style keeps working.
-- Image beats text when both representations are present.
+- A valid image takes priority over text. If an image representation is unreadable but valid text is also present, Glance falls back to the text.
 - Empty or unsupported clipboard content does not create a panel.
 - If Glance is globally hidden, the new panel is created but stays concealed.
 
