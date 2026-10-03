@@ -148,6 +148,12 @@ final class PanelLibraryModel: ObservableObject {
         return true
     }
 
+    func consumePendingScroll() -> UUID? {
+        guard let id = pendingScrollID else { return nil }
+        pendingScrollID = nil
+        return id
+    }
+
     func clearPendingScroll() {
         pendingScrollID = nil
     }
@@ -168,6 +174,7 @@ final class PanelLibraryModel: ObservableObject {
             reconcileSelection()
             reconcileSelectedTag()
             finishPendingRevealIfPossible()
+            dropStalePendingScrollIfNeeded()
         }
     }
 
@@ -186,6 +193,7 @@ final class PanelLibraryModel: ObservableObject {
         reconcileSelection()
         reconcileSelectedTag()
         finishPendingRevealIfPossible()
+        dropStalePendingScrollIfNeeded()
     }
 
     func cancelSummaryLoading() {
@@ -213,6 +221,14 @@ final class PanelLibraryModel: ObservableObject {
         } else if !isLoadingSummaries {
             self.pendingRevealID = nil
         }
+    }
+
+    private func dropStalePendingScrollIfNeeded() {
+        pendingScrollID = PanelLibraryPendingScroll.retained(
+            pending: pendingScrollID,
+            knownIDs: Set(summaries.map(\.id)),
+            isLoading: isLoadingSummaries
+        )
     }
 
     func selectTagFilter(_ tag: String?) {
@@ -420,5 +436,17 @@ final class PanelLibraryModel: ObservableObject {
         } catch {
             presentBatchError(error)
         }
+    }
+}
+
+enum PanelLibraryPendingScroll {
+    static func retained(
+        pending: UUID?,
+        knownIDs: Set<UUID>,
+        isLoading: Bool
+    ) -> UUID? {
+        guard let pending else { return nil }
+        if knownIDs.contains(pending) { return pending }
+        return isLoading ? pending : nil
     }
 }

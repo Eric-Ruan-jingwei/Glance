@@ -116,10 +116,11 @@ struct PanelLibraryView: View {
                                 }
                             }
                             .listStyle(.inset)
-                            .onChange(of: model.pendingScrollID) { _, id in
-                                guard let id else { return }
-                                proxy.scrollTo(id, anchor: .center)
-                                model.clearPendingScroll()
+                            .onAppear {
+                                scrollPendingRevealIfNeeded(using: proxy)
+                            }
+                            .onChange(of: model.pendingScrollID) { _, _ in
+                                scrollPendingRevealIfNeeded(using: proxy)
                             }
                             .safeAreaInset(edge: .top, spacing: 0) {
                                 if model.showsBatchToolbar {
@@ -190,6 +191,14 @@ struct PanelLibraryView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: .glanceWorkspaceDidChange)) { _ in
             model.reload()
+        }
+    }
+
+    private func scrollPendingRevealIfNeeded(using proxy: ScrollViewProxy) {
+        guard model.pendingScrollID != nil else { return }
+        DispatchQueue.main.async {
+            guard let id = model.consumePendingScroll() else { return }
+            proxy.scrollTo(id, anchor: .center)
         }
     }
 

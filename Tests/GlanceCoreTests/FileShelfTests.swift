@@ -346,6 +346,40 @@ final class FileShelfStoreAndServiceTests: XCTestCase {
         XCTAssertTrue(FileManager.default.fileExists(atPath: replacement.path))
     }
 
+    func testRelinkMetadataSaveFailureWithoutPreviousBookmarkDeletesWrittenSidecar() throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("GlanceFileShelf-\(UUID().uuidString)", isDirectory: true)
+        var failSave = false
+        let store = FileShelfStore(root: root, writePrimaryMetadata: { data, url in
+            if failSave { throw FileShelfStoreError.writeFailed }
+            try data.write(to: url, options: .atomic)
+        })
+        let bookmarks = FakeFileShelfBookmarks()
+        let service = FileShelfService(store: store, bookmarks: bookmarks)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let original = root.appendingPathComponent("files/old.txt")
+        let replacement = root.appendingPathComponent("files/new.txt")
+        try FileManager.default.createDirectory(at: original.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try Data("old".utf8).write(to: original)
+        try Data("new".utf8).write(to: replacement)
+        let id = try XCTUnwrap(service.add(paths: [original.path]).addedIDs.first)
+        store.deleteBookmark(id: id)
+        XCTAssertNil(store.readBookmark(id: id))
+        failSave = true
+        XCTAssertFalse(service.relink(id: id, to: replacement.path))
+        let record = try XCTUnwrap(service.records.first)
+        XCTAssertEqual(record.id, id)
+        XCTAssertEqual(record.displayName, "old.txt")
+        XCTAssertEqual(record.originalPath, FileShelfIdentity.standardizedPath(for: original))
+        XCTAssertNil(store.readBookmark(id: id))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: store.bookmarkURL(for: id).path))
+        let resolved = service.resolve(id, allowCache: false)
+        XCTAssertEqual(resolved.urlPath, FileShelfIdentity.standardizedPath(for: original))
+        XCTAssertNotEqual(resolved.urlPath, FileShelfIdentity.standardizedPath(for: replacement))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: original.path))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: replacement.path))
+    }
+
     func testFavoriteSaveFailureRestoresMemory() throws {
         let root = FileManager.default.temporaryDirectory
             .appendingPathComponent("GlanceFileShelf-\(UUID().uuidString)", isDirectory: true)

@@ -103,6 +103,7 @@ final class FileShelfService: ObservableObject {
         }
         let previous = records[index]
         let previousBookmark = store.readBookmark(id: id)
+        let previousResolved = resolutionCache[id]
         do {
             try store.writeBookmark(id: id, data: bookmark)
         } catch {
@@ -119,8 +120,9 @@ final class FileShelfService: ObservableObject {
             return true
         } catch {
             records[index] = previous
-            if let previousBookmark {
-                try? store.writeBookmark(id: id, data: previousBookmark)
+            restoreBookmarkSidecar(id: id, previousBookmark: previousBookmark)
+            if let previousResolved {
+                resolutionCache[id] = previousResolved
             }
             return false
         }
@@ -273,6 +275,14 @@ final class FileShelfService: ObservableObject {
         }
         if changed {
             persistRollingBack { records[index] = previous }
+        }
+    }
+
+    private func restoreBookmarkSidecar(id: UUID, previousBookmark: Data?) {
+        if let previousBookmark {
+            try? store.writeBookmark(id: id, data: previousBookmark)
+        } else {
+            store.deleteBookmark(id: id)
         }
     }
 

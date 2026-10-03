@@ -230,6 +230,137 @@ final class PanelSummaryLoadingTests: XCTestCase {
     }
 }
 
+@MainActor
+final class PanelLibraryPendingScrollTests: XCTestCase {
+    func testSelectForRevealCreatesConsumablePendingScrollRequest() {
+        let target = UUID()
+        let model = modelWith([summary(id: target, title: "Target")])
+        XCTAssertTrue(model.selectForReveal(target))
+        XCTAssertEqual(model.pendingScrollID, target)
+        XCTAssertEqual(model.consumePendingScroll(), target)
+        XCTAssertNil(model.pendingScrollID)
+        XCTAssertNil(model.consumePendingScroll())
+    }
+
+    func testClearPendingScrollEmptiesRequest() {
+        let target = UUID()
+        let model = modelWith([summary(id: target, title: "Target")])
+        XCTAssertTrue(model.selectForReveal(target))
+        model.clearPendingScroll()
+        XCTAssertNil(model.pendingScrollID)
+    }
+
+    func testReloadDoesNotClearUnconsumedRevealRequest() {
+        let target = UUID()
+        let kept = summary(id: target, title: "Keep")
+        let model = PanelLibraryModel()
+        model.loadSummaries = { [kept] }
+        model.reload()
+        XCTAssertTrue(model.selectForReveal(target))
+        model.reload()
+        XCTAssertEqual(model.pendingScrollID, target)
+        XCTAssertEqual(model.selectedPanelIDs, [target])
+    }
+
+    func testSelectionReconciliationDoesNotClearUnconsumedRevealRequest() {
+        let target = UUID()
+        let model = modelWith([summary(id: target, title: "Target")])
+        XCTAssertTrue(model.selectForReveal(target))
+        model.query = "no-match"
+        model.reconcileSelection()
+        XCTAssertTrue(model.selectedPanelIDs.isEmpty)
+        XCTAssertEqual(model.pendingScrollID, target)
+    }
+
+    func testStalePendingScrollIsDroppedWhenTargetMissingAfterLoad() {
+        let target = UUID()
+        let other = UUID()
+        let model = PanelLibraryModel()
+        model.loadSummaries = { [summary(id: target, title: "Gone")] }
+        model.reload()
+        XCTAssertTrue(model.selectForReveal(target))
+        XCTAssertEqual(model.pendingScrollID, target)
+        model.loadSummaries = { [summary(id: other, title: "Other")] }
+        model.reload()
+        XCTAssertNil(model.pendingScrollID)
+        XCTAssertFalse(model.selectedPanelIDs.contains(target))
+    }
+
+    func testRevealDuringAsyncLoadSetsPendingScrollWhenSummariesArrive() async {
+        let target = UUID()
+        let gate = LoadGate()
+        let started = LoadGate()
+        let model = PanelLibraryModel()
+        model.summaryLoader = ScriptedSummaryLoader(steps: [
+            .init(
+                delayNanoseconds: 0,
+                summaries: [summary(id: target, title: "Loaded")],
+                gate: gate,
+                started: started
+            )
+        ])
+        model.loadSummaryInputs = { [dummyInput(id: target)] }
+        model.reload()
+        await started.wait()
+        XCTAssertTrue(model.revealInLibrary(target))
+        XCTAssertNil(model.pendingScrollID)
+        await gate.open()
+        await waitUntil(timeout: 1) { model.pendingScrollID == target }
+        XCTAssertEqual(model.selectedPanelIDs, [target])
+        XCTAssertEqual(model.consumePendingScroll(), target)
+        XCTAssertNil(model.pendingScrollID)
+    }
+
+    func testRevealDuringAsyncLoadDoesNotLeavePendingWhenTargetMissing() async {
+        let target = UUID()
+        let other = UUID()
+        let gate = LoadGate()
+        let started = LoadGate()
+        let model = PanelLibraryModel()
+        model.summaryLoader = ScriptedSummaryLoader(steps: [
+            .init(
+                delayNanoseconds: 0,
+                summaries: [summary(id: other, title: "Other")],
+                gate: gate,
+                started: started
+            )
+        ])
+        model.loadSummaryInputs = { [dummyInput(id: other)] }
+        model.reload()
+        await started.wait()
+        XCTAssertTrue(model.revealInLibrary(target))
+        await gate.open()
+        await waitUntil(timeout: 1) { !model.isLoadingSummaries && model.summaries.map(\.id) == [other] }
+        XCTAssertNil(model.pendingScrollID)
+        XCTAssertFalse(model.selectedPanelIDs.contains(target))
+    }
+
+    func testPendingScrollRetentionPolicy() {
+        let id = UUID()
+        XCTAssertEqual(
+            PanelLibraryPendingScroll.retained(pending: id, knownIDs: [id], isLoading: false),
+            id
+        )
+        XCTAssertEqual(
+            PanelLibraryPendingScroll.retained(pending: id, knownIDs: [id], isLoading: true),
+            id
+        )
+        XCTAssertEqual(
+            PanelLibraryPendingScroll.retained(pending: id, knownIDs: [], isLoading: true),
+            id
+        )
+        XCTAssertNil(PanelLibraryPendingScroll.retained(pending: id, knownIDs: [], isLoading: false))
+        XCTAssertNil(PanelLibraryPendingScroll.retained(pending: nil, knownIDs: [id], isLoading: false))
+    }
+
+    private func modelWith(_ summaries: [PanelSummary]) -> PanelLibraryModel {
+        let model = PanelLibraryModel()
+        model.loadSummaries = { summaries }
+        model.reload()
+        return model
+    }
+}
+
 final class ImageMetadataProbeTests: XCTestCase {
     func testImageMetadataProbeReadsPixelSize() throws {
         let directory = uniqueTempDirectory("GlanceImageMeta")
