@@ -4,9 +4,11 @@ struct SettingsView: View {
     var dataFolderURL: URL
     var versionText: String
     var onRevealData: () -> Void
+    @ObservedObject var shortcuts: ShortcutCoordinator
 
     @State private var launchAtLogin = LaunchAtLogin.isEnabled
     @State private var launchError: String?
+    @State private var recording: ShortcutAction?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
@@ -34,27 +36,30 @@ struct SettingsView: View {
             }
 
             GroupBox("快捷键") {
-                VStack(spacing: 8) {
-                    HStack {
-                        Text("快速记录")
-                        Spacer()
-                        Text(GlanceConstants.quickCaptureShortcutDisplay)
-                            .foregroundStyle(.secondary)
-                            .font(.body.monospaced())
+                VStack(alignment: .leading, spacing: 10) {
+                    ForEach(ShortcutAction.allCases, id: \.self) { action in
+                        HStack {
+                            Text(action.title)
+                            Spacer()
+                            ShortcutRecorderView(
+                                shortcut: shortcuts.shortcut(for: action),
+                                isRecording: recording == action,
+                                onBegin: { beginRecording(action) },
+                                onDecision: { handleDecision($0, for: action) }
+                            )
+                        }
                     }
-                    HStack {
-                        Text("从剪贴板创建")
-                        Spacer()
-                        Text(GlanceConstants.clipboardCaptureShortcutDisplay)
-                            .foregroundStyle(.secondary)
-                            .font(.body.monospaced())
+                    if let message = shortcuts.errorMessage, !message.isEmpty {
+                        Text(message)
+                            .font(.caption)
+                            .foregroundStyle(.red)
                     }
-                    HStack {
-                        Text("隐藏 / 显示全部")
-                        Spacer()
-                        Text(GlanceConstants.hideShowShortcutDisplay)
-                            .foregroundStyle(.secondary)
-                            .font(.body.monospaced())
+                    Button("恢复默认快捷键") {
+                        if let recording {
+                            shortcuts.cancelRecording(recording)
+                            self.recording = nil
+                        }
+                        shortcuts.resetAll()
                     }
                 }
             }
@@ -77,6 +82,29 @@ struct SettingsView: View {
         }
         .padding(24)
         .frame(width: 440)
+    }
+
+    private func beginRecording(_ action: ShortcutAction) {
+        if let recording, recording != action {
+            shortcuts.cancelRecording(recording)
+        }
+        recording = action
+        shortcuts.beginRecording(action)
+    }
+
+    private func handleDecision(_ decision: ShortcutRecorderDecision, for action: ShortcutAction) {
+        switch decision {
+        case .ignore:
+            break
+        case .cancel:
+            shortcuts.cancelRecording(action)
+            recording = nil
+        case .reject(let error):
+            shortcuts.errorMessage = error.errorDescription
+        case .capture(let shortcut):
+            recording = nil
+            shortcuts.commitRecording(shortcut, for: action)
+        }
     }
 
     private var launchBinding: Binding<Bool> {

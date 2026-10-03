@@ -76,6 +76,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func showSettings() {
+        guard let environment else { return }
         if settingsWindow == nil {
             settingsWindow = SettingsWindowController(environment: environment)
         }
