@@ -5,6 +5,7 @@ final class StatusBarController: NSObject, NSMenuDelegate {
     private let manager: PanelManager
     private let onSettings: () -> Void
     private let onManagePanels: () -> Void
+    private let onOpenGuide: () -> Void
     private let shortcutSnapshot: () -> [ShortcutAction: GlanceShortcut]
     private var statusItem: NSStatusItem?
 
@@ -12,11 +13,13 @@ final class StatusBarController: NSObject, NSMenuDelegate {
         manager: PanelManager,
         onSettings: @escaping () -> Void,
         onManagePanels: @escaping () -> Void,
+        onOpenGuide: @escaping () -> Void = {},
         shortcutSnapshot: @escaping () -> [ShortcutAction: GlanceShortcut] = { ShortcutDefaults.all }
     ) {
         self.manager = manager
         self.onSettings = onSettings
         self.onManagePanels = onManagePanels
+        self.onOpenGuide = onOpenGuide
         self.shortcutSnapshot = shortcutSnapshot
     }
 
@@ -56,6 +59,7 @@ final class StatusBarController: NSObject, NSMenuDelegate {
             onNewPDF: { [weak self] in self?.manager.createPDFPanel() },
             onToggleVisibility: { [weak self] in self?.manager.toggleGlobalVisibility() },
             onSettings: { [weak self] in self?.onSettings() },
+            onOpenGuide: { [weak self] in self?.onOpenGuide() },
             onQuit: {
                 NSApp.terminate(nil)
             },

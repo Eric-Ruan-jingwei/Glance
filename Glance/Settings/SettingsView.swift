@@ -4,6 +4,7 @@ struct SettingsView: View {
     var dataFolderURL: URL
     var versionText: String
     var onRevealData: () -> Void
+    var onOpenGuideShortcuts: () -> Void = {}
     @ObservedObject var shortcuts: ShortcutCoordinator
 
     @State private var launchAtLogin = LaunchAtLogin.isEnabled
@@ -67,6 +68,7 @@ struct SettingsView: View {
                         }
                         shortcuts.resetAll()
                     }
+                    Button(GlanceGuideEntry.settingsLinkTitle, action: onOpenGuideShortcuts)
                 }
                 .padding(.vertical, GlanceTheme.Space.xs)
             }

@@ -18,6 +18,7 @@ enum StatusMenuBuilder {
         onNewPDF: @escaping () -> Void = {},
         onToggleVisibility: @escaping () -> Void,
         onSettings: @escaping () -> Void,
+        onOpenGuide: @escaping () -> Void = {},
         onQuit: @escaping () -> Void,
         shortcuts: [ShortcutAction: GlanceShortcut] = ShortcutDefaults.all,
         diagnostic: PersistenceDiagnostic? = nil,
@@ -78,6 +79,7 @@ enum StatusMenuBuilder {
             menu.addItem(actionItem(diagnostic.menuTitle, onShowDiagnostic, symbol: "exclamationmark.triangle"))
         }
         menu.addItem(.separator())
+        menu.addItem(actionItem(GlanceGuideEntry.menuTitle, onOpenGuide, symbol: "questionmark.circle"))
         menu.addItem(actionItem("设置…", onSettings, symbol: "gearshape"))
         menu.addItem(actionItem("退出", onQuit, symbol: "power"))
     }

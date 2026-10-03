@@ -2,7 +2,10 @@ import AppKit
 import SwiftUI
 
 final class SettingsWindowController: NSWindowController {
-    convenience init(environment: AppEnvironment) {
+    convenience init(
+        environment: AppEnvironment,
+        onOpenGuideShortcuts: @escaping () -> Void = {}
+    ) {
         let root = environment.applicationSupportRoot
         let view = SettingsView(
             dataFolderURL: root,
@@ -10,13 +13,14 @@ final class SettingsWindowController: NSWindowController {
             onRevealData: {
                 NSWorkspace.shared.open(root)
             },
+            onOpenGuideShortcuts: onOpenGuideShortcuts,
             shortcuts: environment.shortcutCoordinator
         )
         let hosting = NSHostingController(rootView: view)
         let window = NSWindow(contentViewController: hosting)
         window.title = "设置"
         window.styleMask = [.titled, .closable]
-        window.setContentSize(NSSize(width: 440, height: 540))
+        window.setContentSize(NSSize(width: 440, height: 580))
         window.center()
         window.isReleasedWhenClosed = false
         self.init(window: window)

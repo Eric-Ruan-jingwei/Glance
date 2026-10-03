@@ -22,6 +22,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var settingsWindow: SettingsWindowController?
     private var panelLibrary: PanelLibraryWindowController?
     private var quickCapture: QuickCaptureWindowController?
+    private var guideWindow: GuideWindowController?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         do {
@@ -33,6 +34,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 manager: manager,
                 onSettings: { [weak self] in self?.showSettings() },
                 onManagePanels: { [weak self] in self?.showPanelLibrary() },
+                onOpenGuide: { [weak self] in self?.showGuide() },
                 shortcutSnapshot: { [weak environment] in
                     environment?.shortcutCoordinator.shortcuts ?? ShortcutDefaults.all
                 }
@@ -58,6 +60,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
             environment.shortcutCoordinator.start()
             manager.restoreAll()
+            scheduleOnboardingIfNeeded()
         } catch {
             presentStartupFailure(error)
         }
@@ -71,6 +74,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         false
     }
 
+    private func scheduleOnboardingIfNeeded() {
+        guard OnboardingState().shouldPresent else { return }
+        DispatchQueue.main.async { [weak self] in
+            self?.showGuide(onboarding: true)
+        }
+    }
+
+    private func showGuide(section: GuideSection = .gettingStarted, onboarding: Bool = false) {
+        guard let environment else { return }
+        if guideWindow == nil {
+            guideWindow = GuideWindowController(
+                coordinator: environment.shortcutCoordinator,
+                onOpenSettings: { [weak self] in self?.showSettings() }
+            )
+        }
+        guideWindow?.present(section: section, onboarding: onboarding)
+    }
+
     private func showPanelLibrary() {
         if panelLibrary == nil, let panelManager {
             panelLibrary = PanelLibraryWindowController(panelManager: panelManager)
@@ -81,7 +102,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func showSettings() {
         guard let environment else { return }
         if settingsWindow == nil {
-            settingsWindow = SettingsWindowController(environment: environment)
+            settingsWindow = SettingsWindowController(
+                environment: environment,
+                onOpenGuideShortcuts: { [weak self] in
+                    self?.showGuide(section: .shortcuts)
+                }
+            )
         }
         NSApp.activate(ignoringOtherApps: true)
         settingsWindow?.showWindow(nil)
