@@ -20,7 +20,9 @@ final class GlanceGlobalShortcutTests: XCTestCase {
         XCTAssertEqual(GlanceConstants.quickCaptureShortcutDisplay, "⌥⌘J")
         XCTAssertNotEqual(GlanceConstants.quickCaptureKeyEquivalent, GlanceConstants.hideShowKeyEquivalent)
         XCTAssertNotEqual(GlanceHotKeyID.quickCapture, GlanceHotKeyID.hideShow)
+        XCTAssertNotEqual(GlanceHotKeyID.clipboardCapture, GlanceHotKeyID.quickCapture)
         XCTAssertFalse(GlanceConstants.quickCaptureShortcutDisplay.contains("Space"))
+        XCTAssertEqual(GlanceConstants.clipboardCaptureShortcutDisplay, "⌥⌘B")
     }
 
     func testMenuBarVisibilityItemUsesOptionCommandG() {
@@ -35,6 +37,7 @@ final class GlanceGlobalShortcutTests: XCTestCase {
         XCTAssertEqual(item?.keyEquivalent, "j")
         XCTAssertEqual(item?.keyEquivalentModifierMask, [.option, .command])
         XCTAssertEqual(menu.items.first?.title, "快速记录…")
+        XCTAssertEqual(menu.items[1].title, "从剪贴板创建…")
         XCTAssertEqual(menu.items.first { $0.title == "管理面板…" }?.title, "管理面板…")
     }
 
