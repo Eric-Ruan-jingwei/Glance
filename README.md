@@ -30,7 +30,16 @@ There is no Windows client yet. Shared data contracts are documented so a future
 - No cloud
 - Open source
 
-## V0.15 已支持
+## V0.16
+
+Product hardening for the existing 1.0 feature set. No new panel types, no schema change.
+
+- Improved Panel Manager responsiveness
+- Safer large PDF imports
+- Improved data recovery diagnostics
+- Accessibility improvements
+
+## 已支持
 
 - Text panel
 - Markdown panel (rendered preview, double-click to edit raw UTF-8 `.md`)
@@ -95,11 +104,13 @@ Status-item menu (defaults shown):
 ────────────
 显示全部 / 隐藏全部    ⌥⌘G
 ────────────
+⚠ 数据恢复提示…      (only after backup recovery, corrupt metadata, or unsupported schema)
+────────────
 设置…
 退出
 ```
 
-The Dock icon is hidden. There is no traditional main window.
+The Dock icon is hidden. There is no traditional main window. The data-recovery item is omitted on a normal launch.
 
 ### Quick Capture
 

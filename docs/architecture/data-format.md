@@ -176,7 +176,7 @@ A successful submit creates a normal Text or Todo panel using the existing paylo
 
 ## Panel Library
 
-The Panel Manager / Library window is a derived view of existing metadata and payloads. It is **not** stored in `panels.json`. Summaries are rebuilt at runtime.
+The Panel Manager / Library window is a derived view of existing metadata and payloads. It is **not** stored in `panels.json`. Summaries are rebuilt at runtime from an immutable `PanelSummaryInput` snapshot plus payload inspection. That snapshot is not Codable and is not written to disk. `schemaVersion` remains `5`.
 
 Title model:
 

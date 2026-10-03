@@ -36,7 +36,7 @@ Dirty state
 Portable data contracts
 ```
 
-Examples in this tree: `PanelRecord`, `PanelTitle`, `PanelTag`, `PanelTags`, `PanelFrame`, `PanelDatabase`, `PanelRepository`, `WorkspaceRecord`, `WorkspaceName`, `WorkspaceCatalog`, `WorkspaceMembership`, `ActiveWorkspaceResolver`, `WorkspacePreferenceStore`, `PanelInteractionPolicy`, `PanelInteractionState`, `PanelModeTransition`, `PanelOpacity`, `PayloadDirtyFlag`, `PanelPlacementEngine` (geometry), `PanelPlacementOccupancy`, `PanelSnapEngine`, `PanelLayoutPreset`, `PanelSnapConfiguration`, `PanelFrameRecovery` (geometry), `ApplicationDataLocation`, `PayloadStore`, `MarkdownPayloadFile`, `MarkdownDocument`, `TodoItem`, `TodoDocument`, `TodoMutation`, `TodoPayloadFile`, `QuickCaptureRequest`, `QuickCaptureKind`, `ClipboardCaptureContent`, `ClipboardCaptureRouter`, `PanelInitialContent`, `PanelCreationSession`, `PanelVisibilityPolicy`, `PanelVisibilityTransaction`, `PanelSummary`, `PanelSummaryQuery`, `PanelSummaryText`, `PDFDocumentMetadata`, `PDFPayloadFile`, `ShortcutAction`, `GlanceShortcut`, `ShortcutStore`, `ShortcutValidator`.
+Examples in this tree: `PanelRecord`, `PanelTitle`, `PanelTag`, `PanelTags`, `PanelFrame`, `PanelDatabase`, `PanelRepository`, `WorkspaceRecord`, `WorkspaceName`, `WorkspaceCatalog`, `WorkspaceMembership`, `ActiveWorkspaceResolver`, `WorkspacePreferenceStore`, `PanelInteractionPolicy`, `PanelInteractionState`, `PanelModeTransition`, `PanelOpacity`, `PayloadDirtyFlag`, `PanelPlacementEngine` (geometry), `PanelPlacementOccupancy`, `PanelSnapEngine`, `PanelLayoutPreset`, `PanelSnapConfiguration`, `PanelFrameRecovery` (geometry), `ApplicationDataLocation`, `PayloadStore`, `MarkdownPayloadFile`, `MarkdownDocument`, `TodoItem`, `TodoDocument`, `TodoMutation`, `TodoPayloadFile`, `QuickCaptureRequest`, `QuickCaptureKind`, `ClipboardCaptureContent`, `ClipboardCaptureRouter`, `PanelInitialContent`, `PanelCreationSession`, `PanelVisibilityPolicy`, `PanelVisibilityTransaction`, `PanelSummary`, `PanelSummaryInput`, `PanelSummaryQuery`, `PanelSummaryText`, `PanelSummaryLoader`, `ImagePixelSize`, `PDFDocumentMetadata`, `PDFDocumentInspector`, `PDFPayloadFile`, `PersistenceDiagnostic`, `ShortcutAction`, `GlanceShortcut`, `ShortcutStore`, `ShortcutValidator`.
 
 These types should stay on Foundation (or pure Swift). They must not depend on `NSRect`, `NSWindow`, or other AppKit types.
 
@@ -92,7 +92,21 @@ Quick Capture itself is not persisted. `QuickCaptureRequest` describes the produ
 
 Clipboard Capture is also not persisted as a separate object. `ClipboardCaptureContent` is a one-shot intent. `MacClipboardReader` reads `NSPasteboard` only when the user invokes the command. Capture priority is valid image → valid text → unsupported.
 
-PDF payload files (`document.pdf`, `pdf.json`) are portable. `MacPDFImporter` uses `NSOpenPanel` and PDFKit only to validate and render; it does not write PDFKit archives.
+PDF payload files (`document.pdf`, `pdf.json`) are portable. `MacPDFImporter` uses `NSOpenPanel` on the main actor. Validation and page-count inspection use Core Graphics (`CGPDFDocument`) so large copies can leave the main actor. `PDFView` stays on macOS for rendering. Glance does not write PDFKit archives.
+
+Panel summaries:
+
+```text
+immutable PanelSummaryInput snapshot (MainActor)
+→ background payload inspection (bounded TaskGroup)
+→ MainActor apply with generation / cancel
+```
+
+Heavy payload inspection does not own mutable `PanelRecord` references. Image dimensions use ImageIO metadata (`CGImageSourceCreateWithURL`) rather than decoding a bitmap. Search, type filter, tag filter, and selection stay in-memory over the last applied summaries.
+
+Persistence diagnostics are derived from `PanelRepository.lastLoadOutcome`. They are local, informational, and never auto-repair or delete user bytes. The status menu shows a recovery item only for backup recovery, quarantined corrupt metadata, or an unsupported future schema.
+
+Panel window move uses `NSWindow.performWindowDrag(with:)` plus a mouse-up finish callback. There is no blocking `nextEvent` poll loop. Snap still runs at drag end; Control at release still bypasses snap.
 
 Global shortcut preferences (`ShortcutAction`, `GlanceShortcut`) are app settings, not panel data. They live in `UserDefaults`, outside `panels.json`. `MacShortcutAdapter` maps portable keys onto Carbon virtual key codes, `RegisterEventHotKey`, `NSEvent`, and `NSMenu` key equivalents. The shortcut recorder UI stays on macOS. Recording temporarily suspends the target Carbon hotkey; a successful replace finishes that suspension without a second register, so the new combination can fire immediately. Settings and the status menu show the session’s active registration, not a stale preference snapshot.
 
