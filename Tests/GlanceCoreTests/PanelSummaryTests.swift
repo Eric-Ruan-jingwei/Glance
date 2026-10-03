@@ -116,6 +116,7 @@ final class PanelSummaryTests: XCTestCase {
             isLocked: false,
             isPassThrough: false,
             isPinned: true,
+            isHidden: false,
             isUnreadable: false
         )
     }
@@ -322,6 +323,7 @@ final class PanelSummaryBuilderTests: XCTestCase {
             isLocked: false,
             isPassThrough: false,
             isPinned: true,
+            isHidden: false,
             isUnreadable: false
         )
         let newer = PanelSummary(
@@ -335,6 +337,7 @@ final class PanelSummaryBuilderTests: XCTestCase {
             isLocked: false,
             isPassThrough: false,
             isPinned: true,
+            isHidden: false,
             isUnreadable: false
         )
         let model = PanelLibraryModel()

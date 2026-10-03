@@ -195,6 +195,9 @@ final class PanelInitialContentTests: XCTestCase {
     func testNewlyCreatedPanelFollowsGlobalVisibility() {
         XCTAssertFalse(PanelRevealPolicy.shouldPresentNewlyCreatedPanel(isGloballyConcealed: true))
         XCTAssertTrue(PanelRevealPolicy.shouldPresentNewlyCreatedPanel(isGloballyConcealed: false))
+        XCTAssertFalse(
+            PanelVisibilityPolicy.shouldPresent(panelHidden: false, globallyConcealed: true)
+        )
     }
 
     private struct TestWriteFailure: Error {}
