@@ -116,7 +116,7 @@ final class GlanceTextView: NSTextView {
     }
 
     func insertChecklist() {
-        insertParagraphPrefix("☐ ")
+        insertParagraphPrefix("\(TextChecklistToggle.glyph) ")
     }
 
     private func insertParagraphPrefix(_ prefix: String) {
@@ -127,16 +127,19 @@ final class GlanceTextView: NSTextView {
             insertText(prefix, replacementRange: selectedRange())
         } else {
             let line = ns.substring(with: lineRange)
-            if line.hasPrefix("• ") || line.hasPrefix("☐ ") || line.hasPrefix("☑ ") {
+            if line.hasPrefix("• ")
+                || line.hasPrefix("\(TextChecklistToggle.glyph) ")
+                || line.hasPrefix("☐ ")
+                || line.hasPrefix("☑ ") {
                 let stripped = String(line.dropFirst(2))
                 textStorage.replaceCharacters(in: lineRange, with: prefix + stripped)
             } else {
                 textStorage.replaceCharacters(in: NSRange(location: lineRange.location, length: 0), with: prefix)
             }
         }
-        if prefix.hasPrefix("☐") {
+        if prefix.hasPrefix(TextChecklistToggle.glyph) {
             let markLine = (textStorage.string as NSString).lineRange(for: selectedRange())
-            applyChecklistMarkStyle(at: markLine.location)
+            applyChecklistMarkStyle(at: markLine.location, completed: false)
         }
         didChangeText()
     }
@@ -149,10 +152,10 @@ final class GlanceTextView: NSTextView {
             usesCheckedGlyph: spans.usesCheckedGlyph,
             contentHasStrikethrough: contentHasStrikethrough(in: spans.contentRange)
         )
-        if spans.usesCheckedGlyph {
-            textStorage.replaceCharacters(in: spans.markRange, with: "☐")
+        if spans.usesCheckedGlyph || (textStorage.string as NSString).character(at: spans.markRange.location) != TextChecklistToggle.open {
+            textStorage.replaceCharacters(in: spans.markRange, with: TextChecklistToggle.glyph)
         }
-        applyChecklistMarkStyle(at: spans.markRange.location)
+        applyChecklistMarkStyle(at: spans.markRange.location, completed: !completed)
         applyChecklistContent(completed: !completed, range: spans.contentRange)
         didChangeText()
         onChecklistToggled?()
@@ -191,20 +194,23 @@ final class GlanceTextView: NSTextView {
             let lineRange = ns.lineRange(for: NSRange(location: location, length: 0))
             if lineRange.length > 0 {
                 let ch = ns.character(at: lineRange.location)
-                if ch == TextChecklistToggle.checked {
-                    textStorage.replaceCharacters(
-                        in: NSRange(location: lineRange.location, length: 1),
-                        with: "☐"
-                    )
-                    if let spans = TextChecklistToggle.spans(
+                if TextChecklistToggle.isMark(ch) {
+                    if ch != TextChecklistToggle.open {
+                        textStorage.replaceCharacters(
+                            in: NSRange(location: lineRange.location, length: 1),
+                            with: TextChecklistToggle.glyph
+                        )
+                    }
+                    let spans = TextChecklistToggle.spans(
                         in: textStorage.string as NSString,
                         markIndex: lineRange.location
-                    ) {
+                    )
+                    let completed = ch == TextChecklistToggle.legacyChecked
+                        || contentHasStrikethrough(in: spans?.contentRange ?? NSRange(location: 0, length: 0))
+                    if completed, let spans {
                         applyChecklistContent(completed: true, range: spans.contentRange)
                     }
-                    applyChecklistMarkStyle(at: lineRange.location)
-                } else if ch == TextChecklistToggle.unchecked {
-                    applyChecklistMarkStyle(at: lineRange.location)
+                    applyChecklistMarkStyle(at: lineRange.location, completed: completed)
                 }
             }
             let next = NSMaxRange(lineRange)
@@ -213,12 +219,12 @@ final class GlanceTextView: NSTextView {
         }
     }
 
-    private func applyChecklistMarkStyle(at markIndex: Int) {
+    private func applyChecklistMarkStyle(at markIndex: Int, completed: Bool) {
         guard let textStorage, markIndex >= 0, markIndex < textStorage.length else { return }
         let ch = (textStorage.string as NSString).character(at: markIndex)
-        guard ch == TextChecklistToggle.unchecked || ch == TextChecklistToggle.checked else { return }
+        guard TextChecklistToggle.isMark(ch) else { return }
         let range = NSRange(location: markIndex, length: 1)
-        textStorage.addAttributes(TextChecklistToggle.markAttributes(), range: range)
+        textStorage.addAttributes(TextChecklistToggle.markAttributes(completed: completed), range: range)
         textStorage.removeAttribute(.strikethroughStyle, range: range)
         textStorage.removeAttribute(.strikethroughColor, range: range)
     }
@@ -226,14 +232,7 @@ final class GlanceTextView: NSTextView {
     private func applyChecklistContent(completed: Bool, range: NSRange) {
         guard let textStorage, range.length > 0, NSMaxRange(range) <= textStorage.length else { return }
         if completed {
-            textStorage.addAttributes(
-                [
-                    .strikethroughStyle: NSUnderlineStyle.single.rawValue,
-                    .strikethroughColor: NSColor.quaternaryLabelColor,
-                    .foregroundColor: NSColor.tertiaryLabelColor
-                ],
-                range: range
-            )
+            textStorage.addAttributes(TextChecklistToggle.completedContentAttributes(), range: range)
         } else {
             textStorage.removeAttribute(.strikethroughStyle, range: range)
             textStorage.removeAttribute(.strikethroughColor, range: range)
@@ -243,9 +242,24 @@ final class GlanceTextView: NSTextView {
 
     private func contentHasStrikethrough(in range: NSRange) -> Bool {
         guard let textStorage, range.length > 0, range.location < textStorage.length else { return false }
-        let value = textStorage.attribute(.strikethroughStyle, at: range.location, effectiveRange: nil)
-        if let number = value as? NSNumber { return number.intValue != 0 }
-        if let style = value as? Int { return style != 0 }
+        let end = min(NSMaxRange(range), textStorage.length)
+        var index = range.location
+        while index < end {
+            var effective = NSRange()
+            let value = textStorage.attribute(.strikethroughStyle, at: index, effectiveRange: &effective)
+            let struck: Bool
+            if let number = value as? NSNumber {
+                struck = number.intValue != 0
+            } else if let style = value as? Int {
+                struck = style != 0
+            } else {
+                struck = false
+            }
+            if struck { return true }
+            let next = max(index + 1, NSMaxRange(effective))
+            if next <= index { break }
+            index = next
+        }
         return false
     }
 }
@@ -277,8 +291,10 @@ enum PanelReadingClick: Equatable {
 }
 
 enum TextChecklistToggle {
-    static let unchecked: unichar = 0x2610
-    static let checked: unichar = 0x2611
+    static let open: unichar = 0x25CB
+    static let legacySquare: unichar = 0x2610
+    static let legacyChecked: unichar = 0x2611
+    static let glyph = "○"
     static let hitSlop: CGFloat = 8
     static let markSize: CGFloat = 16
 
@@ -292,13 +308,25 @@ enum TextChecklistToggle {
         .systemFont(ofSize: markSize, weight: .regular)
     }
 
-    static func markAttributes() -> [NSAttributedString.Key: Any] {
+    static func isMark(_ character: unichar) -> Bool {
+        character == open || character == legacySquare || character == legacyChecked
+    }
+
+    static func markAttributes(completed: Bool) -> [NSAttributedString.Key: Any] {
         let body = GlanceConstants.textBodyFont
         let mark = markFont
         return [
             .font: mark,
-            .foregroundColor: GlanceConstants.textBodyColor,
+            .foregroundColor: completed ? NSColor.tertiaryLabelColor : GlanceConstants.textBodyColor,
             .baselineOffset: (body.capHeight - mark.capHeight) / 2
+        ]
+    }
+
+    static func completedContentAttributes() -> [NSAttributedString.Key: Any] {
+        [
+            .strikethroughStyle: NSUnderlineStyle.thick.rawValue,
+            .strikethroughColor: NSColor.secondaryLabelColor,
+            .foregroundColor: NSColor.tertiaryLabelColor
         ]
     }
 
@@ -313,12 +341,12 @@ enum TextChecklistToggle {
     static func markIndex(in string: NSString, at charIndex: Int) -> Int? {
         guard charIndex >= 0, charIndex < string.length else { return nil }
         let ch = string.character(at: charIndex)
-        if ch == unchecked || ch == checked {
+        if isMark(ch) {
             return charIndex
         }
         if ch == 0x20, charIndex > 0 {
             let previous = string.character(at: charIndex - 1)
-            if previous == unchecked || previous == checked {
+            if isMark(previous) {
                 return charIndex - 1
             }
         }
@@ -340,7 +368,7 @@ enum TextChecklistToggle {
         return Spans(
             markRange: NSRange(location: resolved, length: 1),
             contentRange: NSRange(location: contentLocation, length: max(0, end - contentLocation)),
-            usesCheckedGlyph: mark == checked
+            usesCheckedGlyph: mark == legacyChecked
         )
     }
 

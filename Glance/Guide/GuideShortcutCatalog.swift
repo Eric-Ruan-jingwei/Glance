@@ -149,7 +149,7 @@ enum GuideShortcutCatalog {
         GuideShortcutItem(
             id: "textChecklistToggle",
             title: "切换文字清单",
-            detail: "点击方框，用删除线标记完成",
+            detail: "点击圆圈，用删除线标记完成",
             source: .mouseGesture("单击清单符号")
         ),
         GuideShortcutItem(

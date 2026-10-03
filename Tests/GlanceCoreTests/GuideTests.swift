@@ -215,7 +215,7 @@ final class GuideTests: XCTestCase {
         XCTAssertEqual(textEsc?.title, "结束文字编辑")
         XCTAssertEqual(textEsc?.tokens(using: provider).map(\.display), ["Esc"])
         XCTAssertEqual(checklist?.title, "切换文字清单")
-        XCTAssertEqual(checklist?.detail, "点击方框，用删除线标记完成")
+        XCTAssertEqual(checklist?.detail, "点击圆圈，用删除线标记完成")
         XCTAssertEqual(checklist?.tokens(using: provider).map(\.display), ["单击清单符号"])
         XCTAssertEqual(GuideShortcutCatalog.groups.first { $0.id == "editing" }?.title, "编辑")
         XCTAssertEqual(

@@ -8,15 +8,20 @@ import XCTest
 #endif
 
 final class TextChecklistToggleTests: XCTestCase {
-    func testMarkIndexFindsBoxAndFollowingSpace() {
-        XCTAssertEqual(TextChecklistToggle.markIndex(in: "☐ 你好" as NSString, at: 0), 0)
-        XCTAssertEqual(TextChecklistToggle.markIndex(in: "☐ 你好" as NSString, at: 1), 0)
-        XCTAssertNil(TextChecklistToggle.markIndex(in: "☐ 你好" as NSString, at: 2))
+    func testMarkIndexFindsCircleAndFollowingSpace() {
+        XCTAssertEqual(TextChecklistToggle.markIndex(in: "○ 你好" as NSString, at: 0), 0)
+        XCTAssertEqual(TextChecklistToggle.markIndex(in: "○ 你好" as NSString, at: 1), 0)
+        XCTAssertNil(TextChecklistToggle.markIndex(in: "○ 你好" as NSString, at: 2))
         XCTAssertNil(TextChecklistToggle.markIndex(in: "你好" as NSString, at: 0))
     }
 
-    func testSpansCoverTheLineAfterTheBox() {
-        let spans = TextChecklistToggle.spans(in: "☐ 你好" as NSString, markIndex: 0)
+    func testMarkIndexStillFindsLegacySquares() {
+        XCTAssertEqual(TextChecklistToggle.markIndex(in: "☐ 你好" as NSString, at: 0), 0)
+        XCTAssertEqual(TextChecklistToggle.markIndex(in: "☑ 你好" as NSString, at: 0), 0)
+    }
+
+    func testSpansCoverTheLineAfterTheMark() {
+        let spans = TextChecklistToggle.spans(in: "○ 你好" as NSString, markIndex: 0)
         XCTAssertEqual(spans?.markRange, NSRange(location: 0, length: 1))
         XCTAssertEqual(spans?.contentRange, NSRange(location: 1, length: 3))
         XCTAssertEqual(spans?.usesCheckedGlyph, false)
@@ -55,42 +60,71 @@ final class TextChecklistToggleTests: XCTestCase {
 
 @MainActor
 final class TextChecklistClickTests: XCTestCase {
-    func testClickingBoxStrikesThroughTheItem() throws {
-        let view = try makeChecklistView(reading: false, text: "☐ 你好")
+    func testClickingCircleStrikesThroughTheItem() throws {
+        let view = try makeChecklistView(reading: false, text: "○ 你好")
         XCTAssertTrue(view.toggleChecklist(atViewPoint: glyphCenter(in: view, glyphIndex: 0)))
-        XCTAssertTrue(view.string.hasPrefix("☐"))
+        XCTAssertTrue(view.string.hasPrefix("○"))
         XCTAssertFalse(view.string.hasPrefix("☑"))
-        XCTAssertTrue(hasStrikethrough(in: view, at: 2))
-        XCTAssertFalse(hasStrikethrough(in: view, at: 0))
+        XCTAssertEqual(strikethroughStyle(in: view, at: 2), NSUnderlineStyle.thick.rawValue)
+        XCTAssertNil(strikethroughStyle(in: view, at: 0))
+        XCTAssertEqual(foregroundColor(in: view, at: 0), NSColor.tertiaryLabelColor)
     }
 
-    func testClickingBoxAgainClearsTheStrike() throws {
-        let view = try makeChecklistView(reading: false, text: "☐ 你好")
+    func testClickingCircleAgainClearsTheStrike() throws {
+        let view = try makeChecklistView(reading: false, text: "○ 你好")
         XCTAssertTrue(view.toggleChecklist(atViewPoint: glyphCenter(in: view, glyphIndex: 0)))
         view.layoutManager?.ensureLayout(for: try XCTUnwrap(view.textContainer))
         XCTAssertTrue(view.toggleChecklist(atViewPoint: glyphCenter(in: view, glyphIndex: 0)))
-        XCTAssertTrue(view.string.hasPrefix("☐"))
-        XCTAssertFalse(hasStrikethrough(in: view, at: 2))
+        XCTAssertTrue(view.string.hasPrefix("○"))
+        XCTAssertNil(strikethroughStyle(in: view, at: 2))
+        XCTAssertEqual(foregroundColor(in: view, at: 0), GlanceConstants.textBodyColor)
     }
 
-    func testClickingBoxInReadingModeStrikesThrough() throws {
-        let view = try makeChecklistView(reading: true, text: "☐ 你好")
+    func testClickingCircleInReadingModeStrikesThrough() throws {
+        let view = try makeChecklistView(reading: true, text: "○ 你好")
         XCTAssertTrue(view.toggleChecklist(atViewPoint: glyphCenter(in: view, glyphIndex: 0)))
-        XCTAssertTrue(hasStrikethrough(in: view, at: 2))
+        XCTAssertEqual(strikethroughStyle(in: view, at: 2), NSUnderlineStyle.thick.rawValue)
+        XCTAssertEqual(foregroundColor(in: view, at: 0), NSColor.tertiaryLabelColor)
     }
 
-    func testLegacyCheckedGlyphConvertsToStrike() throws {
+    func testLegacySquareConvertsToCircle() throws {
+        let view = try makeChecklistView(reading: false, text: "☐ 你好")
+        view.refreshChecklistMarks()
+        XCTAssertTrue(view.string.hasPrefix("○"))
+        XCTAssertTrue(view.toggleChecklist(atViewPoint: glyphCenter(in: view, glyphIndex: 0)))
+        XCTAssertTrue(view.string.hasPrefix("○"))
+        XCTAssertEqual(strikethroughStyle(in: view, at: 2), NSUnderlineStyle.thick.rawValue)
+        XCTAssertEqual(foregroundColor(in: view, at: 0), NSColor.tertiaryLabelColor)
+    }
+
+    func testRefreshUpgradesExistingStrikeAndGraysTheCircle() throws {
+        let view = try makeChecklistView(reading: false, text: "☐ 你好")
+        view.textStorage?.addAttributes(
+            [
+                .strikethroughStyle: NSUnderlineStyle.single.rawValue,
+                .strikethroughColor: NSColor.quaternaryLabelColor
+            ],
+            range: NSRange(location: 2, length: 2)
+        )
+        view.refreshChecklistMarks()
+        XCTAssertTrue(view.string.hasPrefix("○"))
+        XCTAssertEqual(strikethroughStyle(in: view, at: 2), NSUnderlineStyle.thick.rawValue)
+        XCTAssertEqual(foregroundColor(in: view, at: 0), NSColor.tertiaryLabelColor)
+    }
+
+    func testLegacyCheckedGlyphConvertsToCircleAndStrike() throws {
         let view = try makeChecklistView(reading: false, text: "☑ 你好")
         view.refreshChecklistMarks()
-        XCTAssertTrue(view.string.hasPrefix("☐"))
-        XCTAssertTrue(hasStrikethrough(in: view, at: 2))
+        XCTAssertTrue(view.string.hasPrefix("○"))
+        XCTAssertEqual(strikethroughStyle(in: view, at: 2), NSUnderlineStyle.thick.rawValue)
+        XCTAssertEqual(foregroundColor(in: view, at: 0), NSColor.tertiaryLabelColor)
     }
 
     func testClickingTheLabelDoesNotToggle() throws {
-        let view = try makeChecklistView(reading: false, text: "☐ 你好")
+        let view = try makeChecklistView(reading: false, text: "○ 你好")
         XCTAssertFalse(view.toggleChecklist(atViewPoint: glyphCenter(in: view, glyphIndex: 2)))
-        XCTAssertTrue(view.string.hasPrefix("☐"))
-        XCTAssertFalse(hasStrikethrough(in: view, at: 2))
+        XCTAssertTrue(view.string.hasPrefix("○"))
+        XCTAssertNil(strikethroughStyle(in: view, at: 2))
     }
 
     func testInsertedChecklistMarkIsLargerThanBody() {
@@ -102,7 +136,8 @@ final class TextChecklistClickTests: XCTestCase {
         let font = view.textStorage?.attribute(.font, at: 0, effectiveRange: nil) as? NSFont
         XCTAssertEqual(font?.pointSize, TextChecklistToggle.markSize)
         XCTAssertGreaterThan(TextChecklistToggle.markSize, GlanceConstants.textBodyFont.pointSize)
-        XCTAssertTrue(view.string.hasPrefix("☐"))
+        XCTAssertTrue(view.string.hasPrefix("○"))
+        XCTAssertEqual(foregroundColor(in: view, at: 0), GlanceConstants.textBodyColor)
     }
 
     private func makeChecklistView(reading: Bool, text: String) throws -> GlanceTextView {
@@ -136,12 +171,16 @@ final class TextChecklistClickTests: XCTestCase {
         return NSPoint(x: origin.x + bounds.midX, y: origin.y + bounds.midY)
     }
 
-    private func hasStrikethrough(in view: GlanceTextView, at index: Int) -> Bool {
-        guard let storage = view.textStorage, index < storage.length else { return false }
+    private func strikethroughStyle(in view: GlanceTextView, at index: Int) -> Int? {
+        guard let storage = view.textStorage, index < storage.length else { return nil }
         let value = storage.attribute(.strikethroughStyle, at: index, effectiveRange: nil)
-        if let number = value as? NSNumber { return number.intValue != 0 }
-        if let style = value as? Int { return style != 0 }
-        return false
+        if let number = value as? NSNumber { return number.intValue != 0 ? number.intValue : nil }
+        if let style = value as? Int { return style != 0 ? style : nil }
+        return nil
+    }
+
+    private func foregroundColor(in view: GlanceTextView, at index: Int) -> NSColor? {
+        view.textStorage?.attribute(.foregroundColor, at: index, effectiveRange: nil) as? NSColor
     }
 }
 
