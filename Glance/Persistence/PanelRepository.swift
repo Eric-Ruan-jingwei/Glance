@@ -207,6 +207,36 @@ final class PanelRepository {
         }
     }
 
+    func setTags(id: UUID, tags: [String]) throws {
+        try assertMetadataWritable()
+        guard let panel = records[id] else {
+            throw PanelTagError.panelNotFound
+        }
+        let normalized = try PanelTags.validated(tags)
+        guard panel.tags != normalized else { return }
+        let previousTags = panel.tags
+        let previousUpdatedAt = panel.updatedAt
+        panel.tags = normalized
+        touch(panel)
+        do {
+            try save()
+        } catch {
+            panel.tags = previousTags
+            panel.updatedAt = previousUpdatedAt
+            throw error
+        }
+    }
+
+    func allTagNames() -> [String] {
+        let ordered = records.values.sorted { lhs, rhs in
+            if lhs.createdAt != rhs.createdAt {
+                return lhs.createdAt < rhs.createdAt
+            }
+            return lhs.id.uuidString < rhs.id.uuidString
+        }
+        return PanelTags.catalog(ordered.flatMap(\.tags))
+    }
+
     func save() throws {
         if case .unsupportedFutureSchema(let version) = lastLoadOutcome {
             NSLog(
