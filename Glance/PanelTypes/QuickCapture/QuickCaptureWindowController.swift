@@ -5,7 +5,6 @@ final class QuickCaptureWindowController: NSWindowController, NSTextViewDelegate
     var onSubmit: (QuickCaptureRequest, NSScreen?) -> Bool = { _, _ in false }
 
     private let textView: QuickCaptureTextView
-    private let placeholder = NSTextField(labelWithString: "记录点什么…")
     private let modeControl = NSSegmentedControl()
     private let errorLabel = NSTextField(labelWithString: "无法创建面板")
     private var kind: QuickCaptureKind = .text
@@ -111,7 +110,7 @@ final class QuickCaptureWindowController: NSWindowController, NSTextViewDelegate
     }
 
     private func refreshPlaceholder() {
-        placeholder.isHidden = !textView.string.isEmpty
+        textView.needsDisplay = true
     }
 
     private func positionOnWorkingScreen() {
@@ -204,7 +203,10 @@ final class QuickCaptureWindowController: NSWindowController, NSTextViewDelegate
         textView.font = GlanceTheme.Typography.body
         textView.textColor = .labelColor
         textView.insertionPointColor = .labelColor
-        textView.textContainerInset = NSSize(width: 2, height: GlanceTheme.Space.xs)
+        textView.textContainer?.lineFragmentPadding = 0
+        textView.textContainerInset = NSSize(width: 0, height: GlanceTheme.Space.xxs)
+        textView.placeholderString = GlanceEmptyCopy.quickCapturePlaceholder
+        textView.setAccessibilityPlaceholderValue(GlanceEmptyCopy.quickCapturePlaceholder)
         textView.isAutomaticQuoteSubstitutionEnabled = false
         textView.isAutomaticDashSubstitutionEnabled = false
         textView.isAutomaticTextReplacementEnabled = false
@@ -216,12 +218,11 @@ final class QuickCaptureWindowController: NSWindowController, NSTextViewDelegate
         scroll.hasVerticalScroller = true
         scroll.hasHorizontalScroller = false
         scroll.autohidesScrollers = true
+        scroll.automaticallyAdjustsContentInsets = false
+        scroll.contentInsets = NSEdgeInsets()
+        scroll.contentView.drawsBackground = false
         scroll.documentView = textView
         scroll.translatesAutoresizingMaskIntoConstraints = false
-
-        placeholder.textColor = .tertiaryLabelColor
-        placeholder.font = GlanceTheme.Typography.body
-        placeholder.translatesAutoresizingMaskIntoConstraints = false
 
         modeControl.segmentCount = 2
         modeControl.setLabel("文字", forSegment: 0)
@@ -238,7 +239,6 @@ final class QuickCaptureWindowController: NSWindowController, NSTextViewDelegate
         errorLabel.translatesAutoresizingMaskIntoConstraints = false
 
         effect.addSubview(scroll)
-        effect.addSubview(placeholder)
         effect.addSubview(modeControl)
         effect.addSubview(errorLabel)
         window.contentView = border
@@ -253,9 +253,6 @@ final class QuickCaptureWindowController: NSWindowController, NSTextViewDelegate
             scroll.trailingAnchor.constraint(equalTo: effect.trailingAnchor, constant: -GlanceTheme.Space.lg),
             scroll.topAnchor.constraint(equalTo: effect.topAnchor, constant: GlanceTheme.Space.md),
             scroll.heightAnchor.constraint(equalToConstant: 88),
-
-            placeholder.leadingAnchor.constraint(equalTo: scroll.leadingAnchor, constant: GlanceTheme.Space.sm),
-            placeholder.topAnchor.constraint(equalTo: scroll.topAnchor, constant: GlanceTheme.Space.sm),
 
             modeControl.leadingAnchor.constraint(equalTo: effect.leadingAnchor, constant: GlanceTheme.Space.lg),
             modeControl.topAnchor.constraint(equalTo: scroll.bottomAnchor, constant: GlanceTheme.Space.md),
@@ -325,6 +322,23 @@ final class QuickCapturePanel: NSPanel {
     }
 }
 
+enum QuickCapturePlaceholderLayout {
+    static func shouldDraw(text: String, isComposing: Bool) -> Bool {
+        text.isEmpty && !isComposing
+    }
+
+    static func origin(
+        containerOrigin: NSPoint,
+        extraLineFragment: NSRect,
+        lineFragmentPadding: CGFloat
+    ) -> NSPoint {
+        NSPoint(
+            x: containerOrigin.x + extraLineFragment.minX + lineFragmentPadding,
+            y: containerOrigin.y + extraLineFragment.minY
+        )
+    }
+}
+
 enum QuickCaptureReturn {
     case confirmComposition
     case insertNewline
@@ -350,7 +364,59 @@ enum QuickCaptureReturn {
 final class QuickCaptureTextView: NSTextView {
     var onSubmit: () -> Void = {}
     var allowsNewline: () -> Bool = { true }
+    var placeholderString = GlanceEmptyCopy.quickCapturePlaceholder
     private var isHandlingReturn = false
+
+    var placeholderOrigin: NSPoint {
+        if let textContainer {
+            layoutManager?.ensureLayout(for: textContainer)
+        }
+        return QuickCapturePlaceholderLayout.origin(
+            containerOrigin: textContainerOrigin,
+            extraLineFragment: layoutManager?.extraLineFragmentRect ?? .zero,
+            lineFragmentPadding: textContainer?.lineFragmentPadding ?? 0
+        )
+    }
+
+    override func draw(_ dirtyRect: NSRect) {
+        drawPlaceholderIfNeeded()
+        super.draw(dirtyRect)
+    }
+
+    override func didChangeText() {
+        super.didChangeText()
+        needsDisplay = true
+    }
+
+    override func setFrameSize(_ newSize: NSSize) {
+        super.setFrameSize(newSize)
+        needsDisplay = true
+    }
+
+    private func drawPlaceholderIfNeeded() {
+        guard QuickCapturePlaceholderLayout.shouldDraw(text: string, isComposing: hasMarkedText()) else {
+            return
+        }
+        if let textContainer {
+            layoutManager?.ensureLayout(for: textContainer)
+        }
+        let fragmentHeight = layoutManager?.extraLineFragmentRect.height ?? 0
+        let height = fragmentHeight > 0
+            ? fragmentHeight
+            : ceil((font ?? GlanceTheme.Typography.body).boundingRectForFont.height)
+        let origin = placeholderOrigin
+        let drawingRect = NSRect(
+            x: origin.x,
+            y: origin.y,
+            width: max(0, bounds.width - origin.x),
+            height: height
+        )
+        let attributes: [NSAttributedString.Key: Any] = [
+            .font: font ?? GlanceTheme.Typography.body,
+            .foregroundColor: NSColor.tertiaryLabelColor
+        ]
+        (placeholderString as NSString).draw(in: drawingRect, withAttributes: attributes)
+    }
 
     func handleReturn(_ event: NSEvent) {
         switch QuickCaptureReturn.action(

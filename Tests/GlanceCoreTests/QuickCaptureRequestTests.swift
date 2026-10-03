@@ -125,3 +125,35 @@ final class QuickCaptureReturnTests: XCTestCase {
         XCTAssertTrue(submitted)
     }
 }
+
+final class QuickCapturePlaceholderTests: XCTestCase {
+    func testPlaceholderDrawsOnlyWhenEmptyAndIdle() {
+        XCTAssertTrue(QuickCapturePlaceholderLayout.shouldDraw(text: "", isComposing: false))
+        XCTAssertFalse(QuickCapturePlaceholderLayout.shouldDraw(text: "", isComposing: true))
+        XCTAssertFalse(QuickCapturePlaceholderLayout.shouldDraw(text: "hello", isComposing: false))
+    }
+
+    func testPlaceholderOriginFollowsTextContainerAndLinePadding() {
+        let origin = QuickCapturePlaceholderLayout.origin(
+            containerOrigin: NSPoint(x: 2, y: 4),
+            extraLineFragment: NSRect(x: 0, y: 1, width: 100, height: 16),
+            lineFragmentPadding: 5
+        )
+        XCTAssertEqual(origin, NSPoint(x: 7, y: 5))
+    }
+
+    @MainActor
+    func testTextViewPlaceholderOriginMatchesInsertionLine() {
+        let view = QuickCaptureTextView(usingTextLayoutManager: false)
+        view.font = GlanceTheme.Typography.body
+        view.textContainer?.lineFragmentPadding = 0
+        view.textContainerInset = NSSize(width: 0, height: GlanceTheme.Space.xxs)
+        view.frame = NSRect(x: 0, y: 0, width: 400, height: 88)
+        view.textContainer?.containerSize = NSSize(width: 400, height: CGFloat.greatestFiniteMagnitude)
+        view.string = ""
+        let origin = view.placeholderOrigin
+        XCTAssertEqual(origin.x, view.textContainerOrigin.x, accuracy: 0.5)
+        XCTAssertEqual(origin.y, view.textContainerOrigin.y, accuracy: 0.5)
+        XCTAssertGreaterThanOrEqual(origin.y, 0)
+    }
+}

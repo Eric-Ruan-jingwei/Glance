@@ -16,6 +16,7 @@ enum GlanceEmptyCopy {
     static let pdfEmptyDetail = "从菜单栏导入一份文档。"
     static let pdfUnreadableTitle = "无法显示这份 PDF"
     static let pdfUnreadableDetail = "原文件还在数据目录里。"
+    static let quickCapturePlaceholder = "记录点什么…"
     static let textPlaceholder = "双击编辑"
     static let markdownPlaceholder = "双击编辑 Markdown"
     static let todoPlaceholder = "添加你的第一项待办"

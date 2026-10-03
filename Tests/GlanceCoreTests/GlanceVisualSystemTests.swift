@@ -136,6 +136,7 @@ final class GlanceVisualSystemTests: XCTestCase {
         XCTAssertEqual(GlanceEmptyCopy.workspaceTitle, "这个工作区还是空的")
         XCTAssertEqual(GlanceEmptyCopy.searchTitle, "没有找到面板")
         XCTAssertEqual(GlanceEmptyCopy.filterTitle, "没有符合筛选的面板")
+        XCTAssertEqual(GlanceEmptyCopy.quickCapturePlaceholder, "记录点什么…")
         XCTAssertEqual(PanelSummaryFallback.pdfUnreadable, "无法读取 PDF")
     }
 
