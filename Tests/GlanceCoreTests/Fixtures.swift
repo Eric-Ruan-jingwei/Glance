@@ -295,8 +295,10 @@ struct ForcedMetadataWriteError: Error {}
 
 final class ControllableMetadataWriter {
     var shouldFail = false
+    var writeCount = 0
 
     func write(_ data: Data, to url: URL) throws {
+        writeCount += 1
         if shouldFail {
             throw ForcedMetadataWriteError()
         }

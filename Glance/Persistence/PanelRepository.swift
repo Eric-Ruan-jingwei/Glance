@@ -166,25 +166,97 @@ final class PanelRepository {
     }
 
     func movePanel(id: UUID, toWorkspaceID: String) throws {
-        try assertMetadataWritable()
-        guard let panel = records[id] else {
-            throw WorkspaceError.panelNotFound
+        try movePanels(ids: [id], toWorkspaceID: toWorkspaceID)
+    }
+
+    @discardableResult
+    func setHidden(ids: Set<UUID>, hidden: Bool) throws -> Set<UUID> {
+        let panels = try resolvedPanels(ids: ids)
+        guard !panels.isEmpty else { return [] }
+        let snapshots = panels.map(PanelMutationSnapshot.init)
+        let now = Date()
+        var changed: Set<UUID> = []
+        for panel in panels {
+            guard panel.isHidden != hidden else { continue }
+            panel.isHidden = hidden
+            panel.updatedAt = now
+            changed.insert(panel.id)
         }
+        return try commitPanelMutations(snapshots: snapshots, changedIDs: changed)
+    }
+
+    @discardableResult
+    func movePanels(ids: Set<UUID>, toWorkspaceID: String) throws -> Set<UUID> {
+        let panels = try resolvedPanels(ids: ids)
+        guard !panels.isEmpty else { return [] }
         guard workspaces[toWorkspaceID] != nil else {
             throw WorkspaceError.workspaceNotFound
         }
-        guard panel.workspaceID != toWorkspaceID else { return }
-        let previousWorkspaceID = panel.workspaceID
-        let previousUpdatedAt = panel.updatedAt
-        panel.workspaceID = toWorkspaceID
-        touch(panel)
-        do {
-            try save()
-        } catch {
-            panel.workspaceID = previousWorkspaceID
-            panel.updatedAt = previousUpdatedAt
-            throw error
+        let snapshots = panels.map(PanelMutationSnapshot.init)
+        let now = Date()
+        var changed: Set<UUID> = []
+        for panel in panels {
+            guard panel.workspaceID != toWorkspaceID else { continue }
+            panel.workspaceID = toWorkspaceID
+            panel.updatedAt = now
+            changed.insert(panel.id)
         }
+        return try commitPanelMutations(snapshots: snapshots, changedIDs: changed)
+    }
+
+    @discardableResult
+    func addTags(ids: Set<UUID>, tags: [String]) throws -> Set<UUID> {
+        let panels = try resolvedPanels(ids: ids)
+        guard !panels.isEmpty else { return [] }
+        let incoming = PanelTags.normalized(tags)
+        guard !incoming.isEmpty else { return [] }
+        do {
+            _ = try PanelTags.validated(incoming)
+        } catch PanelTagError.tooManyTags {
+            throw PanelBatchError.tooManyTags
+        }
+        var nextByID: [UUID: [String]] = [:]
+        for panel in panels {
+            let next: [String]
+            do {
+                next = try PanelTags.validated(panel.tags + incoming)
+            } catch PanelTagError.tooManyTags {
+                throw PanelBatchError.tooManyTags
+            }
+            nextByID[panel.id] = next
+        }
+        let snapshots = panels.map(PanelMutationSnapshot.init)
+        let now = Date()
+        var changed: Set<UUID> = []
+        for panel in panels {
+            let next = nextByID[panel.id] ?? panel.tags
+            guard panel.tags != next else { continue }
+            panel.tags = next
+            panel.updatedAt = now
+            changed.insert(panel.id)
+        }
+        return try commitPanelMutations(snapshots: snapshots, changedIDs: changed)
+    }
+
+    @discardableResult
+    func removeTags(ids: Set<UUID>, tags: [String]) throws -> Set<UUID> {
+        let panels = try resolvedPanels(ids: ids)
+        guard !panels.isEmpty else { return [] }
+        let removing = PanelTags.normalized(tags)
+        guard !removing.isEmpty else { return [] }
+        let snapshots = panels.map(PanelMutationSnapshot.init)
+        let now = Date()
+        var changed: Set<UUID> = []
+        for panel in panels {
+            let next = panel.tags.filter { tag in
+                !removing.contains(where: { PanelTag.isEqual($0, tag) })
+            }
+            guard panel.tags != next else { continue }
+            panel.tags = next
+            panel.updatedAt = now
+            changed.insert(panel.id)
+        }
+        return try commitPanelMutations(snapshots: snapshots, changedIDs: changed)
     }
 
     func setCustomTitle(id: UUID, title: String?) throws {
@@ -362,6 +434,32 @@ final class PanelRepository {
         }
     }
 
+    private func resolvedPanels(ids: Set<UUID>) throws -> [PanelRecord] {
+        guard !ids.isEmpty else { return [] }
+        try assertMetadataWritable()
+        return try ids.map { id in
+            guard let panel = records[id] else {
+                throw PanelBatchError.panelNotFound
+            }
+            return panel
+        }
+    }
+
+    @discardableResult
+    private func commitPanelMutations(
+        snapshots: [PanelMutationSnapshot],
+        changedIDs: Set<UUID>
+    ) throws -> Set<UUID> {
+        guard !changedIDs.isEmpty else { return [] }
+        do {
+            try save()
+            return changedIDs
+        } catch {
+            snapshots.forEach { $0.restore() }
+            throw error
+        }
+    }
+
     private func ensureDefaultWorkspace(at date: Date = Date()) {
         if workspaces[WorkspaceRecord.defaultID] == nil {
             workspaces[WorkspaceRecord.defaultID] = WorkspaceRecord.makeDefault(at: date)
@@ -403,4 +501,30 @@ private struct PanelMembershipSnapshot {
     let panel: PanelRecord
     let workspaceID: String
     let updatedAt: Date
+}
+
+private struct PanelMutationSnapshot {
+    let panel: PanelRecord
+    let isHidden: Bool
+    let workspaceID: String
+    let tags: [String]
+    let customTitle: String?
+    let updatedAt: Date
+
+    init(_ panel: PanelRecord) {
+        self.panel = panel
+        self.isHidden = panel.isHidden
+        self.workspaceID = panel.workspaceID
+        self.tags = panel.tags
+        self.customTitle = panel.customTitle
+        self.updatedAt = panel.updatedAt
+    }
+
+    func restore() {
+        panel.isHidden = isHidden
+        panel.workspaceID = workspaceID
+        panel.tags = tags
+        panel.customTitle = customTitle
+        panel.updatedAt = updatedAt
+    }
 }
