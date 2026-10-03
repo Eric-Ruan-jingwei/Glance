@@ -243,6 +243,7 @@ struct PanelTagChip: View {
     var onRemove: (() -> Void)? = nil
     var onAdd: (() -> Void)? = nil
     @State private var isHovered = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var accessibilityKind: PanelTagChipAccessibility {
         .kind(onRemove: onRemove != nil, onAdd: onAdd != nil)
@@ -293,6 +294,10 @@ struct PanelTagChip: View {
         }
         .glanceChipStyle()
         .onHover { isHovered = $0 }
+        .animation(
+            reduceMotion ? nil : .easeInOut(duration: GlanceMotion.duration),
+            value: isHovered
+        )
     }
 }
 

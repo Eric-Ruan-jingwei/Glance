@@ -2,6 +2,7 @@ import SwiftUI
 
 struct PanelLibraryView: View {
     @ObservedObject var model: PanelLibraryModel
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         NavigationSplitView {
@@ -118,6 +119,10 @@ struct PanelLibraryView: View {
                                 batchToolbar
                             }
                         }
+                        .animation(
+                            reduceMotion ? nil : .easeInOut(duration: GlanceMotion.duration),
+                            value: model.showsBatchToolbar
+                        )
                     }
                 }
                 .navigationTitle("Glance")
@@ -243,6 +248,7 @@ private struct PanelLibraryRow: View {
     let onMove: (String) -> Void
 
     @State private var isHovered = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         HStack(alignment: .center, spacing: GlanceTheme.Space.md) {
@@ -296,9 +302,10 @@ private struct PanelLibraryRow: View {
                             .accessibilityLabel("已锁定")
                     }
                     if summary.isPassThrough {
-                        Text("穿透")
+                        Image(systemName: "hand.tap")
                             .font(.caption2)
                             .foregroundStyle(.tertiary)
+                            .accessibilityLabel("点击穿透")
                     }
                     if summary.isPinned {
                         Image(systemName: "star.fill")
@@ -319,8 +326,10 @@ private struct PanelLibraryRow: View {
                                 .foregroundStyle(.tertiary)
                         }
                     }
+                    .lineLimit(1)
                 }
             }
+            .layoutPriority(0)
 
             Spacer(minLength: GlanceTheme.Space.sm)
 
@@ -362,9 +371,15 @@ private struct PanelLibraryRow: View {
                 .opacity(showsSecondaryActions ? 1 : 0)
                 .allowsHitTesting(showsSecondaryActions)
             }
+            .layoutPriority(1)
+            .fixedSize(horizontal: true, vertical: false)
         }
         .padding(.vertical, GlanceTheme.Space.xxs)
         .onHover { isHovered = $0 }
+        .animation(
+            reduceMotion ? nil : .easeInOut(duration: GlanceMotion.duration),
+            value: showsSecondaryActions
+        )
     }
 
     private var showsSecondaryActions: Bool {

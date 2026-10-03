@@ -285,12 +285,15 @@ final class PanelChromeView: NSView {
             : GlanceTheme.Fill.chromeForegroundQuiet
         lockBadge.isHidden = false
         lockBadge.alphaValue = showsLockBadge ? 1 : 0
+        lockBadge.setAccessibilityElement(showsLockBadge)
         pinButton.isHidden = false
         moreButton.isHidden = false
-        pinButton.alphaValue = (chromeActive || isPinned) ? 1 : 0
-        moreButton.alphaValue = chromeActive ? 1 : 0
+        GlanceMotion.setAlpha(pinButton, (chromeActive || isPinned) ? 1 : 0)
+        GlanceMotion.setAlpha(moreButton, chromeActive ? 1 : 0)
         pinButton.isEnabled = chromeActive || isPinned
         moreButton.isEnabled = chromeActive
+        pinButton.setAccessibilityElement(chromeActive || isPinned)
+        moreButton.setAccessibilityElement(chromeActive)
         pinButton.image = GlanceTheme.chromeSymbol(
             isPinned ? "star.fill" : "star",
             accessibilityDescription: isPinned ? "取消置顶" : "置顶"

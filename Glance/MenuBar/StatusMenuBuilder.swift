@@ -56,12 +56,13 @@ enum StatusMenuBuilder {
         ))
         menu.addItem(.separator())
         menu.addItem(actionItem("管理面板…", onManagePanels, symbol: "square.stack"))
-        menu.addItem(NSMenuItem.sectionHeader(title: "新建"))
-        menu.addItem(actionItem("新建文字面板", onNewText, symbol: PanelKindSymbol.name(for: PanelKind.text)))
-        menu.addItem(actionItem("新建 Markdown 面板", onNewMarkdown, symbol: PanelKindSymbol.name(for: PanelKind.markdown)))
-        menu.addItem(actionItem("新建待办面板", onNewTodo, symbol: PanelKindSymbol.name(for: PanelKind.todo)))
-        menu.addItem(actionItem("新建图片面板", onNewImage, symbol: PanelKindSymbol.name(for: PanelKind.image)))
-        menu.addItem(actionItem("新建 PDF 面板…", onNewPDF, symbol: PanelKindSymbol.name(for: PanelKind.pdf)))
+        menu.addItem(newPanelMenu(
+            onNewText: onNewText,
+            onNewMarkdown: onNewMarkdown,
+            onNewTodo: onNewTodo,
+            onNewImage: onNewImage,
+            onNewPDF: onNewPDF
+        ))
         menu.addItem(NSMenuItem.sectionHeader(title: "状态"))
         menu.addItem(
             actionItem(
@@ -101,6 +102,25 @@ enum StatusMenuBuilder {
             submenu.addItem(.separator())
         }
         submenu.addItem(actionItem("新建工作区…", onCreate, symbol: "plus"))
+        item.submenu = submenu
+        return item
+    }
+
+    static func newPanelMenu(
+        onNewText: @escaping () -> Void,
+        onNewMarkdown: @escaping () -> Void,
+        onNewTodo: @escaping () -> Void,
+        onNewImage: @escaping () -> Void,
+        onNewPDF: @escaping () -> Void
+    ) -> NSMenuItem {
+        let item = NSMenuItem(title: "新建面板", action: nil, keyEquivalent: "")
+        item.image = GlanceTheme.menuSymbol("plus")
+        let submenu = NSMenu()
+        submenu.addItem(actionItem("文字", onNewText, symbol: PanelKindSymbol.name(for: PanelKind.text)))
+        submenu.addItem(actionItem("Markdown", onNewMarkdown, symbol: PanelKindSymbol.name(for: PanelKind.markdown)))
+        submenu.addItem(actionItem("待办", onNewTodo, symbol: PanelKindSymbol.name(for: PanelKind.todo)))
+        submenu.addItem(actionItem("图片", onNewImage, symbol: PanelKindSymbol.name(for: PanelKind.image)))
+        submenu.addItem(actionItem("PDF…", onNewPDF, symbol: PanelKindSymbol.name(for: PanelKind.pdf)))
         item.submenu = submenu
         return item
     }

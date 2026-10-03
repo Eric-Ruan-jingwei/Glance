@@ -192,10 +192,10 @@ final class QuickCaptureWindowController: NSWindowController, NSTextViewDelegate
         textView.isRichText = false
         textView.allowsUndo = true
         textView.drawsBackground = false
-        textView.font = NSFont.systemFont(ofSize: 15)
+        textView.font = GlanceTheme.Typography.body
         textView.textColor = .labelColor
         textView.insertionPointColor = .labelColor
-        textView.textContainerInset = NSSize(width: 2, height: 6)
+        textView.textContainerInset = NSSize(width: 2, height: GlanceTheme.Space.xs)
         textView.isAutomaticQuoteSubstitutionEnabled = false
         textView.isAutomaticDashSubstitutionEnabled = false
         textView.isAutomaticTextReplacementEnabled = false
@@ -211,7 +211,7 @@ final class QuickCaptureWindowController: NSWindowController, NSTextViewDelegate
         scroll.translatesAutoresizingMaskIntoConstraints = false
 
         placeholder.textColor = .tertiaryLabelColor
-        placeholder.font = NSFont.systemFont(ofSize: 15)
+        placeholder.font = GlanceTheme.Typography.body
         placeholder.translatesAutoresizingMaskIntoConstraints = false
 
         modeControl.segmentCount = 2
@@ -223,8 +223,8 @@ final class QuickCaptureWindowController: NSWindowController, NSTextViewDelegate
         modeControl.action = #selector(modeChanged)
         modeControl.translatesAutoresizingMaskIntoConstraints = false
 
-        errorLabel.textColor = .systemRed
-        errorLabel.font = NSFont.systemFont(ofSize: 11)
+        errorLabel.textColor = .secondaryLabelColor
+        errorLabel.font = GlanceTheme.Typography.tertiary
         errorLabel.isHidden = true
         errorLabel.translatesAutoresizingMaskIntoConstraints = false
 
@@ -240,21 +240,21 @@ final class QuickCaptureWindowController: NSWindowController, NSTextViewDelegate
             effect.topAnchor.constraint(equalTo: border.topAnchor),
             effect.bottomAnchor.constraint(equalTo: border.bottomAnchor),
 
-            scroll.leadingAnchor.constraint(equalTo: effect.leadingAnchor, constant: 16),
-            scroll.trailingAnchor.constraint(equalTo: effect.trailingAnchor, constant: -16),
-            scroll.topAnchor.constraint(equalTo: effect.topAnchor, constant: 14),
+            scroll.leadingAnchor.constraint(equalTo: effect.leadingAnchor, constant: GlanceTheme.Space.lg),
+            scroll.trailingAnchor.constraint(equalTo: effect.trailingAnchor, constant: -GlanceTheme.Space.lg),
+            scroll.topAnchor.constraint(equalTo: effect.topAnchor, constant: GlanceTheme.Space.md),
             scroll.heightAnchor.constraint(equalToConstant: 88),
 
-            placeholder.leadingAnchor.constraint(equalTo: scroll.leadingAnchor, constant: 6),
-            placeholder.topAnchor.constraint(equalTo: scroll.topAnchor, constant: 8),
+            placeholder.leadingAnchor.constraint(equalTo: scroll.leadingAnchor, constant: GlanceTheme.Space.sm),
+            placeholder.topAnchor.constraint(equalTo: scroll.topAnchor, constant: GlanceTheme.Space.sm),
 
-            modeControl.leadingAnchor.constraint(equalTo: effect.leadingAnchor, constant: 16),
-            modeControl.topAnchor.constraint(equalTo: scroll.bottomAnchor, constant: 12),
-            modeControl.bottomAnchor.constraint(equalTo: effect.bottomAnchor, constant: -14),
+            modeControl.leadingAnchor.constraint(equalTo: effect.leadingAnchor, constant: GlanceTheme.Space.lg),
+            modeControl.topAnchor.constraint(equalTo: scroll.bottomAnchor, constant: GlanceTheme.Space.md),
+            modeControl.bottomAnchor.constraint(equalTo: effect.bottomAnchor, constant: -GlanceTheme.Space.md),
 
-            errorLabel.leadingAnchor.constraint(equalTo: modeControl.trailingAnchor, constant: 12),
+            errorLabel.leadingAnchor.constraint(equalTo: modeControl.trailingAnchor, constant: GlanceTheme.Space.md),
             errorLabel.centerYAnchor.constraint(equalTo: modeControl.centerYAnchor),
-            errorLabel.trailingAnchor.constraint(lessThanOrEqualTo: effect.trailingAnchor, constant: -16)
+            errorLabel.trailingAnchor.constraint(lessThanOrEqualTo: effect.trailingAnchor, constant: -GlanceTheme.Space.lg)
         ])
     }
 

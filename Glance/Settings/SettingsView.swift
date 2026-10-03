@@ -11,13 +11,14 @@ struct SettingsView: View {
     @State private var recording: ShortcutAction?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 18) {
-            HStack(spacing: 14) {
+        VStack(alignment: .leading, spacing: GlanceTheme.Space.lg) {
+            HStack(spacing: GlanceTheme.Space.md) {
                 Image(systemName: "pin.fill")
-                    .font(.system(size: 28, weight: .semibold))
-                    .foregroundStyle(.primary)
+                    .font(.system(size: 22, weight: .semibold))
+                    .foregroundStyle(.secondary)
+                    .frame(width: 28, height: 28)
                     .accessibilityHidden(true)
-                VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: GlanceTheme.Space.xxs) {
                     Text("Glance")
                         .font(.title2.weight(.semibold))
                     Text(GlanceConstants.slogan)
@@ -27,21 +28,25 @@ struct SettingsView: View {
             }
 
             GroupBox("通用") {
-                Toggle("开机自动启动 Glance", isOn: launchBinding)
-                    .toggleStyle(.switch)
-                if let launchError {
-                    Text(launchError)
-                        .font(.caption)
-                        .foregroundStyle(.red)
+                VStack(alignment: .leading, spacing: GlanceTheme.Space.sm) {
+                    Toggle("开机自动启动 Glance", isOn: launchBinding)
+                        .toggleStyle(.switch)
+                    if let launchError {
+                        Text(launchError)
+                            .font(.caption)
+                            .foregroundStyle(.red)
+                    }
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.vertical, GlanceTheme.Space.xs)
             }
 
             GroupBox("快捷键") {
-                VStack(alignment: .leading, spacing: 10) {
+                VStack(alignment: .leading, spacing: GlanceTheme.Space.sm) {
                     ForEach(ShortcutAction.allCases, id: \.self) { action in
                         HStack {
                             Text(action.title)
-                            Spacer()
+                            Spacer(minLength: GlanceTheme.Space.sm)
                             ShortcutRecorderView(
                                 shortcut: shortcuts.shortcut(for: action),
                                 isRecording: recording == action,
@@ -63,10 +68,11 @@ struct SettingsView: View {
                         shortcuts.resetAll()
                     }
                 }
+                .padding(.vertical, GlanceTheme.Space.xs)
             }
 
             GroupBox("数据") {
-                VStack(alignment: .leading, spacing: 8) {
+                VStack(alignment: .leading, spacing: GlanceTheme.Space.sm) {
                     Text("本地数据位置")
                     Text(displayPath(dataFolderURL))
                         .font(.caption)
@@ -75,13 +81,14 @@ struct SettingsView: View {
                     Button("打开数据文件夹", action: onRevealData)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.vertical, GlanceTheme.Space.xs)
             }
 
             Text(versionText)
                 .font(.caption)
                 .foregroundStyle(.tertiary)
         }
-        .padding(24)
+        .padding(GlanceTheme.Space.xl)
         .frame(width: 440)
     }
 
