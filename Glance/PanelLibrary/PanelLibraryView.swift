@@ -58,11 +58,30 @@ struct PanelLibraryView: View {
         } detail: {
             NavigationStack {
                 Group {
-                    if model.isCompletelyEmpty {
-                        emptyState("这个工作区还没有面板")
-                    } else if model.hasNoMatches {
-                        emptyState("没有匹配的面板")
-                    } else {
+                    switch model.emptyKind {
+                    case .loading:
+                        ProgressView(GlanceEmptyCopy.loadingTitle)
+                            .controlSize(.small)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    case .emptyWorkspace:
+                        GlanceEmptyState(
+                            symbol: "square.stack",
+                            title: GlanceEmptyCopy.workspaceTitle,
+                            detail: GlanceEmptyCopy.workspaceDetail
+                        )
+                    case .noSearchResults:
+                        GlanceEmptyState(
+                            symbol: "magnifyingglass",
+                            title: GlanceEmptyCopy.searchTitle,
+                            detail: GlanceEmptyCopy.searchDetail
+                        )
+                    case .noFilterMatches:
+                        GlanceEmptyState(
+                            symbol: "line.3.horizontal.decrease",
+                            title: GlanceEmptyCopy.filterTitle,
+                            detail: GlanceEmptyCopy.filterDetail
+                        )
+                    case .none:
                         List(selection: $model.selectedPanelIDs) {
                             ForEach(model.visible) { summary in
                                 PanelLibraryRow(
@@ -95,6 +114,12 @@ struct PanelLibraryView: View {
                         }
                         .listStyle(.inset)
                     }
+                }
+                .overlay(alignment: .top) {
+                    batchToolbar
+                        .opacity(model.selectedPanelIDs.isEmpty ? 0 : 1)
+                        .allowsHitTesting(!model.selectedPanelIDs.isEmpty)
+                        .accessibilityHidden(model.selectedPanelIDs.isEmpty)
                 }
                 .navigationTitle("Glance")
                 .searchable(text: $model.query, placement: .toolbar, prompt: "搜索面板")
@@ -135,11 +160,6 @@ struct PanelLibraryView: View {
                         }
                     }
                 }
-                .safeAreaInset(edge: .top) {
-                    if !model.selectedPanelIDs.isEmpty {
-                        batchToolbar
-                    }
-                }
             }
         }
         .frame(minWidth: 720, minHeight: 420)
@@ -164,13 +184,17 @@ struct PanelLibraryView: View {
     private var batchToolbar: some View {
         HStack(spacing: GlanceTheme.Space.sm) {
             Text("已选择 \(model.selectedPanelIDs.count) 个")
-                .font(.callout.weight(.medium))
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .monospacedDigit()
                 .accessibilityLabel("已选择 \(model.selectedPanelIDs.count) 个面板")
+            batchToolbarDivider
             Button("隐藏") { model.batchHide() }
                 .disabled(!model.canBatchHide)
             Button("显示") { model.batchShow() }
                 .disabled(!model.canBatchShow)
-            Menu("移动到工作区…") {
+            batchToolbarDivider
+            Menu("移动到…") {
                 ForEach(model.workspaces) { workspace in
                     Button {
                         model.batchMove(to: workspace.id)
@@ -184,28 +208,26 @@ struct PanelLibraryView: View {
                     .disabled(model.allSelectedBelong(to: workspace.id))
                 }
             }
-            Menu("标签…") {
+            Menu("标签") {
                 Button("添加标签…") { model.promptBatchAddTags() }
                 Button("移除标签…") { model.promptBatchRemoveTags() }
                     .disabled(model.selectedTagUnion.isEmpty)
             }
-            Button("取消选择") { model.clearSelection() }
             Spacer(minLength: 0)
+            Button("取消选择") { model.clearSelection() }
         }
+        .buttonStyle(.borderless)
         .controlSize(.small)
+        .frame(maxWidth: .infinity, minHeight: GlanceTheme.Size.controlHeight)
         .padding(.horizontal, GlanceTheme.Space.lg)
-        .padding(.vertical, GlanceTheme.Space.sm)
+        .padding(.vertical, GlanceTheme.Space.xs)
         .background(.bar)
     }
 
-    private func emptyState(_ message: String) -> some View {
-        VStack {
-            Spacer()
-            Text(message)
-                .foregroundStyle(.secondary)
-            Spacer()
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    private var batchToolbarDivider: some View {
+        Divider()
+            .frame(height: 12)
+            .opacity(0.5)
     }
 }
 
@@ -230,7 +252,7 @@ private struct PanelLibraryRow: View {
                 unreadable: summary.isUnreadable
             ))
             .font(.body)
-            .foregroundStyle(summary.isUnreadable ? Color.orange : Color.secondary)
+            .foregroundStyle(.secondary)
             .frame(width: 28, height: 28)
             .background(
                 Color.glanceHoverFill,
@@ -245,7 +267,12 @@ private struct PanelLibraryRow: View {
                     .lineLimit(1)
                     .truncationMode(.tail)
 
-                if let subtitle = summary.subtitle, !subtitle.isEmpty {
+                if summary.isUnreadable {
+                    Text("内容无法读取，文件仍保留在本地。")
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                        .lineLimit(1)
+                } else if let subtitle = summary.subtitle, !subtitle.isEmpty {
                     Text(subtitle)
                         .font(.callout)
                         .foregroundStyle(.secondary)
@@ -333,7 +360,8 @@ private struct PanelLibraryRow: View {
                 .menuIndicator(.hidden)
                 .fixedSize()
                 .buttonStyle(.borderless)
-                .opacity(showsSecondaryActions ? 1 : 0.28)
+                .opacity(showsSecondaryActions ? 1 : 0)
+                .allowsHitTesting(showsSecondaryActions)
             }
         }
         .padding(.vertical, GlanceTheme.Space.xxs)

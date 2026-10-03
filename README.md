@@ -30,6 +30,15 @@ There is no Windows client yet. Shared data contracts are documented so a future
 - No cloud
 - Open source
 
+## V0.17.1
+
+Content and interaction polish on the P0 visual shell. No schema or feature change.
+
+- Text and Markdown reading typography
+- Quieter Todo, Image, and PDF content
+- Hover actions without layout jump
+- Batch toolbar and empty states
+
 ## V0.17
 
 Visual foundation for floating panels, the status menu, and Panel Manager. No schema or feature change.

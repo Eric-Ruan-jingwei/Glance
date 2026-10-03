@@ -26,12 +26,12 @@ struct PanelSettingsView: View {
     var onDelete: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: GlanceTheme.Space.md) {
             Toggle("置顶", isOn: pinnedBinding)
             Toggle("锁定", isOn: lockedBinding)
             Toggle("点击穿透", isOn: passThroughBinding)
 
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: GlanceTheme.Space.xs) {
                 Text("透明度")
                 HStack {
                     Text("30%")
@@ -49,7 +49,7 @@ struct PanelSettingsView: View {
             Button("打开内容文件夹", action: onOpenFolder)
             Button("删除面板", role: .destructive, action: onDelete)
         }
-        .padding(20)
+        .padding(GlanceTheme.Space.xl)
         .frame(width: 280)
         .toggleStyle(.switch)
     }

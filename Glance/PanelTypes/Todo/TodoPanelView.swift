@@ -32,8 +32,8 @@ final class TodoPanelView: NSView, PanelContentControlling {
     private let scrollView = NSScrollView()
     private let documentView = TodoFlippedView()
     private let stack = NSStackView()
-    private let placeholder = NSTextField(labelWithString: "添加你的第一个待办")
-    private let addButton = NSButton(title: "+ 添加待办", target: nil, action: nil)
+    private let placeholder = NSTextField(labelWithString: GlanceEmptyCopy.todoPlaceholder)
+    private let addButton = NSButton(title: "添加待办", target: nil, action: nil)
     private var document = TodoDocument.empty
     private var session: Session = .none
     private var isApplying = false
@@ -85,7 +85,7 @@ final class TodoPanelView: NSView, PanelContentControlling {
 
         stack.orientation = .vertical
         stack.alignment = .width
-        stack.spacing = 0
+        stack.spacing = GlanceTheme.Space.xxs
         stack.translatesAutoresizingMaskIntoConstraints = false
 
         documentView.translatesAutoresizingMaskIntoConstraints = false
@@ -99,14 +99,18 @@ final class TodoPanelView: NSView, PanelContentControlling {
         scrollView.documentView = documentView
         scrollView.translatesAutoresizingMaskIntoConstraints = false
 
-        placeholder.font = .systemFont(ofSize: 13)
+        placeholder.stringValue = GlanceEmptyCopy.todoPlaceholder
+        placeholder.font = GlanceTheme.Typography.placeholder
         placeholder.textColor = .tertiaryLabelColor
         placeholder.translatesAutoresizingMaskIntoConstraints = false
 
         addButton.bezelStyle = .inline
         addButton.isBordered = false
-        addButton.font = .systemFont(ofSize: 13)
-        addButton.contentTintColor = .secondaryLabelColor
+        addButton.image = GlanceTheme.symbol("plus", pointSize: 11)
+        addButton.imagePosition = .imageLeading
+        addButton.title = "添加待办"
+        addButton.font = GlanceTheme.Typography.secondary
+        addButton.contentTintColor = .tertiaryLabelColor
         addButton.target = self
         addButton.action = #selector(addClicked)
         addButton.translatesAutoresizingMaskIntoConstraints = false
@@ -120,14 +124,14 @@ final class TodoPanelView: NSView, PanelContentControlling {
         NSLayoutConstraint.activate([
             scrollView.leadingAnchor.constraint(equalTo: leadingAnchor),
             scrollView.trailingAnchor.constraint(equalTo: trailingAnchor),
-            scrollView.topAnchor.constraint(equalTo: topAnchor, constant: 14),
+            scrollView.topAnchor.constraint(equalTo: topAnchor, constant: GlanceTheme.Space.sm),
             scrollView.bottomAnchor.constraint(equalTo: addButton.topAnchor),
-            addButton.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 10),
-            addButton.trailingAnchor.constraint(lessThanOrEqualTo: trailingAnchor, constant: -10),
-            addButton.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -6),
-            addButton.heightAnchor.constraint(equalToConstant: 26),
-            placeholder.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 16),
-            placeholder.topAnchor.constraint(equalTo: scrollView.topAnchor, constant: 8),
+            addButton.leadingAnchor.constraint(equalTo: leadingAnchor, constant: GlanceTheme.Space.md),
+            addButton.trailingAnchor.constraint(lessThanOrEqualTo: trailingAnchor, constant: -GlanceTheme.Space.md),
+            addButton.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -GlanceTheme.Space.sm),
+            addButton.heightAnchor.constraint(equalToConstant: GlanceTheme.Size.controlHeight),
+            placeholder.leadingAnchor.constraint(equalTo: leadingAnchor, constant: GlanceTheme.Space.lg),
+            placeholder.topAnchor.constraint(equalTo: scrollView.topAnchor, constant: GlanceTheme.Space.sm),
             documentView.leadingAnchor.constraint(equalTo: clip.leadingAnchor),
             documentView.trailingAnchor.constraint(equalTo: clip.trailingAnchor),
             documentView.topAnchor.constraint(equalTo: clip.topAnchor),

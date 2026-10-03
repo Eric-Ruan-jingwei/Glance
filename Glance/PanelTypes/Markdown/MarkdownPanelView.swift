@@ -17,7 +17,7 @@ final class MarkdownPanelView: NSView, PanelContentControlling, NSTextViewDelega
 
     private let scrollView = NSScrollView()
     private let textView: MarkdownPanelTextView
-    private let placeholder = NSTextField(labelWithString: "双击开始编辑 Markdown")
+    private let placeholder = NSTextField(labelWithString: GlanceEmptyCopy.markdownPlaceholder)
     private var source = ""
     private var isEditing = false
     private var isApplyingContent = false
@@ -104,10 +104,12 @@ final class MarkdownPanelView: NSView, PanelContentControlling, NSTextViewDelega
         textView.autoresizingMask = [.width]
         textView.textContainer?.widthTracksTextView = true
         textView.textContainer?.containerSize = NSSize(width: 0, height: CGFloat.greatestFiniteMagnitude)
-        textView.textContainerInset = NSSize(width: 14, height: 12)
+        textView.textContainerInset = GlanceTheme.Size.readingInset
+        textView.defaultParagraphStyle = GlanceTheme.Reading.bodyParagraphStyle()
         textView.isAutomaticQuoteSubstitutionEnabled = false
         textView.isAutomaticDashSubstitutionEnabled = false
         textView.isAutomaticTextReplacementEnabled = false
+        textView.insertionPointColor = .labelColor
         textView.linkTextAttributes = [
             .foregroundColor: NSColor.linkColor,
             .underlineStyle: NSUnderlineStyle.single.rawValue
@@ -126,7 +128,8 @@ final class MarkdownPanelView: NSView, PanelContentControlling, NSTextViewDelega
         scrollView.documentView = textView
         scrollView.translatesAutoresizingMaskIntoConstraints = false
 
-        placeholder.font = .systemFont(ofSize: 13)
+        placeholder.stringValue = GlanceEmptyCopy.markdownPlaceholder
+        placeholder.font = GlanceTheme.Typography.placeholder
         placeholder.textColor = .tertiaryLabelColor
         placeholder.translatesAutoresizingMaskIntoConstraints = false
         placeholder.isEditable = false
@@ -140,8 +143,14 @@ final class MarkdownPanelView: NSView, PanelContentControlling, NSTextViewDelega
             scrollView.trailingAnchor.constraint(equalTo: trailingAnchor),
             scrollView.topAnchor.constraint(equalTo: topAnchor),
             scrollView.bottomAnchor.constraint(equalTo: bottomAnchor),
-            placeholder.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 16),
-            placeholder.topAnchor.constraint(equalTo: topAnchor, constant: 14)
+            placeholder.leadingAnchor.constraint(
+                equalTo: leadingAnchor,
+                constant: GlanceTheme.Size.readingInset.width + 4
+            ),
+            placeholder.topAnchor.constraint(
+                equalTo: topAnchor,
+                constant: GlanceTheme.Size.readingInset.height
+            )
         ])
     }
 
@@ -162,8 +171,9 @@ final class MarkdownPanelView: NSView, PanelContentControlling, NSTextViewDelega
         textView.isEditable = true
         textView.isSelectable = true
         textView.isRichText = false
-        textView.font = NSFont.monospacedSystemFont(ofSize: 13, weight: .regular)
+        textView.font = GlanceTheme.Typography.markdownEdit
         textView.textColor = NSColor.labelColor
+        textView.defaultParagraphStyle = GlanceTheme.Reading.bodyParagraphStyle()
         textView.string = source
         isApplyingContent = false
         placeholder.isHidden = true

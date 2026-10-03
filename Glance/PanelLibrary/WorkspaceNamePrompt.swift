@@ -13,9 +13,7 @@ enum WorkspaceNamePrompt {
         alert.addButton(withTitle: "创建")
         alert.addButton(withTitle: "取消")
 
-        let field = NSTextField(frame: NSRect(x: 0, y: 0, width: 280, height: 24))
-        field.stringValue = defaultName
-        field.placeholderString = "工作区名称"
+        let field = GlancePromptField.make(placeholder: "工作区名称", value: defaultName)
         alert.accessoryView = field
         alert.window.initialFirstResponder = field
 
@@ -27,13 +25,12 @@ enum WorkspaceNamePrompt {
     static func runRenameModal(currentName: String) -> String? {
         let alert = NSAlert()
         alert.messageText = "重命名工作区"
-        alert.informativeText = "输入新的工作区名称。"
+        alert.informativeText = "输入新名称。"
         alert.alertStyle = .informational
         alert.addButton(withTitle: "重命名")
         alert.addButton(withTitle: "取消")
 
-        let field = NSTextField(frame: NSRect(x: 0, y: 0, width: 280, height: 24))
-        field.stringValue = currentName
+        let field = GlancePromptField.make(value: currentName)
         alert.accessoryView = field
         alert.window.initialFirstResponder = field
 

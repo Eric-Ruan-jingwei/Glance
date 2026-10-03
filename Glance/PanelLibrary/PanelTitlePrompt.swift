@@ -9,15 +9,16 @@ enum PanelTitlePrompt {
     static func runModal(customTitle: String?, automaticTitle: String) -> PanelTitlePromptResult {
         let alert = NSAlert()
         alert.messageText = "重命名面板"
-        alert.informativeText = "设置自定义名称。留空可恢复自动标题。"
+        alert.informativeText = "设置名称。留空则恢复自动标题。"
         alert.alertStyle = .informational
         alert.addButton(withTitle: "重命名")
         alert.addButton(withTitle: "取消")
 
-        let field = NSTextField(frame: NSRect(x: 0, y: 0, width: 280, height: 24))
-        field.stringValue = customTitle ?? ""
         let placeholder = automaticTitle.trimmingCharacters(in: .whitespacesAndNewlines)
-        field.placeholderString = placeholder.isEmpty ? "当前：自动标题" : "当前：\(placeholder)"
+        let field = GlancePromptField.make(
+            placeholder: placeholder.isEmpty ? "当前：自动标题" : "当前：\(placeholder)",
+            value: customTitle ?? ""
+        )
         alert.accessoryView = field
         alert.window.initialFirstResponder = field
 

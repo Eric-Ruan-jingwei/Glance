@@ -27,6 +27,11 @@ final class GlanceTextView: NSTextView {
             if allowsContentMutation, toggleChecklist(at: event) {
                 return
             }
+            if isPointInText(event) {
+                prepareReadingSelection()
+                super.mouseDown(with: event)
+                return
+            }
             if allowsMove, let window {
                 PanelWindowDrag.moveThenFinishInteractive(window, with: event)
             }
@@ -35,15 +40,13 @@ final class GlanceTextView: NSTextView {
         super.mouseDown(with: event)
     }
 
-    override func keyDown(with event: NSEvent) {
-        if event.keyCode == 53 {
-            onRequestEndEditing?()
-            return
-        }
-        super.keyDown(with: event)
-    }
-
     override func performKeyEquivalent(with event: NSEvent) -> Bool {
+        if event.modifierFlags.intersection(.deviceIndependentFlagsMask).contains(.command),
+           event.charactersIgnoringModifiers == "c",
+           selectedRange().length > 0 {
+            copy(nil)
+            return true
+        }
         guard !isReadingMode, event.modifierFlags.contains(.command) else {
             return super.performKeyEquivalent(with: event)
         }
@@ -54,6 +57,31 @@ final class GlanceTextView: NSTextView {
         default:
             return super.performKeyEquivalent(with: event)
         }
+    }
+
+    private func prepareReadingSelection() {
+        guard let panel = window as? PanelWindow else { return }
+        panel.allowsKey = true
+        NSApp.activate(ignoringOtherApps: true)
+        panel.makeKey()
+        panel.makeFirstResponder(self)
+    }
+
+    private func isPointInText(_ event: NSEvent) -> Bool {
+        guard let layoutManager, let textContainer else { return false }
+        let point = convert(event.locationInWindow, from: nil)
+        let used = layoutManager.usedRect(for: textContainer)
+        let inset = textContainerInset
+        let textRect = used.offsetBy(dx: inset.width, dy: inset.height).insetBy(dx: -4, dy: -4)
+        return textRect.contains(point)
+    }
+
+    override func keyDown(with event: NSEvent) {
+        if event.keyCode == 53 {
+            onRequestEndEditing?()
+            return
+        }
+        super.keyDown(with: event)
     }
 
     func toggleBold() {

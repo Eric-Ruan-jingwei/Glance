@@ -510,7 +510,7 @@ final class PanelManager {
     func promptCreateWorkspace() {
         guard let raw = WorkspaceNamePrompt.runModal(
             title: "新建工作区",
-            message: "输入工作区名称。"
+            message: "给这个工作区起个名字。"
         ) else { return }
         do {
             _ = try createWorkspace(name: raw)

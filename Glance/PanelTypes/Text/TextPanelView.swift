@@ -17,7 +17,7 @@ final class TextPanelView: NSView, PanelContentControlling, NSTextViewDelegate {
     private let formatBar = NSStackView()
     private let scrollView = NSScrollView()
     private let textView: GlanceTextView
-    private let placeholder = NSTextField(labelWithString: "双击开始编辑")
+    private let placeholder = NSTextField(labelWithString: GlanceEmptyCopy.textPlaceholder)
     private var formatBarHeight: NSLayoutConstraint!
 
     init() {
@@ -54,8 +54,7 @@ final class TextPanelView: NSView, PanelContentControlling, NSTextViewDelegate {
         textView.isReadingMode = false
         textView.isEditable = true
         textView.isSelectable = true
-        formatBar.isHidden = false
-        formatBarHeight.constant = 30
+        applyFormatBar(visible: true)
         placeholder.isHidden = true
         window?.makeFirstResponder(textView)
     }
@@ -63,9 +62,8 @@ final class TextPanelView: NSView, PanelContentControlling, NSTextViewDelegate {
     func exitEditing() {
         textView.isReadingMode = true
         textView.isEditable = false
-        textView.isSelectable = false
-        formatBar.isHidden = true
-        formatBarHeight.constant = 0
+        textView.isSelectable = true
+        applyFormatBar(visible: false)
         refreshPlaceholder()
     }
 
@@ -83,10 +81,14 @@ final class TextPanelView: NSView, PanelContentControlling, NSTextViewDelegate {
 
         formatBar.orientation = .horizontal
         formatBar.alignment = .centerY
-        formatBar.spacing = 6
-        formatBar.edgeInsets = NSEdgeInsets(top: 6, left: 10, bottom: 2, right: 10)
+        formatBar.spacing = GlanceTheme.Space.xs
+        formatBar.edgeInsets = NSEdgeInsets(
+            top: GlanceTheme.Space.xs,
+            left: GlanceTheme.Space.md,
+            bottom: 0,
+            right: GlanceTheme.Space.md
+        )
         formatBar.translatesAutoresizingMaskIntoConstraints = false
-        formatBar.isHidden = true
 
         formatBar.addArrangedSubview(makeFormatButton(symbol: "bold", tooltip: "粗体 (⌘B)", action: #selector(boldClicked)))
         formatBar.addArrangedSubview(makeFormatButton(symbol: "list.bullet", tooltip: "无序列表", action: #selector(bulletClicked)))
@@ -100,16 +102,23 @@ final class TextPanelView: NSView, PanelContentControlling, NSTextViewDelegate {
         textView.allowsUndo = true
         textView.drawsBackground = false
         textView.isEditable = false
-        textView.isSelectable = false
+        textView.isSelectable = true
         textView.isReadingMode = true
         textView.font = GlanceConstants.textBodyFont
         textView.textColor = GlanceConstants.textBodyColor
-        textView.textContainerInset = NSSize(width: 12, height: 10)
+        textView.defaultParagraphStyle = GlanceTheme.Reading.bodyParagraphStyle()
+        textView.typingAttributes = [
+            .font: GlanceConstants.textBodyFont,
+            .foregroundColor: GlanceConstants.textBodyColor,
+            .paragraphStyle: GlanceTheme.Reading.bodyParagraphStyle()
+        ]
+        textView.textContainerInset = GlanceTheme.Size.readingInset
         textView.isVerticallyResizable = true
         textView.isHorizontallyResizable = false
         textView.autoresizingMask = [.width]
         textView.textContainer?.widthTracksTextView = true
         textView.textContainer?.containerSize = NSSize(width: 0, height: CGFloat.greatestFiniteMagnitude)
+        textView.insertionPointColor = .labelColor
         textView.onBeginEditing = { [weak self] in self?.onRequestEditing?() }
         textView.onRequestEndEditing = { [weak self] in
             self?.exitEditing()
@@ -125,7 +134,7 @@ final class TextPanelView: NSView, PanelContentControlling, NSTextViewDelegate {
         scrollView.documentView = textView
         scrollView.translatesAutoresizingMaskIntoConstraints = false
 
-        placeholder.font = .systemFont(ofSize: 13)
+        placeholder.font = GlanceTheme.Typography.placeholder
         placeholder.textColor = .tertiaryLabelColor
         placeholder.translatesAutoresizingMaskIntoConstraints = false
         placeholder.isEditable = false
@@ -136,7 +145,7 @@ final class TextPanelView: NSView, PanelContentControlling, NSTextViewDelegate {
         addSubview(scrollView)
         addSubview(placeholder)
 
-        formatBarHeight = formatBar.heightAnchor.constraint(equalToConstant: 0)
+        formatBarHeight = formatBar.heightAnchor.constraint(equalToConstant: GlanceTheme.Size.formatBarHeight)
 
         NSLayoutConstraint.activate([
             formatBar.leadingAnchor.constraint(equalTo: leadingAnchor),
@@ -147,9 +156,21 @@ final class TextPanelView: NSView, PanelContentControlling, NSTextViewDelegate {
             scrollView.trailingAnchor.constraint(equalTo: trailingAnchor),
             scrollView.topAnchor.constraint(equalTo: formatBar.bottomAnchor),
             scrollView.bottomAnchor.constraint(equalTo: bottomAnchor),
-            placeholder.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 16),
-            placeholder.topAnchor.constraint(equalTo: formatBar.bottomAnchor, constant: 14)
+            placeholder.leadingAnchor.constraint(equalTo: leadingAnchor, constant: GlanceTheme.Size.readingInset.width + 4),
+            placeholder.topAnchor.constraint(
+                equalTo: formatBar.bottomAnchor,
+                constant: GlanceTheme.Size.readingInset.height
+            )
         ])
+        applyFormatBar(visible: false)
+    }
+
+    private func applyFormatBar(visible: Bool) {
+        formatBar.alphaValue = visible ? 1 : 0
+        formatBarHeight.constant = GlanceTheme.Size.formatBarHeight
+        for case let button as NSButton in formatBar.arrangedSubviews {
+            button.isEnabled = visible
+        }
     }
 
     private func makeFormatButton(symbol: String, tooltip: String, action: Selector) -> NSButton {
@@ -160,6 +181,7 @@ final class TextPanelView: NSView, PanelContentControlling, NSTextViewDelegate {
         button.toolTip = tooltip
         button.imagePosition = .imageOnly
         button.setButtonType(.momentaryChange)
+        button.contentTintColor = .secondaryLabelColor
         return button
     }
 
@@ -203,7 +225,8 @@ enum TextPayloadFile {
             string: string,
             attributes: [
                 .font: GlanceConstants.textBodyFont,
-                .foregroundColor: GlanceConstants.textBodyColor
+                .foregroundColor: GlanceConstants.textBodyColor,
+                .paragraphStyle: GlanceTheme.Reading.bodyParagraphStyle()
             ]
         )
         let url = directory.appendingPathComponent(fileName)

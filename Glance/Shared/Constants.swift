@@ -67,6 +67,6 @@ enum GlanceConstants {
     static let payloadVersionTodo = 1
     static let payloadVersionPDF = 1
 
-    static let textBodyFont = NSFont.systemFont(ofSize: 13)
+    static let textBodyFont = GlanceTheme.Typography.body
     static let textBodyColor = NSColor.labelColor
 }

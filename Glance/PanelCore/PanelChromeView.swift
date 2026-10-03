@@ -283,9 +283,14 @@ final class PanelChromeView: NSView {
         titleLabel.textColor = chromeActive
             ? GlanceTheme.Fill.chromeForeground
             : GlanceTheme.Fill.chromeForegroundQuiet
-        lockBadge.isHidden = !showsLockBadge
-        pinButton.isHidden = !(chromeActive || isPinned)
-        moreButton.isHidden = !chromeActive
+        lockBadge.isHidden = false
+        lockBadge.alphaValue = showsLockBadge ? 1 : 0
+        pinButton.isHidden = false
+        moreButton.isHidden = false
+        pinButton.alphaValue = (chromeActive || isPinned) ? 1 : 0
+        moreButton.alphaValue = chromeActive ? 1 : 0
+        pinButton.isEnabled = chromeActive || isPinned
+        moreButton.isEnabled = chromeActive
         pinButton.image = GlanceTheme.chromeSymbol(
             isPinned ? "star.fill" : "star",
             accessibilityDescription: isPinned ? "取消置顶" : "置顶"

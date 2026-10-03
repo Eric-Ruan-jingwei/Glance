@@ -10,13 +10,12 @@ enum PanelBatchTagPrompt {
     static func runAddModal() -> PanelBatchTagPromptResult {
         let alert = NSAlert()
         alert.messageText = "添加标签"
-        alert.informativeText = "为所选面板添加标签。多个标签可用逗号或换行分隔。"
+        alert.informativeText = "多个标签用逗号或换行分开。"
         alert.alertStyle = .informational
         alert.addButton(withTitle: "添加")
         alert.addButton(withTitle: "取消")
 
-        let field = NSTextField(frame: NSRect(x: 0, y: 0, width: 280, height: 24))
-        field.placeholderString = "必读, 论文"
+        let field = GlancePromptField.make(placeholder: "必读, 论文")
         alert.accessoryView = field
         alert.window.initialFirstResponder = field
 
@@ -94,7 +93,8 @@ private struct BatchTagRemovalView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: GlanceTheme.Space.md) {
-            Text("选择要从所选面板移除的标签。没有该标签的面板不会改变。")
+            Text("选择要从所选面板移除的标签。")
+                .font(.callout)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
 
@@ -121,6 +121,7 @@ private struct BatchTagRemovalView: View {
                     NSApp.stopModal(withCode: .OK)
                 }
                 .keyboardShortcut(.defaultAction)
+                .buttonStyle(.borderedProminent)
                 .disabled(session.selected.isEmpty)
             }
         }

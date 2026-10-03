@@ -24,11 +24,15 @@ enum GlanceTheme {
         static let panelChromeHeight: CGFloat = 28
         static let chromeButton: CGFloat = 18
         static let controlHeight: CGFloat = 28
+        static let formatBarHeight: CGFloat = 28
+        static let todoRowHeight: CGFloat = 32
         static let chipHorizontalPadding: CGFloat = 7
         static let chipVerticalPadding: CGFloat = 2
         static let sidebarIdeal: CGFloat = 176
         static let menuSymbol: CGFloat = 13
         static let chromeSymbol: CGFloat = 11
+        static let readingInset = NSSize(width: 16, height: 12)
+        static let mediaInset: CGFloat = 6
     }
 
     enum Typography {
@@ -38,6 +42,67 @@ enum GlanceTheme {
         static let secondary = NSFont.systemFont(ofSize: 12, weight: .regular)
         static let tertiary = NSFont.systemFont(ofSize: 11, weight: .regular)
         static let chip = NSFont.systemFont(ofSize: 11, weight: .medium)
+        static let markdownEdit = NSFont.monospacedSystemFont(ofSize: 13, weight: .regular)
+        static let code = NSFont.monospacedSystemFont(ofSize: 12, weight: .regular)
+        static let placeholder = NSFont.systemFont(ofSize: 13, weight: .regular)
+
+        static func heading(_ level: Int) -> NSFont {
+            let sizes: [CGFloat] = [22, 17, 15, 13, 13, 13]
+            let size = sizes[max(0, min(level - 1, sizes.count - 1))]
+            let weight: NSFont.Weight = level <= 2 ? .semibold : .medium
+            return .systemFont(ofSize: size, weight: weight)
+        }
+    }
+
+    enum Reading {
+        static let lineHeightMultiple: CGFloat = 1.28
+        static let paragraphSpacing: CGFloat = 7
+
+        static func bodyParagraphStyle() -> NSParagraphStyle {
+            let style = NSMutableParagraphStyle()
+            style.lineHeightMultiple = lineHeightMultiple
+            style.paragraphSpacing = paragraphSpacing
+            style.lineBreakMode = .byWordWrapping
+            return style
+        }
+
+        static func headingParagraphStyle(level: Int) -> NSParagraphStyle {
+            let style = NSMutableParagraphStyle()
+            style.lineHeightMultiple = 1.15
+            style.paragraphSpacingBefore = level == 1 ? 14 : (level == 2 ? 12 : 10)
+            style.paragraphSpacing = 6
+            style.lineBreakMode = .byWordWrapping
+            return style
+        }
+
+        static func quoteParagraphStyle() -> NSParagraphStyle {
+            let style = NSMutableParagraphStyle()
+            style.lineHeightMultiple = lineHeightMultiple
+            style.paragraphSpacing = paragraphSpacing
+            style.headIndent = 14
+            style.firstLineHeadIndent = 14
+            style.lineBreakMode = .byWordWrapping
+            return style
+        }
+
+        static func listParagraphStyle() -> NSParagraphStyle {
+            let style = NSMutableParagraphStyle()
+            style.lineHeightMultiple = lineHeightMultiple
+            style.paragraphSpacing = 4
+            style.headIndent = 18
+            style.firstLineHeadIndent = 0
+            style.lineBreakMode = .byWordWrapping
+            return style
+        }
+
+        static func codeParagraphStyle() -> NSParagraphStyle {
+            let style = NSMutableParagraphStyle()
+            style.lineHeightMultiple = 1.2
+            style.paragraphSpacing = 8
+            style.paragraphSpacingBefore = 4
+            style.lineBreakMode = .byWordWrapping
+            return style
+        }
     }
 
     enum Fill {
@@ -108,4 +173,36 @@ extension View {
     func glanceChipStyle() -> some View {
         modifier(GlanceChipStyle())
     }
+}
+
+struct GlanceEmptyState: View {
+    var symbol: String
+    var title: String
+    var detail: String
+
+    var body: some View {
+        VStack(spacing: GlanceTheme.Space.sm) {
+            Image(systemName: symbol)
+                .font(.system(size: 22, weight: .regular))
+                .foregroundStyle(.tertiary)
+            Text(title)
+                .font(.body.weight(.semibold))
+                .foregroundStyle(.secondary)
+            Text(detail)
+                .font(.callout)
+                .foregroundStyle(.tertiary)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: 280)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding(GlanceTheme.Space.xl)
+    }
+}
+
+enum PanelLibraryEmptyKind: Equatable {
+    case none
+    case loading
+    case emptyWorkspace
+    case noSearchResults
+    case noFilterMatches
 }

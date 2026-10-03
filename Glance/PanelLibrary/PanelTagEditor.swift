@@ -136,7 +136,8 @@ private struct PanelTagEditorView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: GlanceTheme.Space.md) {
-            Text("为这个面板设置标签。标签用于搜索和筛选，不会改变工作区或显示状态。")
+            Text("标签用于搜索和筛选。")
+                .font(.callout)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
 
@@ -163,7 +164,7 @@ private struct PanelTagEditorView: View {
             if let errorMessage = session.errorMessage {
                 Text(errorMessage)
                     .foregroundStyle(.red)
-                    .font(.callout)
+                    .font(.caption)
             }
 
             if !session.suggestions.isEmpty {
@@ -191,6 +192,7 @@ private struct PanelTagEditorView: View {
                     }
                 }
                 .keyboardShortcut(.defaultAction)
+                .buttonStyle(.borderedProminent)
             }
         }
         .padding(GlanceTheme.Space.lg)
@@ -240,6 +242,7 @@ struct PanelTagChip: View {
     let text: String
     var onRemove: (() -> Void)? = nil
     var onAdd: (() -> Void)? = nil
+    @State private var isHovered = false
 
     private var accessibilityKind: PanelTagChipAccessibility {
         .kind(onRemove: onRemove != nil, onAdd: onAdd != nil)
@@ -281,11 +284,15 @@ struct PanelTagChip: View {
                 Button(action: onRemove) {
                     Image(systemName: "xmark")
                         .font(.system(size: 8, weight: .semibold))
+                        .foregroundStyle(.tertiary)
                 }
                 .buttonStyle(.plain)
+                .opacity(isHovered ? 1 : 0)
+                .accessibilityHidden(true)
             }
         }
         .glanceChipStyle()
+        .onHover { isHovered = $0 }
     }
 }
 

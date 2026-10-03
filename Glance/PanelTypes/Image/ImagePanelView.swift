@@ -12,13 +12,17 @@ final class ImagePanelView: NSView, PanelContentControlling {
     var allowsContentMutation = true
 
     private let imageView = NSImageView()
-    private let placeholder = NSTextField(wrappingLabelWithString: "拖入、粘贴或右键选择图片")
+    private let caption = NSTextField(labelWithString: "")
+    private let placeholder = GlanceMessagePlaceholder()
     private let media = MediaStore()
     private var hasImage = false
+    private var isHovered = false
+    private var trackingArea: NSTrackingArea?
 
     init() {
         super.init(frame: .zero)
         setup()
+        showEmpty()
     }
 
     required init?(coder: NSCoder) {
@@ -26,10 +30,14 @@ final class ImagePanelView: NSView, PanelContentControlling {
     }
 
     func loadPayload(from directory: URL) throws {
-        if let image = try media.loadImage(from: directory) {
-            apply(image, resizePanel: false)
-        } else {
-            apply(nil, resizePanel: false)
+        do {
+            if let image = try media.loadImage(from: directory) {
+                apply(image, resizePanel: false)
+            } else {
+                showEmpty()
+            }
+        } catch {
+            showUnreadable()
         }
     }
 
@@ -60,29 +68,68 @@ final class ImagePanelView: NSView, PanelContentControlling {
 
     private func setup() {
         registerForDraggedTypes([.fileURL, .png, .tiff])
+        wantsLayer = true
 
         imageView.imageScaling = .scaleProportionallyUpOrDown
         imageView.imageAlignment = .alignCenter
         imageView.animates = false
+        imageView.wantsLayer = true
+        imageView.layer?.cornerRadius = GlanceTheme.Radius.control
+        imageView.layer?.cornerCurve = .continuous
+        imageView.layer?.masksToBounds = true
         imageView.translatesAutoresizingMaskIntoConstraints = false
 
-        placeholder.alignment = .center
-        placeholder.textColor = .tertiaryLabelColor
-        placeholder.font = .systemFont(ofSize: 12)
+        caption.font = GlanceTheme.Typography.tertiary
+        caption.textColor = .tertiaryLabelColor
+        caption.alignment = .center
+        caption.translatesAutoresizingMaskIntoConstraints = false
+        caption.alphaValue = 0
+
         placeholder.translatesAutoresizingMaskIntoConstraints = false
 
         addSubview(imageView)
         addSubview(placeholder)
+        addSubview(caption)
+        let inset = GlanceTheme.Size.mediaInset
         NSLayoutConstraint.activate([
-            imageView.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 8),
-            imageView.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -8),
-            imageView.topAnchor.constraint(equalTo: topAnchor, constant: 8),
-            imageView.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -8),
-            placeholder.centerXAnchor.constraint(equalTo: centerXAnchor),
-            placeholder.centerYAnchor.constraint(equalTo: centerYAnchor),
-            placeholder.leadingAnchor.constraint(greaterThanOrEqualTo: leadingAnchor, constant: 16),
-            placeholder.trailingAnchor.constraint(lessThanOrEqualTo: trailingAnchor, constant: -16)
+            imageView.leadingAnchor.constraint(equalTo: leadingAnchor, constant: inset),
+            imageView.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -inset),
+            imageView.topAnchor.constraint(equalTo: topAnchor, constant: inset),
+            imageView.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -inset),
+            caption.centerXAnchor.constraint(equalTo: centerXAnchor),
+            caption.bottomAnchor.constraint(equalTo: imageView.bottomAnchor, constant: -GlanceTheme.Space.xs),
+            caption.leadingAnchor.constraint(greaterThanOrEqualTo: leadingAnchor, constant: GlanceTheme.Space.sm),
+            caption.trailingAnchor.constraint(lessThanOrEqualTo: trailingAnchor, constant: -GlanceTheme.Space.sm),
+            placeholder.leadingAnchor.constraint(equalTo: leadingAnchor),
+            placeholder.trailingAnchor.constraint(equalTo: trailingAnchor),
+            placeholder.topAnchor.constraint(equalTo: topAnchor),
+            placeholder.bottomAnchor.constraint(equalTo: bottomAnchor)
         ])
+    }
+
+    override func updateTrackingAreas() {
+        super.updateTrackingAreas()
+        if let trackingArea {
+            removeTrackingArea(trackingArea)
+        }
+        let area = NSTrackingArea(
+            rect: bounds,
+            options: [.mouseEnteredAndExited, .activeAlways, .inVisibleRect],
+            owner: self,
+            userInfo: nil
+        )
+        addTrackingArea(area)
+        trackingArea = area
+    }
+
+    override func mouseEntered(with event: NSEvent) {
+        isHovered = true
+        refreshCaption()
+    }
+
+    override func mouseExited(with event: NSEvent) {
+        isHovered = false
+        refreshCaption()
     }
 
     override func rightMouseDown(with event: NSEvent) {
@@ -139,9 +186,44 @@ final class ImagePanelView: NSView, PanelContentControlling {
     private func apply(_ image: NSImage?, resizePanel: Bool) {
         imageView.image = image
         hasImage = image != nil
+        imageView.isHidden = !hasImage
         placeholder.isHidden = hasImage
+        caption.stringValue = dimensionLabel(for: image)
+        refreshCaption()
         if resizePanel, let image {
             onRequestPreferredSize?(media.fittingSize(for: image))
         }
+    }
+
+    private func showEmpty() {
+        apply(nil, resizePanel: false)
+        placeholder.apply(
+            symbol: "photo",
+            title: GlanceEmptyCopy.imageEmptyTitle,
+            detail: GlanceEmptyCopy.imageEmptyDetail
+        )
+        placeholder.isHidden = false
+    }
+
+    private func showUnreadable() {
+        apply(nil, resizePanel: false)
+        placeholder.apply(
+            symbol: "exclamationmark.triangle",
+            title: GlanceEmptyCopy.imageUnreadableTitle,
+            detail: GlanceEmptyCopy.imageUnreadableDetail
+        )
+        placeholder.isHidden = false
+    }
+
+    private func refreshCaption() {
+        caption.alphaValue = hasImage && isHovered && !caption.stringValue.isEmpty ? 1 : 0
+    }
+
+    private func dimensionLabel(for image: NSImage?) -> String {
+        guard let image, let rep = image.representations.first else { return "" }
+        let width = rep.pixelsWide
+        let height = rep.pixelsHigh
+        guard width > 0, height > 0 else { return "" }
+        return "\(width) × \(height)"
     }
 }

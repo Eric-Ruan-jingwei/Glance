@@ -16,12 +16,12 @@ final class PDFPanelView: NSView, PanelContentControlling {
     private(set) var loadedPageCount = 0
 
     private let pdfView = PDFView()
-    private let errorLabel = NSTextField(wrappingLabelWithString: "")
+    private let placeholder = GlanceMessagePlaceholder()
 
     init() {
         super.init(frame: .zero)
         setup()
-        showErrorPlaceholder()
+        showMissing()
     }
 
     required init?(coder: NSCoder) {
@@ -31,11 +31,11 @@ final class PDFPanelView: NSView, PanelContentControlling {
     func loadPayload(from directory: URL) throws {
         let documentURL = PDFPayloadFile.documentURL(in: directory)
         guard FileManager.default.fileExists(atPath: documentURL.path) else {
-            showErrorPlaceholder()
+            showMissing()
             return
         }
         guard let document = PDFDocument(url: documentURL), document.pageCount > 0, !document.isLocked else {
-            showErrorPlaceholder()
+            showUnreadable()
             return
         }
         showDocument(document)
@@ -52,25 +52,25 @@ final class PDFPanelView: NSView, PanelContentControlling {
         pdfView.displayMode = .singlePageContinuous
         pdfView.displayDirection = .vertical
         pdfView.autoScales = true
+        pdfView.backgroundColor = .clear
+        pdfView.pageShadowsEnabled = false
         pdfView.translatesAutoresizingMaskIntoConstraints = false
 
-        errorLabel.alignment = .center
-        errorLabel.textColor = .secondaryLabelColor
-        errorLabel.font = .systemFont(ofSize: 12)
-        errorLabel.translatesAutoresizingMaskIntoConstraints = false
+        placeholder.translatesAutoresizingMaskIntoConstraints = false
 
         addSubview(pdfView)
-        addSubview(errorLabel)
+        addSubview(placeholder)
 
+        let inset = GlanceTheme.Size.mediaInset
         NSLayoutConstraint.activate([
-            pdfView.leadingAnchor.constraint(equalTo: leadingAnchor),
-            pdfView.trailingAnchor.constraint(equalTo: trailingAnchor),
-            pdfView.topAnchor.constraint(equalTo: topAnchor),
-            pdfView.bottomAnchor.constraint(equalTo: bottomAnchor),
-            errorLabel.centerXAnchor.constraint(equalTo: centerXAnchor),
-            errorLabel.centerYAnchor.constraint(equalTo: centerYAnchor),
-            errorLabel.leadingAnchor.constraint(greaterThanOrEqualTo: leadingAnchor, constant: 16),
-            errorLabel.trailingAnchor.constraint(lessThanOrEqualTo: trailingAnchor, constant: -16)
+            pdfView.leadingAnchor.constraint(equalTo: leadingAnchor, constant: inset),
+            pdfView.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -inset),
+            pdfView.topAnchor.constraint(equalTo: topAnchor, constant: inset),
+            pdfView.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -inset),
+            placeholder.leadingAnchor.constraint(equalTo: leadingAnchor),
+            placeholder.trailingAnchor.constraint(equalTo: trailingAnchor),
+            placeholder.topAnchor.constraint(equalTo: topAnchor),
+            placeholder.bottomAnchor.constraint(equalTo: bottomAnchor)
         ])
     }
 
@@ -79,16 +79,33 @@ final class PDFPanelView: NSView, PanelContentControlling {
         pdfView.autoScales = true
         pdfView.goToFirstPage(nil)
         pdfView.isHidden = false
-        errorLabel.isHidden = true
+        placeholder.isHidden = true
         isShowingError = false
         loadedPageCount = document.pageCount
     }
 
-    private func showErrorPlaceholder() {
+    private func showMissing() {
         pdfView.document = nil
         pdfView.isHidden = true
-        errorLabel.stringValue = "无法读取 PDF\n原文件仍保存在 Glance 数据目录中。"
-        errorLabel.isHidden = false
+        placeholder.apply(
+            symbol: "doc.richtext",
+            title: GlanceEmptyCopy.pdfEmptyTitle,
+            detail: GlanceEmptyCopy.pdfEmptyDetail
+        )
+        placeholder.isHidden = false
+        isShowingError = true
+        loadedPageCount = 0
+    }
+
+    private func showUnreadable() {
+        pdfView.document = nil
+        pdfView.isHidden = true
+        placeholder.apply(
+            symbol: "exclamationmark.triangle",
+            title: GlanceEmptyCopy.pdfUnreadableTitle,
+            detail: GlanceEmptyCopy.pdfUnreadableDetail
+        )
+        placeholder.isHidden = false
         isShowingError = true
         loadedPageCount = 0
     }

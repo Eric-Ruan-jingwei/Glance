@@ -61,7 +61,7 @@ enum PanelSummaryFallback {
     static let todo = "空待办面板"
     static let image = "图片面板"
     static let pdf = "PDF 文档"
-    static let pdfUnreadable = "⚠️ 无法读取 PDF"
+    static let pdfUnreadable = "无法读取 PDF"
     static let unreadable = "无法读取内容"
 }
 

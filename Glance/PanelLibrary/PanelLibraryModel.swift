@@ -10,6 +10,7 @@ final class PanelLibraryModel: ObservableObject {
     @Published var selectedWorkspaceID: String = WorkspaceRecord.defaultID
     @Published var selectedTag: String? = nil
     @Published var selectedPanelIDs: Set<UUID> = []
+    @Published var isLoadingSummaries = false
 
     var loadSummaries: () -> [PanelSummary] = { [] }
     var loadWorkspaces: () -> [WorkspaceRecord] = { [WorkspaceRecord.makeDefault()] }
@@ -71,6 +72,20 @@ final class PanelLibraryModel: ObservableObject {
     var isCompletelyEmpty: Bool { workspaceSummaries.isEmpty }
     var hasNoMatches: Bool { !workspaceSummaries.isEmpty && visible.isEmpty }
 
+    var emptyKind: PanelLibraryEmptyKind {
+        if isLoadingSummaries, summaries.isEmpty {
+            return .loading
+        }
+        if isCompletelyEmpty {
+            return .emptyWorkspace
+        }
+        if hasNoMatches {
+            let hasQuery = !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            return hasQuery ? .noSearchResults : .noFilterMatches
+        }
+        return .none
+    }
+
     var selectedSummaries: [PanelSummary] {
         let ids = selectedPanelIDs
         return visible.filter { ids.contains($0.id) }
@@ -129,6 +144,7 @@ final class PanelLibraryModel: ObservableObject {
 
     func applyLoadedSummaries(_ summaries: [PanelSummary], generation: UInt64) {
         guard generation == summaryGeneration else { return }
+        isLoadingSummaries = false
         self.summaries = summaries
         reconcileSelection()
         reconcileSelectedTag()
@@ -138,10 +154,12 @@ final class PanelLibraryModel: ObservableObject {
         summaryGeneration += 1
         summaryLoadTask?.cancel()
         summaryLoadTask = nil
+        isLoadingSummaries = false
     }
 
     private func startSummaryLoad(_ inputs: [PanelSummaryInput]) {
         let generation = beginSummaryRequest()
+        isLoadingSummaries = summaries.isEmpty
         let loader = summaryLoader
         summaryLoadTask = Task.detached { [weak self] in
             let summaries = await loader.loadSummaries(inputs: inputs)
@@ -306,7 +324,7 @@ final class PanelLibraryModel: ObservableObject {
     func promptCreateWorkspace() {
         guard let raw = WorkspaceNamePrompt.runModal(
             title: "新建工作区",
-            message: "输入工作区名称。"
+            message: "给这个工作区起个名字。"
         ) else { return }
         do {
             _ = try createWorkspace(raw)
