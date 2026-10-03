@@ -12,6 +12,7 @@ enum StatusMenuBuilder {
         onNewMarkdown: @escaping () -> Void,
         onNewTodo: @escaping () -> Void,
         onNewImage: @escaping () -> Void,
+        onNewPDF: @escaping () -> Void = {},
         onToggleVisibility: @escaping () -> Void,
         onSettings: @escaping () -> Void,
         onQuit: @escaping () -> Void
@@ -42,6 +43,7 @@ enum StatusMenuBuilder {
         menu.addItem(actionItem("新建 Markdown 面板", onNewMarkdown))
         menu.addItem(actionItem("新建待办面板", onNewTodo))
         menu.addItem(actionItem("新建图片面板", onNewImage))
+        menu.addItem(actionItem("新建 PDF 面板…", onNewPDF))
         menu.addItem(.separator())
         menu.addItem(
             actionItem(

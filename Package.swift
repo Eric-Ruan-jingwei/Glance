@@ -23,6 +23,7 @@ let package = Package(
             ],
             linkerSettings: [
                 .linkedFramework("Carbon"),
+                .linkedFramework("PDFKit"),
                 .linkedFramework("ServiceManagement")
             ]
         ),

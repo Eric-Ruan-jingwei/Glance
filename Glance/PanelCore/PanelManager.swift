@@ -67,6 +67,27 @@ final class PanelManager {
         _ = createPanel(kindIdentifier: PanelKind.image)
     }
 
+    func createPDFPanel() {
+        let screen = DisplayManager.screenContainingMouse()
+        NSApp.activate(ignoringOtherApps: true)
+        guard let url = MacPDFImporter.chooseFile() else { return }
+        do {
+            try importPDF(from: url, preferredScreen: screen)
+        } catch {
+            presentPDFImportAlert(error)
+        }
+    }
+
+    func importPDF(from sourceURL: URL, preferredScreen: NSScreen? = nil) throws {
+        let metadata = try MacPDFImporter.inspect(sourceURL)
+        try materializePanel(
+            kindIdentifier: PanelKind.pdf,
+            preferredScreen: preferredScreen
+        ) { directory in
+            try PDFPayloadFile.importDocument(from: sourceURL, metadata: metadata, to: directory)
+        }
+    }
+
     @discardableResult
     func createPanel(
         from request: QuickCaptureRequest,
@@ -152,6 +173,25 @@ final class PanelManager {
         initialContent: PanelInitialContent = .none,
         preferredScreen: NSScreen? = nil
     ) -> Bool {
+        do {
+            try materializePanel(
+                kindIdentifier: kindIdentifier,
+                preferredScreen: preferredScreen
+            ) { directory in
+                try PanelInitialPayloadWriter.write(initialContent, to: directory)
+            }
+            return true
+        } catch {
+            NSLog("Glance: create panel failed: \(error.localizedDescription)")
+            return false
+        }
+    }
+
+    private func materializePanel(
+        kindIdentifier: String,
+        preferredScreen: NSScreen?,
+        writePayload: @escaping (URL) throws -> Void
+    ) throws {
         let id = UUID()
         let size = PanelProviderRegistry.defaultSize(for: kindIdentifier)
         let screen = preferredScreen ?? DisplayManager.screenContainingMouse()
@@ -170,24 +210,29 @@ final class PanelManager {
             payloadVersion: PanelProviderRegistry.payloadVersion(for: kindIdentifier)
         )
 
-        do {
-            try PanelCreationSession.materialize(
-                id: id,
-                store: environment.payloadStore,
-                writePayload: { directory in
-                    try PanelInitialPayloadWriter.write(initialContent, to: directory)
-                },
-                insert: {
-                    try environment.repository.insert(record)
-                }
-            )
-            present(record: record)
-            notifyPanelsDidChange()
-            return true
-        } catch {
-            NSLog("Glance: create panel failed: \(error.localizedDescription)")
-            return false
+        try PanelCreationSession.materialize(
+            id: id,
+            store: environment.payloadStore,
+            writePayload: writePayload,
+            insert: {
+                try environment.repository.insert(record)
+            }
+        )
+        present(record: record)
+        notifyPanelsDidChange()
+    }
+
+    private func presentPDFImportAlert(_ error: Error) {
+        let alert = NSAlert()
+        alert.alertStyle = .warning
+        if let importError = error as? PDFImportError {
+            alert.messageText = importError.errorDescription ?? "无法导入 PDF。"
+        } else {
+            alert.messageText = "无法导入 PDF。"
         }
+        alert.addButton(withTitle: "好")
+        NSApp.activate(ignoringOtherApps: true)
+        alert.runModal()
     }
 
     private func present(record: PanelRecord) {

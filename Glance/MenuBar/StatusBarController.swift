@@ -43,6 +43,7 @@ final class StatusBarController: NSObject, NSMenuDelegate {
             onNewMarkdown: { [weak self] in self?.manager.createMarkdownPanel() },
             onNewTodo: { [weak self] in self?.manager.createTodoPanel() },
             onNewImage: { [weak self] in self?.manager.createImagePanel() },
+            onNewPDF: { [weak self] in self?.manager.createPDFPanel() },
             onToggleVisibility: { [weak self] in self?.manager.toggleGlobalVisibility() },
             onSettings: { [weak self] in self?.onSettings() },
             onQuit: {
