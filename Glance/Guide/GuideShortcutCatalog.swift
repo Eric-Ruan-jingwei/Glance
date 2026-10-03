@@ -108,6 +108,7 @@ enum GuideShortcutCatalog {
             GuideShortcutGroup(id: "panel", title: "面板操作", items: panel),
             GuideShortcutGroup(id: "quickCapture", title: "Quick Capture", items: quickCapture),
             GuideShortcutGroup(id: "clipboard", title: "剪贴板", items: clipboard),
+            GuideShortcutGroup(id: "fileShelf", title: "文件架", items: fileShelf),
             GuideShortcutGroup(id: "editing", title: "编辑", items: editing),
             GuideShortcutGroup(id: "dialogs", title: "弹窗", items: dialogs)
         ]
@@ -125,6 +126,12 @@ enum GuideShortcutCatalog {
             title: ShortcutAction.clipboardHistory.title,
             detail: nil,
             source: .dynamic(.clipboardHistory)
+        ),
+        GuideShortcutItem(
+            id: "fileShelf",
+            title: ShortcutAction.fileShelf.title,
+            detail: nil,
+            source: .dynamic(.fileShelf)
         ),
         GuideShortcutItem(
             id: "clipboardCapture",
@@ -234,6 +241,57 @@ enum GuideShortcutCatalog {
         GuideShortcutItem(
             id: "clipboardCancel",
             title: "关闭剪贴板",
+            detail: nil,
+            source: .keys([.escape])
+        )
+    ]
+
+    static let fileShelf: [GuideShortcutItem] = [
+        GuideShortcutItem(
+            id: "fileShelfOpen",
+            title: "打开文件",
+            detail: nil,
+            source: .keys([.enter])
+        ),
+        GuideShortcutItem(
+            id: "fileShelfReveal",
+            title: "在 Finder 中显示",
+            detail: nil,
+            source: .keys([.command, .enter])
+        ),
+        GuideShortcutItem(
+            id: "fileShelfPreview",
+            title: "快速预览",
+            detail: nil,
+            source: .keys([.character("Space")])
+        ),
+        GuideShortcutItem(
+            id: "fileShelfCopy",
+            title: "复制文件",
+            detail: nil,
+            source: .keys([.command, .character("C")])
+        ),
+        GuideShortcutItem(
+            id: "fileShelfRemove",
+            title: "从文件架移除",
+            detail: nil,
+            source: .keys([.character("Delete")])
+        ),
+        GuideShortcutItem(
+            id: "fileShelfRecentTab",
+            title: "最近",
+            detail: nil,
+            source: .keys([.command, .character("1")])
+        ),
+        GuideShortcutItem(
+            id: "fileShelfFavoriteTab",
+            title: "收藏",
+            detail: nil,
+            source: .keys([.command, .character("2")])
+        ),
+        GuideShortcutItem(
+            id: "fileShelfCancel",
+            title: "关闭文件架",
             detail: nil,
             source: .keys([.escape])
         )

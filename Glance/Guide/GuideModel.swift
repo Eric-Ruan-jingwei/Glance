@@ -38,7 +38,7 @@ enum GlanceGuideEntry {
 
 enum GuideGettingStartedCopy {
     static let step1Title = "把常用信息和工具留在手边"
-    static let step1Detail = "Glance 是一个常驻 macOS 的轻量个人办公工具入口。可以把需要持续参考的内容固定为桌面面板，也可以保存和收藏最近复制过的内容，方便随时再次调用。"
+    static let step1Detail = "Glance 是一个常驻 macOS 的轻量个人办公工具入口。可以把需要持续参考的内容固定为桌面面板，保存和收藏复制过的信息，也可以把稍后还要用的文件暂存在文件架里。"
 }
 
 struct GuideFeatureCopy: Equatable {
@@ -53,6 +53,11 @@ enum GuideFeatureCatalog {
             title: "剪贴板",
             symbol: "list.clipboard",
             body: "Glance 可以在本机保存你之后复制的文字和图片。常用内容可以收藏，并通过剪贴板窗口快速搜索和再次调用。内容只保存在本机。"
+        ),
+        GuideFeatureCopy(
+            title: "文件架",
+            symbol: "tray",
+            body: "把稍后还要用的文件暂存在文件架里。Glance 只保存文件引用，不会复制原文件。从文件架移除记录也不会删除原文件。"
         ),
         GuideFeatureCopy(
             title: "Workspaces",
