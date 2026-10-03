@@ -2,9 +2,9 @@
 
 **Pin what matters. Keep it in sight.**
 
-A lightweight, local-first floating panel app for **macOS**.
+A lightweight, local-first personal workspace for **macOS**.
 
-Glance is not another notes app. It is an always-on-top information layer: put the text, reference images, or PDFs you need to keep seeing on independent panels, pin them anywhere on screen, and they stay there while you work in the browser, editor, or chat.
+Glance keeps two kinds of work nearby: floating panels for things you need to keep seeing, and a local clipboard shelf for things you keep copying. Both stay on this machine.
 
 There is no Windows client yet. Shared data contracts are documented so a future Windows app can reuse them.
 
@@ -15,6 +15,7 @@ There is no Windows client yet. Shared data contracts are documented so a future
 - Local-first
 - Text, Markdown, Todo, images, and PDF
 - Quick Capture from any app
+- Clipboard Shelf
 - Clipboard Capture
 - Customizable global shortcuts
 - First-run onboarding
@@ -32,6 +33,10 @@ There is no Windows client yet. Shared data contracts are documented so a future
 - No account
 - No cloud
 - Open source
+
+## V0.19.0
+
+Clipboard Shelf: recent history, favorites, search, reuse, and create a panel from a saved item. Recording stays local and is off until you turn it on. Panel schema is unchanged.
 
 ## V0.18.10
 
@@ -151,14 +156,17 @@ The core loop is still: create a panel → put content in it → drag it where y
 
 Quick Capture skips the empty-panel step: use the Quick Capture shortcut from any app, type, press Enter.
 
-Clipboard Capture skips typing: copy in another app, then use Clipboard Capture.
+Clipboard Capture still creates a panel from whatever is on the system clipboard right now.
+
+Clipboard Shelf is separate: after you turn on local recording, Glance keeps recent text and images, lets you favorite them, and writes a chosen item back to the system clipboard. It does not auto-paste.
 
 Default shortcuts:
 
 ```text
-Quick Capture       ⌥⌘J
-Clipboard Capture   ⌥⌘B
-Hide / Show         ⌥⌘G
+Quick Capture                 ⌥⌘J
+Clipboard                     ⌥⌘V
+Create from current clipboard ⌥⌘B
+Hide / Show                   ⌥⌘G
 ```
 
 These can be changed in Settings.
@@ -166,8 +174,9 @@ These can be changed in Settings.
 Status-item menu (defaults shown):
 
 ```text
-快速记录…              ⌥⌘J
-从剪贴板创建…          ⌥⌘B
+快速记录…                  ⌥⌘J
+剪贴板…                    ⌥⌘V
+从当前剪贴板创建…          ⌥⌘B
 ────────────
 工作区
   默认 ✓
@@ -291,7 +300,7 @@ Each panel can be pinned, locked, made click-through, and faded independently. T
 
 ### App settings
 
-Glance settings include launch at login (`SMAppService.mainApp`), customizable global shortcuts (defaults `⌥⌘J`, `⌥⌘B`, and `⌥⌘G`), the local data folder, and the version from the app bundle.
+Glance settings include launch at login (`SMAppService.mainApp`), customizable global shortcuts (defaults `⌥⌘J`, `⌥⌘V`, `⌥⌘B`, and `⌥⌘G`), clipboard history recording, the local data folder, and the version from the app bundle.
 
 ## Download
 
@@ -327,14 +336,18 @@ Everything lives on disk. See [docs/architecture/data-format.md](docs/architectu
 ├── Database/
 │   ├── panels.json          schemaVersion 5 envelope (workspaces + panels)
 │   └── panels.backup.json
-└── Panels/
-    └── {panel-id}/
-        ├── content.rtf
-        ├── content.md
-        ├── todo.json
-        ├── image.png
-        ├── document.pdf
-        └── pdf.json
+├── Panels/
+│   └── {panel-id}/
+│       ├── content.rtf
+│       ├── content.md
+│       ├── todo.json
+│       ├── image.png
+│       ├── document.pdf
+│       └── pdf.json
+└── Clipboard/
+    ├── history.json         schemaVersion 1 clipboard shelf
+    └── Assets/
+        └── {item-id}.png
 ```
 
 Images and PDFs are copied into this directory. Deleting the original file does not blank the panel.

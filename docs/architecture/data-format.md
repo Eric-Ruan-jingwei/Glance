@@ -196,6 +196,17 @@ Edge snap and layout presets are interaction-only. They write the resulting `x` 
 
 Clipboard Capture is a user-triggered one-shot read. It is **not** stored as clipboard history and does not add a `source` field. Capture priority is valid image → valid text → unsupported. A successful capture creates a normal Text (`content.rtf`) or Image (`image.png`) panel with `isHidden = false`, `customTitle = nil`, `tags = []`, and `workspaceID` equal to the current active workspace. `schemaVersion` remains `5`.
 
+## Clipboard Shelf
+
+Clipboard history is a separate data domain from panels.
+
+```text
+Clipboard/history.json
+Clipboard/Assets/<uuid>.png
+```
+
+The envelope is `{ "schemaVersion": 1, "items": [ ... ] }`. This schema is independent of `PanelDatabase.currentSchemaVersion`, which remains **5**. Future clipboard schemas are rejected without rewriting the file. Recording is off by default (`com.glance.clipboardHistory.enabled`).
+
 ## Future clients
 
 Any future Windows (or other) client should read and write this JSON + RTF + Markdown + Todo JSON + PNG + PDF layout. Windowing, shortcuts, and tray code are platform-specific; the files are not.
