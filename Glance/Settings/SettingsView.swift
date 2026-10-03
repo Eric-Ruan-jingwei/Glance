@@ -50,15 +50,23 @@ struct SettingsView: View {
             GroupBox("快捷键") {
                 VStack(alignment: .leading, spacing: GlanceTheme.Space.sm) {
                     ForEach(ShortcutAction.allCases, id: \.self) { action in
-                        HStack {
-                            Text(action.title)
-                            Spacer(minLength: GlanceTheme.Space.sm)
-                            ShortcutRecorderView(
-                                shortcut: shortcuts.shortcut(for: action),
-                                isRecording: recording == action,
-                                onBegin: { beginRecording(action) },
-                                onDecision: { handleDecision($0, for: action) }
-                            )
+                        VStack(alignment: .leading, spacing: GlanceTheme.Space.xxs) {
+                            HStack {
+                                Text(action.title)
+                                Spacer(minLength: GlanceTheme.Space.sm)
+                                ShortcutRecorderView(
+                                    shortcut: shortcuts.configuredShortcut(for: action),
+                                    isRecording: recording == action,
+                                    onBegin: { beginRecording(action) },
+                                    onDecision: { handleDecision($0, for: action) }
+                                )
+                            }
+                            if let caption = shortcuts.runtimeIssue(for: action)?.settingsCaption {
+                                Text(caption)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
                         }
                     }
                     if let message = shortcuts.errorMessage, !message.isEmpty {
