@@ -361,6 +361,136 @@ final class PanelLibraryPendingScrollTests: XCTestCase {
     }
 }
 
+@MainActor
+final class PanelLibraryCrossWorkspaceRevealTests: XCTestCase {
+    func testManualWorkspaceSwitchClearsSelectionFromPreviousWorkspace() {
+        let a1 = UUID()
+        let b1 = UUID()
+        var switched: [String] = []
+        let model = makeModel(a1: a1, b1: b1, active: { WorkspaceRecord.defaultID }) {
+            switched.append($0)
+        }
+        model.selectedWorkspaceID = WorkspaceRecord.defaultID
+        model.selectedPanelIDs = [a1]
+        model.activateWorkspace("project")
+        XCTAssertEqual(model.selectedPanelIDs, [])
+        XCTAssertEqual(switched, ["project"])
+    }
+
+    func testCrossWorkspaceRevealKeepsTargetSelectionThroughActivateWorkspace() {
+        let a1 = UUID()
+        let b1 = UUID()
+        var switched: [String] = []
+        let model = makeModel(a1: a1, b1: b1, active: { WorkspaceRecord.defaultID }) {
+            switched.append($0)
+        }
+        XCTAssertTrue(model.selectForReveal(b1))
+        XCTAssertEqual(model.selectedWorkspaceID, "project")
+        XCTAssertEqual(model.selectedPanelIDs, [b1])
+        XCTAssertEqual(model.pendingScrollID, b1)
+        model.activateWorkspace("project")
+        XCTAssertEqual(model.selectedPanelIDs, [b1])
+        XCTAssertEqual(model.selectedWorkspaceID, "project")
+        XCTAssertEqual(model.pendingScrollID, b1)
+        XCTAssertEqual(switched, ["project"])
+    }
+
+    func testReloadAfterCrossWorkspaceRevealKeepsSelection() {
+        let a1 = UUID()
+        let b1 = UUID()
+        var active = WorkspaceRecord.defaultID
+        var switched: [String] = []
+        let model = makeModel(a1: a1, b1: b1, active: { active }) {
+            switched.append($0)
+            active = $0
+        }
+        XCTAssertTrue(model.selectForReveal(b1))
+        model.activateWorkspace("project")
+        XCTAssertEqual(switched, ["project"])
+        XCTAssertEqual(active, "project")
+        model.reload()
+        XCTAssertEqual(model.selectedWorkspaceID, "project")
+        XCTAssertEqual(model.selectedPanelIDs, [b1])
+        XCTAssertEqual(model.pendingScrollID, b1)
+    }
+
+    func testMissingRevealTargetDoesNotKeepStaleSelectionOrScroll() {
+        let a1 = UUID()
+        let b1 = UUID()
+        let leftover = UUID()
+        var active = WorkspaceRecord.defaultID
+        let model = makeModel(a1: a1, b1: b1, active: { active }) { active = $0 }
+        XCTAssertTrue(model.selectForReveal(b1))
+        model.activateWorkspace("project")
+        XCTAssertEqual(model.selectedPanelIDs, [b1])
+        XCTAssertEqual(model.pendingScrollID, b1)
+        model.loadSummaries = {
+            [
+                summary(id: a1, title: "A1", workspaceID: WorkspaceRecord.defaultID),
+                summary(id: leftover, title: "Leftover", workspaceID: "project")
+            ]
+        }
+        model.reload()
+        XCTAssertFalse(model.selectedPanelIDs.contains(b1))
+        XCTAssertNil(model.pendingScrollID)
+    }
+
+    func testWorkspaceSelectionRetentionKeepsOnlyDestinationIDs() {
+        let a1 = UUID()
+        let b1 = UUID()
+        let summaries = [
+            summary(id: a1, title: "A1", workspaceID: WorkspaceRecord.defaultID),
+            summary(id: b1, title: "B1", workspaceID: "project")
+        ]
+        XCTAssertEqual(
+            PanelLibraryWorkspaceSelection.retained(
+                selected: [a1, b1],
+                inWorkspace: "project",
+                summaries: summaries
+            ),
+            [b1]
+        )
+        XCTAssertEqual(
+            PanelLibraryWorkspaceSelection.retained(
+                selected: [a1],
+                inWorkspace: "project",
+                summaries: summaries
+            ),
+            []
+        )
+    }
+
+    private func makeModel(
+        a1: UUID,
+        b1: UUID,
+        active: @escaping () -> String,
+        onSwitch: @escaping (String) -> Void
+    ) -> PanelLibraryModel {
+        let model = PanelLibraryModel()
+        model.loadActiveWorkspaceID = active
+        model.switchWorkspace = onSwitch
+        model.loadWorkspaces = {
+            [
+                WorkspaceRecord.makeDefault(at: Date(timeIntervalSince1970: 1)),
+                WorkspaceRecord(
+                    id: "project",
+                    name: "Project",
+                    createdAt: Date(timeIntervalSince1970: 2),
+                    updatedAt: Date(timeIntervalSince1970: 2)
+                )
+            ]
+        }
+        model.loadSummaries = {
+            [
+                summary(id: a1, title: "A1", workspaceID: WorkspaceRecord.defaultID),
+                summary(id: b1, title: "B1", workspaceID: "project")
+            ]
+        }
+        model.reload()
+        return model
+    }
+}
+
 final class ImageMetadataProbeTests: XCTestCase {
     func testImageMetadataProbeReadsPixelSize() throws {
         let directory = uniqueTempDirectory("GlanceImageMeta")
@@ -547,7 +677,11 @@ private func dummyInput(
     )
 }
 
-private func summary(id: UUID = UUID(), title: String) -> PanelSummary {
+private func summary(
+    id: UUID = UUID(),
+    title: String,
+    workspaceID: String = WorkspaceRecord.defaultID
+) -> PanelSummary {
     PanelSummary(
         id: id,
         kindIdentifier: PanelKind.text,
@@ -560,6 +694,7 @@ private func summary(id: UUID = UUID(), title: String) -> PanelSummary {
         isPassThrough: false,
         isPinned: false,
         isHidden: false,
+        workspaceID: workspaceID,
         isUnreadable: false
     )
 }

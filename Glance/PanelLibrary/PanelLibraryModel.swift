@@ -163,7 +163,7 @@ final class PanelLibraryModel: ObservableObject {
         let active = loadActiveWorkspaceID()
         if selectedWorkspaceID != active {
             selectedTag = nil
-            selectedPanelIDs = []
+            retainSelection(in: active)
         }
         selectedWorkspaceID = active
         if let loadSummaryInputs {
@@ -231,6 +231,14 @@ final class PanelLibraryModel: ObservableObject {
         )
     }
 
+    private func retainSelection(in workspaceID: String) {
+        selectedPanelIDs = PanelLibraryWorkspaceSelection.retained(
+            selected: selectedPanelIDs,
+            inWorkspace: workspaceID,
+            summaries: summaries
+        )
+    }
+
     func selectTagFilter(_ tag: String?) {
         selectedTag = tag
         reconcileSelectedTag()
@@ -238,11 +246,10 @@ final class PanelLibraryModel: ObservableObject {
     }
 
     func activateWorkspace(_ id: String) {
-        if id != loadActiveWorkspaceID() {
-            selectedTag = nil
-            selectedPanelIDs = []
-        }
-        guard id != loadActiveWorkspaceID() else { return }
+        let activeID = loadActiveWorkspaceID()
+        guard id != activeID else { return }
+        selectedTag = nil
+        retainSelection(in: id)
         switchWorkspace(id)
     }
 
@@ -448,5 +455,20 @@ enum PanelLibraryPendingScroll {
         guard let pending else { return nil }
         if knownIDs.contains(pending) { return pending }
         return isLoading ? pending : nil
+    }
+}
+
+enum PanelLibraryWorkspaceSelection {
+    static func retained(
+        selected: Set<UUID>,
+        inWorkspace workspaceID: String,
+        summaries: [PanelSummary]
+    ) -> Set<UUID> {
+        let belonging = Set(
+            summaries.compactMap { summary in
+                summary.workspaceID == workspaceID ? summary.id : nil
+            }
+        )
+        return selected.intersection(belonging)
     }
 }
