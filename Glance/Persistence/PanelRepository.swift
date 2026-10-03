@@ -187,6 +187,26 @@ final class PanelRepository {
         }
     }
 
+    func setCustomTitle(id: UUID, title: String?) throws {
+        try assertMetadataWritable()
+        guard let panel = records[id] else {
+            throw PanelTitleError.panelNotFound
+        }
+        let normalized = try PanelTitle.validated(title)
+        guard panel.customTitle != normalized else { return }
+        let previousTitle = panel.customTitle
+        let previousUpdatedAt = panel.updatedAt
+        panel.customTitle = normalized
+        touch(panel)
+        do {
+            try save()
+        } catch {
+            panel.customTitle = previousTitle
+            panel.updatedAt = previousUpdatedAt
+            throw error
+        }
+    }
+
     func save() throws {
         if case .unsupportedFutureSchema(let version) = lastLoadOutcome {
             NSLog(
