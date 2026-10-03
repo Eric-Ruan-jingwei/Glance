@@ -20,11 +20,12 @@ There is no Windows client yet. Shared data contracts are documented so a future
 - Per-panel hide/show
 - Workspaces
 - Panel Manager
+- Custom panel titles
 - No account
 - No cloud
 - Open source
 
-## V0.12 已支持
+## V0.13 已支持
 
 - Text panel
 - Markdown panel (rendered preview, double-click to edit raw UTF-8 `.md`)
@@ -35,6 +36,7 @@ There is no Windows client yet. Shared data contracts are documented so a future
 - Clipboard Capture — create a Text or Image panel from the current clipboard. Default: `⌥⌘B`
 - Panel Manager — browse, search, reveal, hide, delete, and move existing panels; the sidebar switches the active workspace
 - Workspaces — organize panels by workspace and switch the visible set of panels without changing their content or per-panel hidden state
+- Custom panel titles — give long-lived panels a stable custom name without modifying their underlying content. Clearing a custom title restores the automatic content-derived title
 - Per-panel hide/show — hide a panel without deleting it; the state survives relaunch
 - Panel edge snapping
 - Panel layout presets
@@ -127,7 +129,7 @@ PDFs are copied into Glance's local data directory. Deleting the original file d
 
 ### Panel Manager
 
-`管理面板…` opens a regular macOS window (not a floating panel). It is not stored in `panels.json`. The left sidebar lists workspaces; choosing one switches the active workspace and lists only that workspace’s panels. Browse panels, filter by type, search titles, hide or show a panel, move it to another workspace, bring a visible panel forward, or delete it with the same confirmation as the panel menu. Titles are derived from existing payload content; there is no separate rename field.
+`管理面板…` opens a regular macOS window (not a floating panel). It is not stored in `panels.json`. The left sidebar lists workspaces; choosing one switches the active workspace and lists only that workspace’s panels. Browse panels, filter by type, search titles, hide or show a panel, rename it, move it to another workspace, bring a visible panel forward, or delete it with the same confirmation as the panel menu. Each panel has an automatic title derived from its payload. A custom title is optional metadata; it does not change the underlying Text, Markdown, Todo, Image, or PDF content. Search matches both the custom name and the automatic title.
 
 An empty workspace is valid: the desktop shows no Glance panels, and the manager says **这个工作区还没有面板**.
 
@@ -149,11 +151,13 @@ Panels can be individually hidden without deleting them. Hidden panels stay in t
 Right-click a panel:
 
 ```text
+重命名…
 移动到工作区
 → 默认 / …
+隐藏此面板
 ```
 
-Moving a panel out of the active workspace hides it immediately. Its `isHidden` flag is unchanged.
+Moving a panel out of the active workspace hides it immediately. Its `isHidden` flag is unchanged. Rename is metadata only: locked panels can still be renamed, and Global Hide is not cleared.
 
 ### Shortcuts
 
@@ -181,7 +185,7 @@ Each panel can be pinned, locked, made click-through, and faded independently. T
 - **Markdown** shows a rendered preview. Double-click to edit the raw Markdown source. Payload is UTF-8 `content.md`.
 - **Todo** is a lightweight on-screen checklist: add, inline edit, complete, and delete. Payload is UTF-8 `todo.json`. There is no reorder, due date, reminder, or priority system.
 - **PDF** is a local copy of the imported document. Payload is `document.pdf` plus `pdf.json` (filename and page count). There is no annotation, OCR, or full-text search.
-- **Lock** prevents accidental drag, resize, text editing, checklist toggles, Markdown source edits, Todo mutations, and image replace. PDF reading (scroll, select, copy) still works. Right-click, unlock, opacity, pin, click-through, hide, delete, and panel settings still work.
+- **Lock** prevents accidental drag, resize, text editing, checklist toggles, Markdown source edits, Todo mutations, and image replace. PDF reading (scroll, select, copy) still works. Right-click, unlock, opacity, pin, click-through, hide, rename, delete, and panel settings still work.
 - **Click-through** ignores mouse events until you hold Option. Lock still wins: Option can open the menu and settings, but cannot move, resize, or edit a locked panel.
 - **Opacity** ranges from 30% to 100% (`window.alphaValue`). The slider in panel settings updates live and persists after you release.
 
@@ -221,7 +225,7 @@ Everything lives on disk. See [docs/architecture/data-format.md](docs/architectu
 ```text
 ~/Library/Application Support/Glance/
 ├── Database/
-│   ├── panels.json          schemaVersion 3 envelope (workspaces + panels)
+│   ├── panels.json          schemaVersion 4 envelope (workspaces + panels)
 │   └── panels.backup.json
 └── Panels/
     └── {panel-id}/

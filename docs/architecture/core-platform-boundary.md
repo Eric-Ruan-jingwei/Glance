@@ -36,9 +36,19 @@ Dirty state
 Portable data contracts
 ```
 
-Examples in this tree: `PanelRecord`, `PanelFrame`, `PanelDatabase`, `PanelRepository`, `WorkspaceRecord`, `WorkspaceName`, `WorkspaceCatalog`, `WorkspaceMembership`, `ActiveWorkspaceResolver`, `WorkspacePreferenceStore`, `PanelInteractionPolicy`, `PanelInteractionState`, `PanelModeTransition`, `PanelOpacity`, `PayloadDirtyFlag`, `PanelPlacementEngine` (geometry), `PanelSnapEngine`, `PanelLayoutPreset`, `PanelSnapConfiguration`, `PanelFrameRecovery` (geometry), `ApplicationDataLocation`, `PayloadStore`, `MarkdownPayloadFile`, `MarkdownDocument`, `TodoItem`, `TodoDocument`, `TodoMutation`, `TodoPayloadFile`, `QuickCaptureRequest`, `QuickCaptureKind`, `ClipboardCaptureContent`, `ClipboardCaptureRouter`, `PanelInitialContent`, `PanelCreationSession`, `PanelVisibilityPolicy`, `PanelVisibilityTransaction`, `PanelSummary`, `PanelSummaryQuery`, `PanelSummaryText`, `PDFDocumentMetadata`, `PDFPayloadFile`, `ShortcutAction`, `GlanceShortcut`, `ShortcutStore`, `ShortcutValidator`.
+Examples in this tree: `PanelRecord`, `PanelTitle`, `PanelFrame`, `PanelDatabase`, `PanelRepository`, `WorkspaceRecord`, `WorkspaceName`, `WorkspaceCatalog`, `WorkspaceMembership`, `ActiveWorkspaceResolver`, `WorkspacePreferenceStore`, `PanelInteractionPolicy`, `PanelInteractionState`, `PanelModeTransition`, `PanelOpacity`, `PayloadDirtyFlag`, `PanelPlacementEngine` (geometry), `PanelPlacementOccupancy`, `PanelSnapEngine`, `PanelLayoutPreset`, `PanelSnapConfiguration`, `PanelFrameRecovery` (geometry), `ApplicationDataLocation`, `PayloadStore`, `MarkdownPayloadFile`, `MarkdownDocument`, `TodoItem`, `TodoDocument`, `TodoMutation`, `TodoPayloadFile`, `QuickCaptureRequest`, `QuickCaptureKind`, `ClipboardCaptureContent`, `ClipboardCaptureRouter`, `PanelInitialContent`, `PanelCreationSession`, `PanelVisibilityPolicy`, `PanelVisibilityTransaction`, `PanelSummary`, `PanelSummaryQuery`, `PanelSummaryText`, `PDFDocumentMetadata`, `PDFPayloadFile`, `ShortcutAction`, `GlanceShortcut`, `ShortcutStore`, `ShortcutValidator`.
 
 These types should stay on Foundation (or pure Swift). They must not depend on `NSRect`, `NSWindow`, or other AppKit types.
+
+Panel titles:
+
+```text
+Automatic title = derived from payload, not persisted
+Custom title    = PanelRecord.customTitle metadata
+Effective title = customTitle ?? automaticTitle
+```
+
+`PanelTitle` normalization (newline → space, trim, blank → `nil`, max length on user writes) is portable. Schema migration, effective-title overlay, and Manager search over both custom and automatic titles stay in Core. The rename prompt (`NSAlert`), panel context menu, and Panel Manager “重命名…” action stay on macOS.
 
 ## macOS Platform
 
@@ -86,7 +96,7 @@ effectiveVisible =
   && !globalConcealed
 ```
 
-These three states are independent. Switching workspace does not change `isHidden` or Global Hide. Global Hide does not change workspace membership. `PanelRecord.isHidden` and `workspaceID` are persistent. Global Hide / Show is a runtime override (`GlobalVisibilityController`) and is not stored on the panel. The active workspace id is a `UserDefaults` preference (`com.glance.workspace.activeID`), not part of `panels.json`. Schema 1 databases migrate missing `isHidden` to `false` and assign `workspaceID = default`. Schema 2 databases keep `isHidden` and assign every panel to the Default workspace. AppKit `NSWindow.orderOut` / `orderFrontRegardless`, the workspace status menu, Panel Manager sidebar, and name dialogs stay on macOS.
+These three states are independent. Switching workspace does not change `isHidden` or Global Hide. Global Hide does not change workspace membership. `PanelRecord.isHidden` and `workspaceID` are persistent. Global Hide / Show is a runtime override (`GlobalVisibilityController`) and is not stored on the panel. The active workspace id is a `UserDefaults` preference (`com.glance.workspace.activeID`), not part of `panels.json`. Schema 1 databases migrate missing `isHidden` to `false` and assign `workspaceID = default`. Schema 2 databases keep `isHidden` and assign every panel to the Default workspace. Schema 3 databases keep workspace membership and set `customTitle = nil`. AppKit `NSWindow.orderOut` / `orderFrontRegardless`, the workspace status menu, Panel Manager sidebar, workspace name dialogs, and panel title prompts stay on macOS.
 
 ## Future Windows
 
