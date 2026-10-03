@@ -33,6 +33,10 @@ There is no Windows client yet. Shared data contracts are documented so a future
 - No cloud
 - Open source
 
+## V0.18.2
+
+Quick Capture Return submits even when the Guide window is open.
+
 ## V0.18.1
 
 Expanded in-app shortcut and interaction reference.
