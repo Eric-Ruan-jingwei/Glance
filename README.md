@@ -22,7 +22,7 @@ There is no Windows client yet. Shared data contracts are documented so a future
 - No cloud
 - Open source
 
-## V0.10 已支持
+## V0.10.1 已支持
 
 - Text panel
 - Markdown panel (rendered preview, double-click to edit raw UTF-8 `.md`)
