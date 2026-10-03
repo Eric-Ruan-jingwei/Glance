@@ -50,6 +50,8 @@ enum PanelProviderRegistry {
             return TodoPanelProvider.makeContent()
         case PanelKind.image:
             return ImagePanelProvider.makeContent()
+        case PanelKind.pdf:
+            return PDFPanelProvider.makeContent()
         default:
             return UnknownPanelContentController(kindIdentifier: kindIdentifier)
         }
@@ -59,6 +61,8 @@ enum PanelProviderRegistry {
         switch kindIdentifier {
         case PanelKind.image:
             return ImagePanelProvider.minimumSize
+        case PanelKind.pdf:
+            return PDFPanelProvider.minimumSize
         case PanelKind.markdown:
             return MarkdownPanelProvider.minimumSize
         case PanelKind.todo:
@@ -72,6 +76,8 @@ enum PanelProviderRegistry {
         switch kindIdentifier {
         case PanelKind.image:
             return ImagePanelProvider.defaultSize
+        case PanelKind.pdf:
+            return PDFPanelProvider.defaultSize
         case PanelKind.markdown:
             return MarkdownPanelProvider.defaultSize
         case PanelKind.todo:
@@ -85,6 +91,8 @@ enum PanelProviderRegistry {
         switch kindIdentifier {
         case PanelKind.image:
             return ImagePanelProvider.payloadVersion
+        case PanelKind.pdf:
+            return PDFPanelProvider.payloadVersion
         case PanelKind.markdown:
             return MarkdownPanelProvider.payloadVersion
         case PanelKind.todo:
