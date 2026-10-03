@@ -208,6 +208,23 @@ final class GuideTests: XCTestCase {
         )
     }
 
+    func testGettingStartedStepOneMentionsPanelsAndClipboard() {
+        XCTAssertEqual(GuideGettingStartedCopy.step1Title, "把常用信息和工具留在手边")
+        XCTAssertTrue(GuideGettingStartedCopy.step1Detail.contains("个人办公工具入口"))
+        XCTAssertTrue(GuideGettingStartedCopy.step1Detail.contains("桌面面板"))
+        XCTAssertTrue(GuideGettingStartedCopy.step1Detail.contains("复制"))
+        XCTAssertEqual(GuideModel.onboardingPageCount, 4)
+    }
+
+    func testMoreFeaturesLeadsWithClipboard() {
+        XCTAssertEqual(GuideFeatureCatalog.items.first?.title, "剪贴板")
+        XCTAssertEqual(
+            GuideFeatureCatalog.items.map(\.title),
+            ["剪贴板", "Workspaces", "Tags", "Panel Manager"]
+        )
+        XCTAssertNotEqual(GuideFeatureCatalog.items.last?.title, "剪贴板")
+    }
+
     func testCatalogIncludesClipboardHistoryDynamicAction() {
         let item = GuideShortcutCatalog.item(id: "clipboardHistory")
         XCTAssertEqual(item?.title, "剪贴板")

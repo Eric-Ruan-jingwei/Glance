@@ -531,7 +531,7 @@ final class WorkspaceSummaryAndMenuTests: XCTestCase {
             onSettings: {},
             onQuit: {}
         )
-        let workspaceItem = menu.items.first { $0.title == "工作区" }
+        let workspaceItem = GlanceMenuQuery.item(titled: "工作区", in: menu)
         let titles = workspaceItem?.submenu?.items.map(\.title) ?? []
         XCTAssertEqual(titles.first, "默认")
         XCTAssertEqual(titles[1], "Work")

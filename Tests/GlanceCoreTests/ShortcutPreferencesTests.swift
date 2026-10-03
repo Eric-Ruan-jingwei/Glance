@@ -279,7 +279,7 @@ final class ShortcutPreferencesTests: XCTestCase {
         let item = menu.items.first { $0.title == "快速记录…" }
         XCTAssertEqual(item?.keyEquivalent, "k")
         XCTAssertEqual(item?.keyEquivalentModifierMask, [.control, .option])
-        let hide = menu.items.first { $0.title == "隐藏全部" }
+        let hide = GlanceMenuQuery.item(titled: "隐藏全部", in: menu)
         XCTAssertEqual(hide?.keyEquivalent, "g")
         XCTAssertEqual(hide?.keyEquivalentModifierMask, [.option, .command])
     }

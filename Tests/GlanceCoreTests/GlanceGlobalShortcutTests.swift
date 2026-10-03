@@ -37,9 +37,9 @@ final class GlanceGlobalShortcutTests: XCTestCase {
         XCTAssertEqual(item?.keyEquivalent, "j")
         XCTAssertEqual(item?.keyEquivalentModifierMask, [.option, .command])
         XCTAssertEqual(menu.items.first?.title, "快速记录…")
-        XCTAssertEqual(menu.items[1].title, "剪贴板…")
-        XCTAssertEqual(menu.items[2].title, "从当前剪贴板创建…")
-        XCTAssertEqual(menu.items.first { $0.title == "管理面板…" }?.title, "管理面板…")
+        XCTAssertEqual(menu.items.first { $0.title == "剪贴板…" }?.title, "剪贴板…")
+        XCTAssertNotNil(menu.items.first { $0.title == "面板" }?.submenu)
+        XCTAssertEqual(GlanceMenuQuery.item(titled: "管理面板…", in: menu)?.title, "管理面板…")
     }
 
     func testPassThroughHintMentionsLockLimit() {
@@ -52,7 +52,7 @@ final class GlanceGlobalShortcutTests: XCTestCase {
     private func assertVisibilityShortcut(allHidden: Bool, title: String) {
         let menu = NSMenu()
         populate(menu, allHidden: allHidden)
-        let item = menu.items.first { $0.title == title }
+        let item = GlanceMenuQuery.item(titled: title, in: menu)
         XCTAssertEqual(item?.keyEquivalent, "g")
         XCTAssertEqual(item?.keyEquivalentModifierMask, [.option, .command])
     }

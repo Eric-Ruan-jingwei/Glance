@@ -390,6 +390,58 @@ final class ClipboardHistoryStoreAndServiceTests: XCTestCase {
         XCTAssertEqual(ClipboardHistoryIngest.read(imageBoard), .skippedOversizedImage)
     }
 
+    func testIngestKeepsSmallPNGWhenAnotherRepresentationIsOversized() {
+        let pasteboard = NSPasteboard.withUniqueName()
+        pasteboard.clearContents()
+        pasteboard.declareTypes([.png, .tiff], owner: nil)
+        pasteboard.setData(samplePNG, forType: .png)
+        pasteboard.setData(
+            Data(repeating: 3, count: ClipboardHistoryPolicy.maximumStoredImageBytes + 16),
+            forType: .tiff
+        )
+        XCTAssertEqual(ClipboardHistoryIngest.read(pasteboard), .captured(.png(samplePNG)))
+        XCTAssertEqual(MacClipboardReader.read(pasteboard), .png(samplePNG))
+    }
+
+    func testIngestUsesValidSecondaryRepresentationWhenPNGIsOversized() {
+        let jpeg = tinyJPEG()
+        let pasteboard = NSPasteboard.withUniqueName()
+        pasteboard.clearContents()
+        pasteboard.declareTypes([.png, NSPasteboard.PasteboardType("public.jpeg")], owner: nil)
+        pasteboard.setData(
+            Data(repeating: 4, count: ClipboardHistoryPolicy.maximumStoredImageBytes + 16),
+            forType: .png
+        )
+        pasteboard.setData(jpeg, forType: NSPasteboard.PasteboardType("public.jpeg"))
+        switch ClipboardHistoryIngest.read(pasteboard) {
+        case .captured(.png(let data)):
+            XCTAssertTrue(MediaStore.looksLikePNG(data))
+            XCTAssertLessThanOrEqual(data.count, ClipboardHistoryPolicy.maximumStoredImageBytes)
+        default:
+            XCTFail("oversized PNG should fall through to a valid JPEG representation")
+        }
+    }
+
+    func testIngestFallsBackToTextWhenImageIsUnreadable() {
+        let pasteboard = NSPasteboard.withUniqueName()
+        pasteboard.clearContents()
+        pasteboard.declareTypes([.tiff, .string], owner: nil)
+        pasteboard.setData(Data([0x00, 0x01]), forType: .tiff)
+        pasteboard.setString("hello", forType: .string)
+        XCTAssertEqual(ClipboardHistoryIngest.read(pasteboard), .captured(.text("hello")))
+        XCTAssertEqual(MacClipboardReader.read(pasteboard), .text("hello"))
+    }
+
+    private func tinyJPEG() -> Data {
+        let image = NSImage(size: NSSize(width: 2, height: 2))
+        image.lockFocus()
+        NSColor.red.setFill()
+        NSBezierPath(rect: NSRect(x: 0, y: 0, width: 2, height: 2)).fill()
+        image.unlockFocus()
+        let tiff = image.tiffRepresentation!
+        return NSBitmapImageRep(data: tiff)!.representation(using: .jpeg, properties: [:])!
+    }
+
     func testMenuAndGuideExposeClipboardHistory() {
         let menu = NSMenu()
         StatusMenuBuilder.populate(
@@ -408,12 +460,12 @@ final class ClipboardHistoryStoreAndServiceTests: XCTestCase {
             onQuit: {}
         )
         XCTAssertEqual(menu.items[0].title, "快速记录…")
-        XCTAssertEqual(menu.items[1].title, "剪贴板…")
-        XCTAssertEqual(menu.items[2].title, "从当前剪贴板创建…")
+        XCTAssertEqual(menu.items.first { $0.title == "剪贴板…" }?.title, "剪贴板…")
+        XCTAssertNotNil(menu.items.first { $0.title == "面板" }?.submenu)
         let history = menu.items.first { $0.title == "剪贴板…" }
         XCTAssertEqual(history?.keyEquivalent, "v")
         XCTAssertEqual(history?.keyEquivalentModifierMask, [.option, .command])
-        let capture = menu.items.first { $0.title == "从当前剪贴板创建…" }
+        let capture = GlanceMenuQuery.item(titled: "从当前剪贴板创建…", in: menu)
         XCTAssertEqual(capture?.keyEquivalent, "b")
 
         let item = GuideShortcutCatalog.item(id: "clipboardHistory")

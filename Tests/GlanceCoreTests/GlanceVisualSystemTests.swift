@@ -45,24 +45,25 @@ final class GlanceVisualSystemTests: XCTestCase {
         let titles = menu.items.map(\.title)
         XCTAssertEqual(menu.items.first { $0.title == "快速记录…" }?.title, "快速记录…")
         XCTAssertEqual(menu.items.first { $0.title == "剪贴板…" }?.title, "剪贴板…")
-        XCTAssertEqual(menu.items.first { $0.title == "从当前剪贴板创建…" }?.title, "从当前剪贴板创建…")
-        XCTAssertNotNil(menu.items.first { $0.title == "工作区" })
-        XCTAssertNotNil(menu.items.first { $0.title == "管理面板…" })
-        let newPanel = menu.items.first { $0.title == "新建面板" }
+        XCTAssertNotNil(menu.items.first { $0.title == "面板" }?.submenu)
+        XCTAssertNil(menu.items.first { $0.title == "从当前剪贴板创建…" })
+        XCTAssertNil(menu.items.first { $0.title == "工作区" })
+        XCTAssertNil(menu.items.first { $0.title == "管理面板…" })
+        XCTAssertNil(menu.items.first { $0.title == "状态" })
+        XCTAssertNil(menu.items.first { $0.title == "隐藏全部" })
+        let newPanel = GlanceMenuQuery.item(titled: "新建面板", in: menu)
         XCTAssertNotNil(newPanel)
-        XCTAssertNotNil(menu.items.first { $0.title == "状态" })
-        XCTAssertNotNil(menu.items.first { $0.title == "隐藏全部" })
+        XCTAssertNotNil(GlanceMenuQuery.item(titled: "隐藏全部", in: menu))
         XCTAssertNotNil(menu.items.first { $0.title == GlanceGuideEntry.menuTitle })
         XCTAssertNotNil(menu.items.first { $0.title == "设置…" })
         XCTAssertEqual(titles.last, "退出")
         XCTAssertNotNil(menu.items.first { $0.title == "快速记录…" }?.image)
-        XCTAssertNotNil(menu.items.first { $0.title == "管理面板…" }?.image)
+        XCTAssertNotNil(GlanceMenuQuery.item(titled: "管理面板…", in: menu)?.image)
         XCTAssertNotNil(newPanel?.image)
         XCTAssertEqual(
-            newPanel?.submenu?.items.map(\.title),
+            GlanceMenuQuery.newPanelMenu(in: menu)?.items.map(\.title),
             ["文字", "Markdown", "待办", "图片", "PDF…"]
         )
-        XCTAssertTrue(menu.items.first { $0.title == "状态" }?.isSectionHeader == true)
     }
 
     func testWorkspacePanelCountIsDerivedFromSummaries() {
