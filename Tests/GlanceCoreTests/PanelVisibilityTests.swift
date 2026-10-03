@@ -43,8 +43,9 @@ final class PanelVisibilityPersistenceTests: XCTestCase {
     func testV1MigratesToVisibleWithoutChangingTimestamps() throws {
         let decoded = try PanelDatabaseCodec.decode(from: Data(GlanceTestFixtures.schemaV1EnvelopeJSON.utf8))
         XCTAssertTrue(decoded.migratedFromLegacy)
-        XCTAssertEqual(decoded.database.schemaVersion, 3)
+        XCTAssertEqual(decoded.database.schemaVersion, PanelDatabase.currentSchemaVersion)
         let panel = try XCTUnwrap(decoded.database.panels.first)
+        XCTAssertNil(panel.customTitle)
         XCTAssertFalse(panel.isHidden)
         XCTAssertEqual(panel.workspaceID, WorkspaceRecord.defaultID)
         XCTAssertTrue(panel.isLocked)
@@ -69,13 +70,13 @@ final class PanelVisibilityPersistenceTests: XCTestCase {
             PanelDatabase(schemaVersion: PanelDatabase.currentSchemaVersion, panels: [record])
         )
         let root = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
-        XCTAssertEqual(root["schemaVersion"] as? Int, 3)
+        XCTAssertEqual(root["schemaVersion"] as? Int, PanelDatabase.currentSchemaVersion)
         let panel = try XCTUnwrap((root["panels"] as? [[String: Any]])?.first)
         XCTAssertEqual(panel["isHidden"] as? Bool, true)
         XCTAssertEqual(panel["workspaceID"] as? String, WorkspaceRecord.defaultID)
         let decoded = try PanelDatabaseCodec.decode(from: data)
         XCTAssertFalse(decoded.migratedFromLegacy)
-        XCTAssertEqual(decoded.database.schemaVersion, 3)
+        XCTAssertEqual(decoded.database.schemaVersion, PanelDatabase.currentSchemaVersion)
         XCTAssertEqual(decoded.database.panels.first?.isHidden, true)
     }
 
@@ -87,7 +88,7 @@ final class PanelVisibilityPersistenceTests: XCTestCase {
             try repository.insert(record)
             let reloaded = try PanelRepository(fileURL: metadataURL)
             XCTAssertEqual(try reloaded.record(id: record.id)?.isHidden, true)
-            XCTAssertEqual(try PanelDatabaseCodec.decode(from: Data(contentsOf: metadataURL)).database.schemaVersion, 3)
+            XCTAssertEqual(try PanelDatabaseCodec.decode(from: Data(contentsOf: metadataURL)).database.schemaVersion, PanelDatabase.currentSchemaVersion)
         }
     }
 
@@ -100,7 +101,7 @@ final class PanelVisibilityPersistenceTests: XCTestCase {
             XCTAssertFalse(panel.isHidden)
             XCTAssertEqual(panel.updatedAt, ISO8601DateFormatter().date(from: "2026-10-02T16:00:00Z"))
             let rewritten = try PanelDatabaseCodec.decode(from: Data(contentsOf: metadataURL))
-            XCTAssertEqual(rewritten.database.schemaVersion, 3)
+            XCTAssertEqual(rewritten.database.schemaVersion, PanelDatabase.currentSchemaVersion)
             XCTAssertEqual(rewritten.database.panels.first?.isHidden, false)
             XCTAssertEqual(rewritten.database.panels.first?.updatedAt, panel.updatedAt)
         }

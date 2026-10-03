@@ -163,7 +163,7 @@ final class WorkspaceMigrationTests: XCTestCase {
     func testV2MigratesToDefaultWithoutChangingPanelState() throws {
         let decoded = try PanelDatabaseCodec.decode(from: Data(GlanceTestFixtures.schemaV2EnvelopeJSON.utf8))
         XCTAssertTrue(decoded.migratedFromLegacy)
-        XCTAssertEqual(decoded.database.schemaVersion, 3)
+        XCTAssertEqual(decoded.database.schemaVersion, PanelDatabase.currentSchemaVersion)
         XCTAssertEqual(decoded.database.workspaces.map(\.id), [WorkspaceRecord.defaultID])
         XCTAssertEqual(decoded.database.workspaces.first?.name, "默认")
         XCTAssertEqual(decoded.database.panels.count, 2)
@@ -171,6 +171,8 @@ final class WorkspaceMigrationTests: XCTestCase {
         let visible = try XCTUnwrap(decoded.database.panels.first { $0.id.uuidString == "BBBBBBBB-BBBB-BBBB-BBBB-BBBBBBBBBBBB" })
         XCTAssertTrue(hidden.isHidden)
         XCTAssertFalse(visible.isHidden)
+        XCTAssertNil(hidden.customTitle)
+        XCTAssertNil(visible.customTitle)
         XCTAssertEqual(hidden.workspaceID, WorkspaceRecord.defaultID)
         XCTAssertEqual(visible.workspaceID, WorkspaceRecord.defaultID)
         XCTAssertEqual(hidden.updatedAt, ISO8601DateFormatter().date(from: "2026-10-02T16:00:00Z"))
@@ -186,7 +188,8 @@ final class WorkspaceMigrationTests: XCTestCase {
 
     func testV1MigratesHiddenFalseAndDefaultWorkspace() throws {
         let decoded = try PanelDatabaseCodec.decode(from: Data(GlanceTestFixtures.schemaV1EnvelopeJSON.utf8))
-        XCTAssertEqual(decoded.database.schemaVersion, 3)
+        XCTAssertEqual(decoded.database.schemaVersion, PanelDatabase.currentSchemaVersion)
+        XCTAssertNil(decoded.database.panels.first?.customTitle)
         XCTAssertEqual(decoded.database.workspaces.map(\.id), [WorkspaceRecord.defaultID])
         XCTAssertEqual(decoded.database.panels.first?.isHidden, false)
         XCTAssertEqual(decoded.database.panels.first?.workspaceID, WorkspaceRecord.defaultID)
@@ -195,7 +198,8 @@ final class WorkspaceMigrationTests: XCTestCase {
     func testSchema0MigratesToV3() throws {
         let decoded = try PanelDatabaseCodec.decode(from: Data(GlanceTestFixtures.legacyArrayJSON.utf8))
         XCTAssertTrue(decoded.migratedFromLegacy)
-        XCTAssertEqual(decoded.database.schemaVersion, 3)
+        XCTAssertEqual(decoded.database.schemaVersion, PanelDatabase.currentSchemaVersion)
+        XCTAssertNil(decoded.database.panels.first?.customTitle)
         XCTAssertEqual(decoded.database.workspaces.first?.id, WorkspaceRecord.defaultID)
         XCTAssertEqual(decoded.database.panels.first?.workspaceID, WorkspaceRecord.defaultID)
         XCTAssertFalse(decoded.database.panels.first?.isHidden ?? true)
@@ -206,7 +210,7 @@ final class WorkspaceMigrationTests: XCTestCase {
             let original = Data(GlanceTestFixtures.futureSchemaJSON.utf8)
             try original.write(to: metadataURL)
             let repository = try PanelRepository(fileURL: metadataURL)
-            XCTAssertEqual(repository.lastLoadOutcome, .unsupportedFutureSchema(4))
+            XCTAssertEqual(repository.lastLoadOutcome, .unsupportedFutureSchema(5))
             XCTAssertEqual(try Data(contentsOf: metadataURL), original)
         }
     }
@@ -220,7 +224,7 @@ final class WorkspaceMigrationTests: XCTestCase {
             XCTAssertEqual(hidden.workspaceID, WorkspaceRecord.defaultID)
             XCTAssertEqual(hidden.updatedAt, ISO8601DateFormatter().date(from: "2026-10-02T16:00:00Z"))
             let rewritten = try PanelDatabaseCodec.decode(from: Data(contentsOf: metadataURL))
-            XCTAssertEqual(rewritten.database.schemaVersion, 3)
+            XCTAssertEqual(rewritten.database.schemaVersion, PanelDatabase.currentSchemaVersion)
             XCTAssertEqual(rewritten.database.workspaces.map(\.id), [WorkspaceRecord.defaultID])
             XCTAssertFalse(rewritten.migratedFromLegacy)
         }
@@ -231,7 +235,7 @@ final class WorkspaceMigrationTests: XCTestCase {
             let record = GlanceTestFixtures.sampleRecord()
             record.workspaceID = WorkspaceRecord.defaultID
             let data = try PanelDatabaseCodec.encode(
-                PanelDatabase(schemaVersion: 3, workspaces: [], panels: [record])
+                PanelDatabase(schemaVersion: PanelDatabase.currentSchemaVersion, workspaces: [], panels: [record])
             )
             try data.write(to: metadataURL)
             let original = try Data(contentsOf: metadataURL)
@@ -248,7 +252,7 @@ final class WorkspaceMigrationTests: XCTestCase {
             record.workspaceID = "missing-id"
             let data = try PanelDatabaseCodec.encode(
                 PanelDatabase(
-                    schemaVersion: 3,
+                    schemaVersion: PanelDatabase.currentSchemaVersion,
                     workspaces: [WorkspaceRecord.makeDefault(at: Date(timeIntervalSince1970: 1))],
                     panels: [record]
                 )

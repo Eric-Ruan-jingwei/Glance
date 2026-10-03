@@ -109,7 +109,7 @@ enum GlanceTestFixtures {
           "y" : 20
         }
       ],
-      "schemaVersion" : 4
+      "schemaVersion" : 5
     }
     """
 
@@ -158,6 +158,70 @@ enum GlanceTestFixtures {
         }
       ],
       "schemaVersion" : 2
+    }
+    """
+
+    static let schemaV3EnvelopeJSON = """
+    {
+      "panels" : [
+        {
+          "createdAt" : "2026-10-02T15:32:51Z",
+          "displayIdentifier" : "1",
+          "height" : 220,
+          "id" : "AAAAAAAA-AAAA-AAAA-AAAA-AAAAAAAAAAAA",
+          "isCollapsed" : false,
+          "isHidden" : true,
+          "isLocked" : false,
+          "isPassThrough" : false,
+          "isPinned" : true,
+          "kindIdentifier" : "com.glance.panel.text",
+          "opacity" : 1,
+          "payloadPath" : "Panels/AAAAAAAA-AAAA-AAAA-AAAA-AAAAAAAAAAAA",
+          "payloadVersion" : 1,
+          "themeIdentifier" : "system",
+          "updatedAt" : "2026-10-02T16:00:00Z",
+          "width" : 320,
+          "workspaceID" : "work",
+          "x" : 100,
+          "y" : 200
+        },
+        {
+          "createdAt" : "2026-10-02T15:40:00Z",
+          "displayIdentifier" : "1",
+          "height" : 220,
+          "id" : "BBBBBBBB-BBBB-BBBB-BBBB-BBBBBBBBBBBB",
+          "isCollapsed" : false,
+          "isHidden" : false,
+          "isLocked" : true,
+          "isPassThrough" : false,
+          "isPinned" : true,
+          "kindIdentifier" : "com.glance.panel.pdf",
+          "opacity" : 0.5,
+          "payloadPath" : "Panels/BBBBBBBB-BBBB-BBBB-BBBB-BBBBBBBBBBBB",
+          "payloadVersion" : 1,
+          "themeIdentifier" : "system",
+          "updatedAt" : "2026-10-02T16:10:00Z",
+          "width" : 420,
+          "workspaceID" : "default",
+          "x" : 200,
+          "y" : 300
+        }
+      ],
+      "schemaVersion" : 3,
+      "workspaces" : [
+        {
+          "createdAt" : "2026-10-02T15:00:00Z",
+          "id" : "default",
+          "name" : "默认",
+          "updatedAt" : "2026-10-02T15:00:00Z"
+        },
+        {
+          "createdAt" : "2026-10-02T15:10:00Z",
+          "id" : "work",
+          "name" : "Work",
+          "updatedAt" : "2026-10-02T15:10:00Z"
+        }
+      ]
     }
     """
 }
