@@ -1,5 +1,15 @@
 import Foundation
 
+enum PanelPlacementOccupancy {
+    static func shouldOccupy(
+        workspaceID: String,
+        isHidden: Bool,
+        activeWorkspaceID: String
+    ) -> Bool {
+        workspaceID == activeWorkspaceID && !isHidden
+    }
+}
+
 struct PanelPlacementEngine {
     func frameForNewPanel(
         width: Double,
