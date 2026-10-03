@@ -364,6 +364,7 @@ final class GuideTests: XCTestCase {
                 "globalSearchPrevious",
                 "globalSearchNext",
                 "globalSearchActivate",
+                "globalSearchReveal",
                 "globalSearchCancel"
             ]
         )
@@ -371,6 +372,14 @@ final class GuideTests: XCTestCase {
         XCTAssertEqual(
             GuideShortcutCatalog.item(id: "globalSearchActivate")?.tokens(using: provider).map(\.display),
             ["↩"]
+        )
+        XCTAssertEqual(
+            GuideShortcutCatalog.item(id: "globalSearchReveal")?.title,
+            "在来源中显示"
+        )
+        XCTAssertEqual(
+            GuideShortcutCatalog.item(id: "globalSearchReveal")?.tokens(using: provider).map(\.display),
+            ["⌘", "↩"]
         )
         XCTAssertEqual(
             GuideShortcutCatalog.item(id: "globalSearchCancel")?.tokens(using: provider).map(\.display),
