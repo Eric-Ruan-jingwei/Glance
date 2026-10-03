@@ -11,6 +11,12 @@ enum PanelInitialPayloadWriter {
             var document = TodoDocument.empty
             guard TodoMutation.add(&document, text: title) != nil else { return }
             try TodoPayloadFile.writeDocument(document, to: directory)
+        case .imagePNG(let data):
+            guard !data.isEmpty else { throw MediaStoreError.writeFailed }
+            try data.write(
+                to: directory.appendingPathComponent("image.png"),
+                options: .atomic
+            )
         }
     }
 }

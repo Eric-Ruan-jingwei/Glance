@@ -127,6 +127,21 @@ final class PanelManager {
         onToggleQuickCapture?()
     }
 
+    func captureClipboard() {
+        guard let content = MacClipboardReader.read() else {
+            NSSound.beep()
+            return
+        }
+        let created = createPanel(
+            kindIdentifier: ClipboardCaptureRouter.kindIdentifier(for: content),
+            initialContent: ClipboardCaptureRouter.initialContent(for: content),
+            preferredScreen: DisplayManager.screenContainingMouse()
+        )
+        if !created {
+            NSSound.beep()
+        }
+    }
+
     var allHidden: Bool {
         environment.visibility.isConcealed
     }
