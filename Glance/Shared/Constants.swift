@@ -12,12 +12,24 @@ enum GlanceConstants {
     static let appName = "Glance"
     static let bundleIdentifier = "com.glance.app"
     static let slogan = "Pin what matters. Keep it in sight."
-    static let hideShowShortcutDisplay = "⌥⌘G"
-    static let hideShowKeyEquivalent = "g"
-    static let quickCaptureShortcutDisplay = "⌥⌘J"
-    static let quickCaptureKeyEquivalent = "j"
-    static let clipboardCaptureShortcutDisplay = "⌥⌘B"
-    static let clipboardCaptureKeyEquivalent = "b"
+    static var hideShowShortcutDisplay: String {
+        ShortcutDisplayFormatter.display(ShortcutDefaults.hideShow)
+    }
+    static var hideShowKeyEquivalent: String {
+        ShortcutDisplayFormatter.keyEquivalent(ShortcutDefaults.hideShow)
+    }
+    static var quickCaptureShortcutDisplay: String {
+        ShortcutDisplayFormatter.display(ShortcutDefaults.quickCapture)
+    }
+    static var quickCaptureKeyEquivalent: String {
+        ShortcutDisplayFormatter.keyEquivalent(ShortcutDefaults.quickCapture)
+    }
+    static var clipboardCaptureShortcutDisplay: String {
+        ShortcutDisplayFormatter.display(ShortcutDefaults.clipboardCapture)
+    }
+    static var clipboardCaptureKeyEquivalent: String {
+        ShortcutDisplayFormatter.keyEquivalent(ShortcutDefaults.clipboardCapture)
+    }
 
     static var versionDisplay: String {
         let short = (Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String)?
