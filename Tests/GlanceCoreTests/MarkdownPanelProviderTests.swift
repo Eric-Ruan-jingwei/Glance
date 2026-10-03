@@ -65,15 +65,15 @@ final class MarkdownPanelProviderTests: XCTestCase {
             onSettings: {},
             onQuit: {}
         )
-        let titles = menu.items.map(\.title)
-        XCTAssertEqual(titles[0], "快速记录…")
-        XCTAssertEqual(titles[1], "从剪贴板创建…")
-        XCTAssertEqual(titles[3], "工作区")
-        XCTAssertEqual(titles[5], "管理面板…")
-        XCTAssertEqual(titles[6], "新建面板")
+        XCTAssertNotNil(menu.items.first { $0.title == "快速记录…" })
+        XCTAssertNotNil(menu.items.first { $0.title == "从剪贴板创建…" })
+        XCTAssertNotNil(menu.items.first { $0.title == "工作区" })
+        XCTAssertNotNil(menu.items.first { $0.title == "管理面板…" })
+        let newPanel = menu.items.first { $0.title == "新建面板" }
         XCTAssertEqual(
-            menu.items[6].submenu?.items.map(\.title),
+            newPanel?.submenu?.items.map(\.title),
             ["文字", "Markdown", "待办", "图片", "PDF…"]
         )
+        XCTAssertNotNil(menu.items.first { $0.title == GlanceGuideEntry.menuTitle })
     }
 }

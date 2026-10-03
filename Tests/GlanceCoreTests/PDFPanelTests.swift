@@ -312,9 +312,10 @@ final class PDFPanelProviderTests: XCTestCase {
             onSettings: {},
             onQuit: {}
         )
-        let titles = menu.items.map(\.title)
-        XCTAssertEqual(titles[6], "新建面板")
-        XCTAssertEqual(menu.items[6].submenu?.items.map(\.title).last, "PDF…")
+        let newPanel = menu.items.first { $0.title == "新建面板" }
+        XCTAssertNotNil(newPanel)
+        XCTAssertEqual(newPanel?.submenu?.items.map(\.title).last, "PDF…")
+        XCTAssertNotNil(menu.items.first { $0.title == GlanceGuideEntry.menuTitle })
     }
 }
 

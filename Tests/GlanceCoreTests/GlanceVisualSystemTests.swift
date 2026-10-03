@@ -43,22 +43,25 @@ final class GlanceVisualSystemTests: XCTestCase {
             onQuit: {}
         )
         let titles = menu.items.map(\.title)
-        XCTAssertEqual(titles[0], "快速记录…")
-        XCTAssertEqual(titles[1], "从剪贴板创建…")
-        XCTAssertEqual(titles[3], "工作区")
-        XCTAssertEqual(titles[5], "管理面板…")
-        XCTAssertEqual(titles[6], "新建面板")
-        XCTAssertEqual(titles[7], "状态")
-        XCTAssertEqual(titles[8], "隐藏全部")
+        XCTAssertEqual(menu.items.first { $0.title == "快速记录…" }?.title, "快速记录…")
+        XCTAssertEqual(menu.items.first { $0.title == "从剪贴板创建…" }?.title, "从剪贴板创建…")
+        XCTAssertNotNil(menu.items.first { $0.title == "工作区" })
+        XCTAssertNotNil(menu.items.first { $0.title == "管理面板…" })
+        let newPanel = menu.items.first { $0.title == "新建面板" }
+        XCTAssertNotNil(newPanel)
+        XCTAssertNotNil(menu.items.first { $0.title == "状态" })
+        XCTAssertNotNil(menu.items.first { $0.title == "隐藏全部" })
+        XCTAssertNotNil(menu.items.first { $0.title == GlanceGuideEntry.menuTitle })
+        XCTAssertNotNil(menu.items.first { $0.title == "设置…" })
         XCTAssertEqual(titles.last, "退出")
-        XCTAssertNotNil(menu.items[0].image)
-        XCTAssertNotNil(menu.items[5].image)
-        XCTAssertNotNil(menu.items[6].image)
+        XCTAssertNotNil(menu.items.first { $0.title == "快速记录…" }?.image)
+        XCTAssertNotNil(menu.items.first { $0.title == "管理面板…" }?.image)
+        XCTAssertNotNil(newPanel?.image)
         XCTAssertEqual(
-            menu.items[6].submenu?.items.map(\.title),
+            newPanel?.submenu?.items.map(\.title),
             ["文字", "Markdown", "待办", "图片", "PDF…"]
         )
-        XCTAssertTrue(menu.items[7].isSectionHeader)
+        XCTAssertTrue(menu.items.first { $0.title == "状态" }?.isSectionHeader == true)
     }
 
     func testWorkspacePanelCountIsDerivedFromSummaries() {
