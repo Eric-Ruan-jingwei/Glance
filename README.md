@@ -33,6 +33,10 @@ There is no Windows client yet. Shared data contracts are documented so a future
 - No cloud
 - Open source
 
+## V0.18.1
+
+Expanded in-app shortcut and interaction reference.
+
 ## V0.18.0
 
 First-run onboarding and an in-app usage guide. No schema or feature change beyond help.
