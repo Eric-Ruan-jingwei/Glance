@@ -35,6 +35,7 @@ final class GlanceGlobalShortcutTests: XCTestCase {
         XCTAssertEqual(item?.keyEquivalent, "j")
         XCTAssertEqual(item?.keyEquivalentModifierMask, [.option, .command])
         XCTAssertEqual(menu.items.first?.title, "快速记录…")
+        XCTAssertEqual(menu.items.first { $0.title == "管理面板…" }?.title, "管理面板…")
     }
 
     func testPassThroughHintMentionsLockLimit() {
@@ -57,6 +58,7 @@ final class GlanceGlobalShortcutTests: XCTestCase {
             menu,
             allHidden: allHidden,
             onQuickCapture: {},
+            onManagePanels: {},
             onNewText: {},
             onNewMarkdown: {},
             onNewTodo: {},
