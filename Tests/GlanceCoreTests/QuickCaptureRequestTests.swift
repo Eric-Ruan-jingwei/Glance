@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import XCTest
 
@@ -49,5 +50,78 @@ final class QuickCaptureRequestTests: XCTestCase {
         XCTAssertEqual(GlanceConstants.quickCaptureKeyEquivalent, "j")
         XCTAssertEqual(GlanceConstants.quickCaptureShortcutDisplay, "⌥⌘J")
         XCTAssertEqual(GlanceConstants.clipboardCaptureShortcutDisplay, "⌥⌘B")
+    }
+}
+
+@MainActor
+final class QuickCaptureReturnTests: XCTestCase {
+    func testReturnSubmitsWhenNotComposing() {
+        XCTAssertEqual(
+            QuickCaptureReturn.action(isComposing: false, shift: false, allowsNewline: true),
+            .submit
+        )
+    }
+
+    func testShiftReturnInsertsNewlineOnlyWhenAllowed() {
+        XCTAssertEqual(
+            QuickCaptureReturn.action(isComposing: false, shift: true, allowsNewline: true),
+            .insertNewline
+        )
+        XCTAssertEqual(
+            QuickCaptureReturn.action(isComposing: false, shift: true, allowsNewline: false),
+            .submit
+        )
+    }
+
+    func testComposingReturnConfirmsInputMethod() {
+        XCTAssertEqual(
+            QuickCaptureReturn.action(isComposing: true, shift: false, allowsNewline: true),
+            .confirmComposition
+        )
+    }
+
+    func testInsertNewlineSubmitsInsteadOfInserting() {
+        let view = QuickCaptureTextView(usingTextLayoutManager: false)
+        var submitted = 0
+        view.onSubmit = { submitted += 1 }
+        view.string = "hello"
+        view.doCommand(by: #selector(NSResponder.insertNewline(_:)))
+        XCTAssertEqual(submitted, 1)
+        XCTAssertEqual(view.string, "hello")
+    }
+
+    func testInsertLineBreakSubmits() {
+        let view = QuickCaptureTextView(usingTextLayoutManager: false)
+        var submitted = 0
+        view.onSubmit = { submitted += 1 }
+        view.doCommand(by: #selector(NSResponder.insertLineBreak(_:)))
+        XCTAssertEqual(submitted, 1)
+    }
+
+    func testCapturePanelConsumesReturnAsKeyEquivalent() {
+        let controller = QuickCaptureWindowController()
+        var submitted = false
+        controller.onSubmit = { request, _ in
+            submitted = request.isValid
+            return true
+        }
+        controller.present()
+        defer { controller.cancel() }
+        let view = controller.window?.initialFirstResponder as? QuickCaptureTextView
+        view?.string = "from guide"
+        let event = NSEvent.keyEvent(
+            with: .keyDown,
+            location: .zero,
+            modifierFlags: [],
+            timestamp: 0,
+            windowNumber: controller.window?.windowNumber ?? 0,
+            context: nil,
+            characters: "\r",
+            charactersIgnoringModifiers: "\r",
+            isARepeat: false,
+            keyCode: 36
+        )
+        XCTAssertEqual(controller.window?.performKeyEquivalent(with: try XCTUnwrap(event)), true)
+        XCTAssertTrue(submitted)
     }
 }

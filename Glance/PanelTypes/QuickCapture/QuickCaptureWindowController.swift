@@ -67,16 +67,25 @@ final class QuickCaptureWindowController: NSWindowController, NSTextViewDelegate
         clearError()
     }
 
+    fileprivate func handleReturnKey(_ event: NSEvent) -> Bool {
+        window?.makeFirstResponder(textView)
+        textView.handleReturn(event)
+        return true
+    }
+
     fileprivate func submit() {
         let request = QuickCaptureRequest(kind: kind, text: textView.string)
         guard request.isValid else {
             NSSound.beep()
+            errorLabel.stringValue = "先输入内容"
+            errorLabel.isHidden = false
             return
         }
         let screen = window?.screen ?? DisplayManager.screenContainingMouse()
         if onSubmit(request, screen) {
             dismiss(activatePreviousApp: true)
         } else {
+            errorLabel.stringValue = "无法创建面板"
             errorLabel.isHidden = false
         }
     }
@@ -297,39 +306,89 @@ final class QuickCapturePanel: NSPanel {
 
     override func performKeyEquivalent(with event: NSEvent) -> Bool {
         let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
-        guard flags == .command, let character = event.charactersIgnoringModifiers else {
-            return super.performKeyEquivalent(with: event)
+        if flags == .command, let character = event.charactersIgnoringModifiers {
+            switch character {
+            case "1":
+                (windowController as? QuickCaptureWindowController)?.setKind(.text)
+                return true
+            case "2":
+                (windowController as? QuickCaptureWindowController)?.setKind(.todo)
+                return true
+            default:
+                break
+            }
         }
-        switch character {
-        case "1":
-            (windowController as? QuickCaptureWindowController)?.setKind(.text)
-            return true
-        case "2":
-            (windowController as? QuickCaptureWindowController)?.setKind(.todo)
-            return true
-        default:
-            return super.performKeyEquivalent(with: event)
+        if QuickCaptureReturn.isReturnKey(event) {
+            return (windowController as? QuickCaptureWindowController)?.handleReturnKey(event) ?? false
         }
+        return super.performKeyEquivalent(with: event)
+    }
+}
+
+enum QuickCaptureReturn {
+    case confirmComposition
+    case insertNewline
+    case submit
+
+    static func action(isComposing: Bool, shift: Bool, allowsNewline: Bool) -> QuickCaptureReturn {
+        if isComposing { return .confirmComposition }
+        if shift, allowsNewline { return .insertNewline }
+        return .submit
+    }
+
+    static func isReturnKey(_ event: NSEvent) -> Bool {
+        event.keyCode == 36 || event.keyCode == 76
+    }
+
+    static func isNewlineCommand(_ selector: Selector) -> Bool {
+        selector == #selector(NSResponder.insertNewline(_:))
+            || selector == #selector(NSResponder.insertNewlineIgnoringFieldEditor(_:))
+            || selector == #selector(NSResponder.insertLineBreak(_:))
     }
 }
 
 final class QuickCaptureTextView: NSTextView {
     var onSubmit: () -> Void = {}
     var allowsNewline: () -> Bool = { true }
+    private var isHandlingReturn = false
+
+    func handleReturn(_ event: NSEvent) {
+        switch QuickCaptureReturn.action(
+            isComposing: hasMarkedText(),
+            shift: event.modifierFlags.contains(.shift),
+            allowsNewline: allowsNewline()
+        ) {
+        case .confirmComposition:
+            isHandlingReturn = true
+            super.keyDown(with: event)
+            isHandlingReturn = false
+        case .insertNewline:
+            insertNewline(nil)
+        case .submit:
+            onSubmit()
+        }
+    }
+
+    override func keyDown(with event: NSEvent) {
+        if !isHandlingReturn, QuickCaptureReturn.isReturnKey(event) {
+            handleReturn(event)
+            return
+        }
+        super.keyDown(with: event)
+    }
 
     override func doCommand(by selector: Selector) {
-        if selector == #selector(insertNewline(_:)) || selector == #selector(insertNewlineIgnoringFieldEditor(_:)) {
-            let isComposing = hasMarkedText()
-            if isComposing {
+        if QuickCaptureReturn.isNewlineCommand(selector) {
+            switch QuickCaptureReturn.action(
+                isComposing: hasMarkedText(),
+                shift: NSApp.currentEvent?.modifierFlags.contains(.shift) == true,
+                allowsNewline: allowsNewline()
+            ) {
+            case .confirmComposition, .insertNewline:
                 super.doCommand(by: selector)
-                return
+            case .submit:
+                onSubmit()
             }
-            let shift = NSApp.currentEvent?.modifierFlags.contains(.shift) == true
-            if shift, allowsNewline() {
-                super.doCommand(by: selector)
-                return
-            }
-            onSubmit()
             return
         }
         super.doCommand(by: selector)
