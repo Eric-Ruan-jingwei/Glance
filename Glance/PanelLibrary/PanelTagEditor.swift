@@ -172,8 +172,7 @@ private struct PanelTagEditorView: View {
                     .foregroundStyle(.secondary)
                 TagFlowLayout {
                     ForEach(Array(session.suggestions.prefix(12)), id: \.self) { tag in
-                        PanelTagChip(text: tag)
-                            .onTapGesture { session.addSuggestion(tag) }
+                        PanelTagChip(text: tag, onAdd: { session.addSuggestion(tag) })
                     }
                 }
             }
@@ -199,11 +198,82 @@ private struct PanelTagEditorView: View {
     }
 }
 
+enum PanelTagChipAccessibility: Equatable {
+    case readOnly
+    case remove
+    case addSuggestion
+
+    static func kind(onRemove: Bool, onAdd: Bool) -> PanelTagChipAccessibility {
+        if onRemove { return .remove }
+        if onAdd { return .addSuggestion }
+        return .readOnly
+    }
+
+    var isButton: Bool {
+        self != .readOnly
+    }
+
+    func label(for text: String) -> String {
+        switch self {
+        case .readOnly:
+            return "标签：\(text)"
+        case .remove:
+            return "移除标签：\(text)"
+        case .addSuggestion:
+            return "添加标签：\(text)"
+        }
+    }
+
+    func activate(onRemove: (() -> Void)?, onAdd: (() -> Void)?) {
+        switch self {
+        case .readOnly:
+            break
+        case .remove:
+            onRemove?()
+        case .addSuggestion:
+            onAdd?()
+        }
+    }
+}
+
 struct PanelTagChip: View {
     let text: String
     var onRemove: (() -> Void)? = nil
+    var onAdd: (() -> Void)? = nil
+
+    private var accessibilityKind: PanelTagChipAccessibility {
+        .kind(onRemove: onRemove != nil, onAdd: onAdd != nil)
+    }
 
     var body: some View {
+        switch accessibilityKind {
+        case .remove:
+            chipBody
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel(accessibilityKind.label(for: text))
+                .accessibilityAddTraits(.isButton)
+                .accessibilityAction(.default) {
+                    accessibilityKind.activate(onRemove: onRemove, onAdd: onAdd)
+                }
+        case .addSuggestion:
+            chipBody
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel(accessibilityKind.label(for: text))
+                .accessibilityAddTraits(.isButton)
+                .accessibilityAction(.default) {
+                    accessibilityKind.activate(onRemove: onRemove, onAdd: onAdd)
+                }
+                .onTapGesture {
+                    accessibilityKind.activate(onRemove: onRemove, onAdd: onAdd)
+                }
+        case .readOnly:
+            chipBody
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel(accessibilityKind.label(for: text))
+        }
+    }
+
+    private var chipBody: some View {
         HStack(spacing: 3) {
             Text(text)
                 .lineLimit(1)
@@ -220,9 +290,6 @@ struct PanelTagChip: View {
         .padding(.vertical, 3)
         .background(Color.secondary.opacity(0.14))
         .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(onRemove == nil ? "标签：\(text)" : "移除标签：\(text)")
-        .accessibilityAddTraits(onRemove == nil ? [] : .isButton)
     }
 }
 
