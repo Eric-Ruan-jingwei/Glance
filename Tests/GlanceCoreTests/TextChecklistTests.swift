@@ -8,27 +8,24 @@ import XCTest
 #endif
 
 final class TextChecklistToggleTests: XCTestCase {
-    func testUncheckedBoxBecomesChecked() {
-        let change = TextChecklistToggle.replacement(in: "☐ 你好" as NSString, at: 0)
-        XCTAssertEqual(change?.range, NSRange(location: 0, length: 1))
-        XCTAssertEqual(change?.replacement, "☑")
+    func testMarkIndexFindsBoxAndFollowingSpace() {
+        XCTAssertEqual(TextChecklistToggle.markIndex(in: "☐ 你好" as NSString, at: 0), 0)
+        XCTAssertEqual(TextChecklistToggle.markIndex(in: "☐ 你好" as NSString, at: 1), 0)
+        XCTAssertNil(TextChecklistToggle.markIndex(in: "☐ 你好" as NSString, at: 2))
+        XCTAssertNil(TextChecklistToggle.markIndex(in: "你好" as NSString, at: 0))
     }
 
-    func testCheckedBoxBecomesUnchecked() {
-        let change = TextChecklistToggle.replacement(in: "☑ 你好" as NSString, at: 0)
-        XCTAssertEqual(change?.range, NSRange(location: 0, length: 1))
-        XCTAssertEqual(change?.replacement, "☐")
+    func testSpansCoverTheLineAfterTheBox() {
+        let spans = TextChecklistToggle.spans(in: "☐ 你好" as NSString, markIndex: 0)
+        XCTAssertEqual(spans?.markRange, NSRange(location: 0, length: 1))
+        XCTAssertEqual(spans?.contentRange, NSRange(location: 1, length: 3))
+        XCTAssertEqual(spans?.usesCheckedGlyph, false)
     }
 
-    func testSpaceAfterBoxStillTogglesTheMark() {
-        let change = TextChecklistToggle.replacement(in: "☐ 你好" as NSString, at: 1)
-        XCTAssertEqual(change?.range, NSRange(location: 0, length: 1))
-        XCTAssertEqual(change?.replacement, "☑")
-    }
-
-    func testOrdinaryTextDoesNotToggle() {
-        XCTAssertNil(TextChecklistToggle.replacement(in: "☐ 你好" as NSString, at: 2))
-        XCTAssertNil(TextChecklistToggle.replacement(in: "你好" as NSString, at: 0))
+    func testCheckedGlyphCountsAsCompleted() {
+        XCTAssertTrue(TextChecklistToggle.isCompleted(usesCheckedGlyph: true, contentHasStrikethrough: false))
+        XCTAssertTrue(TextChecklistToggle.isCompleted(usesCheckedGlyph: false, contentHasStrikethrough: true))
+        XCTAssertFalse(TextChecklistToggle.isCompleted(usesCheckedGlyph: false, contentHasStrikethrough: false))
     }
 
     func testContainerPointSubtractsTextOrigin() {
@@ -58,32 +55,64 @@ final class TextChecklistToggleTests: XCTestCase {
 
 @MainActor
 final class TextChecklistClickTests: XCTestCase {
-    func testClickingBoxInEditingModeChecksTheItem() throws {
-        let view = try makeChecklistView(reading: false)
+    func testClickingBoxStrikesThroughTheItem() throws {
+        let view = try makeChecklistView(reading: false, text: "☐ 你好")
         XCTAssertTrue(view.toggleChecklist(atViewPoint: glyphCenter(in: view, glyphIndex: 0)))
-        XCTAssertTrue(view.string.hasPrefix("☑"))
+        XCTAssertTrue(view.string.hasPrefix("☐"))
+        XCTAssertFalse(view.string.hasPrefix("☑"))
+        XCTAssertTrue(hasStrikethrough(in: view, at: 2))
+        XCTAssertFalse(hasStrikethrough(in: view, at: 0))
     }
 
-    func testClickingBoxInReadingModeChecksTheItem() throws {
-        let view = try makeChecklistView(reading: true)
+    func testClickingBoxAgainClearsTheStrike() throws {
+        let view = try makeChecklistView(reading: false, text: "☐ 你好")
         XCTAssertTrue(view.toggleChecklist(atViewPoint: glyphCenter(in: view, glyphIndex: 0)))
-        XCTAssertTrue(view.string.hasPrefix("☑"))
+        view.layoutManager?.ensureLayout(for: try XCTUnwrap(view.textContainer))
+        XCTAssertTrue(view.toggleChecklist(atViewPoint: glyphCenter(in: view, glyphIndex: 0)))
+        XCTAssertTrue(view.string.hasPrefix("☐"))
+        XCTAssertFalse(hasStrikethrough(in: view, at: 2))
+    }
+
+    func testClickingBoxInReadingModeStrikesThrough() throws {
+        let view = try makeChecklistView(reading: true, text: "☐ 你好")
+        XCTAssertTrue(view.toggleChecklist(atViewPoint: glyphCenter(in: view, glyphIndex: 0)))
+        XCTAssertTrue(hasStrikethrough(in: view, at: 2))
+    }
+
+    func testLegacyCheckedGlyphConvertsToStrike() throws {
+        let view = try makeChecklistView(reading: false, text: "☑ 你好")
+        view.refreshChecklistMarks()
+        XCTAssertTrue(view.string.hasPrefix("☐"))
+        XCTAssertTrue(hasStrikethrough(in: view, at: 2))
     }
 
     func testClickingTheLabelDoesNotToggle() throws {
-        let view = try makeChecklistView(reading: false)
+        let view = try makeChecklistView(reading: false, text: "☐ 你好")
         XCTAssertFalse(view.toggleChecklist(atViewPoint: glyphCenter(in: view, glyphIndex: 2)))
+        XCTAssertTrue(view.string.hasPrefix("☐"))
+        XCTAssertFalse(hasStrikethrough(in: view, at: 2))
+    }
+
+    func testInsertedChecklistMarkIsLargerThanBody() {
+        let view = GlanceTextView(usingTextLayoutManager: false)
+        view.font = GlanceConstants.textBodyFont
+        view.string = "hello"
+        view.setSelectedRange(NSRange(location: 0, length: 0))
+        view.insertChecklist()
+        let font = view.textStorage?.attribute(.font, at: 0, effectiveRange: nil) as? NSFont
+        XCTAssertEqual(font?.pointSize, TextChecklistToggle.markSize)
+        XCTAssertGreaterThan(TextChecklistToggle.markSize, GlanceConstants.textBodyFont.pointSize)
         XCTAssertTrue(view.string.hasPrefix("☐"))
     }
 
-    private func makeChecklistView(reading: Bool) throws -> GlanceTextView {
+    private func makeChecklistView(reading: Bool, text: String) throws -> GlanceTextView {
         let view = GlanceTextView(usingTextLayoutManager: false)
         view.isVerticallyResizable = true
         view.isHorizontallyResizable = false
         view.textContainerInset = GlanceTheme.Size.readingInset
         view.textContainer?.widthTracksTextView = false
         view.font = GlanceConstants.textBodyFont
-        view.string = "☐ 你好"
+        view.string = text
         view.isReadingMode = reading
         view.isEditable = !reading
         view.allowsContentMutation = true
@@ -105,6 +134,14 @@ final class TextChecklistClickTests: XCTestCase {
         )
         let origin = view.textContainerOrigin
         return NSPoint(x: origin.x + bounds.midX, y: origin.y + bounds.midY)
+    }
+
+    private func hasStrikethrough(in view: GlanceTextView, at index: Int) -> Bool {
+        guard let storage = view.textStorage, index < storage.length else { return false }
+        let value = storage.attribute(.strikethroughStyle, at: index, effectiveRange: nil)
+        if let number = value as? NSNumber { return number.intValue != 0 }
+        if let style = value as? Int { return style != 0 }
+        return false
     }
 }
 

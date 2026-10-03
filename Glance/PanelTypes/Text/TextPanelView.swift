@@ -35,6 +35,7 @@ final class TextPanelView: NSView, PanelContentControlling, NSTextViewDelegate {
         if let attributed = try TextPayloadFile.readAttributedString(from: directory) {
             textView.textStorage?.setAttributedString(attributed)
         }
+        textView.refreshChecklistMarks()
         refreshPlaceholder()
     }
 
@@ -57,6 +58,7 @@ final class TextPanelView: NSView, PanelContentControlling, NSTextViewDelegate {
         textView.isSelectable = true
         applyFormatBar(visible: true)
         placeholder.isHidden = true
+        textView.refreshChecklistMarks()
         window?.makeFirstResponder(textView)
     }
 

@@ -33,7 +33,7 @@ final class GlanceTextView: NSTextView {
     private func handleReadingMouseDown(_ event: NSEvent) {
         let viewPoint = convert(event.locationInWindow, from: nil)
         switch PanelReadingClick.textAction(
-            hitsChecklist: checklistChange(atViewPoint: viewPoint) != nil,
+            hitsChecklist: checklistMarkIndex(atViewPoint: viewPoint) != nil,
             allowsContentMutation: allowsContentMutation
         ) {
         case .toggleChecklist:
@@ -125,27 +125,41 @@ final class GlanceTextView: NSTextView {
         let lineRange = ns.lineRange(for: selectedRange())
         if lineRange.length == 0 {
             insertText(prefix, replacementRange: selectedRange())
-            return
-        }
-        let line = ns.substring(with: lineRange)
-        if line.hasPrefix("• ") || line.hasPrefix("☐ ") || line.hasPrefix("☑ ") {
-            let stripped = String(line.dropFirst(2))
-            textStorage.replaceCharacters(in: lineRange, with: prefix + stripped)
         } else {
-            textStorage.replaceCharacters(in: NSRange(location: lineRange.location, length: 0), with: prefix)
+            let line = ns.substring(with: lineRange)
+            if line.hasPrefix("• ") || line.hasPrefix("☐ ") || line.hasPrefix("☑ ") {
+                let stripped = String(line.dropFirst(2))
+                textStorage.replaceCharacters(in: lineRange, with: prefix + stripped)
+            } else {
+                textStorage.replaceCharacters(in: NSRange(location: lineRange.location, length: 0), with: prefix)
+            }
+        }
+        if prefix.hasPrefix("☐") {
+            let markLine = (textStorage.string as NSString).lineRange(for: selectedRange())
+            applyChecklistMarkStyle(at: markLine.location)
         }
         didChangeText()
     }
 
     func toggleChecklist(atViewPoint viewPoint: NSPoint) -> Bool {
-        guard let change = checklistChange(atViewPoint: viewPoint), let textStorage else { return false }
-        textStorage.replaceCharacters(in: change.range, with: change.replacement)
+        guard let markIndex = checklistMarkIndex(atViewPoint: viewPoint), let textStorage else { return false }
+        let ns = textStorage.string as NSString
+        guard let spans = TextChecklistToggle.spans(in: ns, markIndex: markIndex) else { return false }
+        let completed = TextChecklistToggle.isCompleted(
+            usesCheckedGlyph: spans.usesCheckedGlyph,
+            contentHasStrikethrough: contentHasStrikethrough(in: spans.contentRange)
+        )
+        if spans.usesCheckedGlyph {
+            textStorage.replaceCharacters(in: spans.markRange, with: "☐")
+        }
+        applyChecklistMarkStyle(at: spans.markRange.location)
+        applyChecklistContent(completed: !completed, range: spans.contentRange)
         didChangeText()
         onChecklistToggled?()
         return true
     }
 
-    func checklistChange(atViewPoint viewPoint: NSPoint) -> (range: NSRange, replacement: String)? {
+    func checklistMarkIndex(atViewPoint viewPoint: NSPoint) -> Int? {
         guard let layoutManager, let textContainer, let textStorage else { return nil }
         var fraction: CGFloat = 0
         let containerPoint = TextChecklistToggle.containerPoint(
@@ -166,7 +180,73 @@ final class GlanceTextView: NSTextView {
             return nil
         }
         let charIndex = layoutManager.characterIndexForGlyph(at: glyphIndex)
-        return TextChecklistToggle.replacement(in: textStorage.string as NSString, at: charIndex)
+        return TextChecklistToggle.markIndex(in: textStorage.string as NSString, at: charIndex)
+    }
+
+    func refreshChecklistMarks() {
+        guard let textStorage else { return }
+        let ns = textStorage.string as NSString
+        var location = 0
+        while location < ns.length {
+            let lineRange = ns.lineRange(for: NSRange(location: location, length: 0))
+            if lineRange.length > 0 {
+                let ch = ns.character(at: lineRange.location)
+                if ch == TextChecklistToggle.checked {
+                    textStorage.replaceCharacters(
+                        in: NSRange(location: lineRange.location, length: 1),
+                        with: "☐"
+                    )
+                    if let spans = TextChecklistToggle.spans(
+                        in: textStorage.string as NSString,
+                        markIndex: lineRange.location
+                    ) {
+                        applyChecklistContent(completed: true, range: spans.contentRange)
+                    }
+                    applyChecklistMarkStyle(at: lineRange.location)
+                } else if ch == TextChecklistToggle.unchecked {
+                    applyChecklistMarkStyle(at: lineRange.location)
+                }
+            }
+            let next = NSMaxRange(lineRange)
+            if next <= location { break }
+            location = next
+        }
+    }
+
+    private func applyChecklistMarkStyle(at markIndex: Int) {
+        guard let textStorage, markIndex >= 0, markIndex < textStorage.length else { return }
+        let ch = (textStorage.string as NSString).character(at: markIndex)
+        guard ch == TextChecklistToggle.unchecked || ch == TextChecklistToggle.checked else { return }
+        let range = NSRange(location: markIndex, length: 1)
+        textStorage.addAttributes(TextChecklistToggle.markAttributes(), range: range)
+        textStorage.removeAttribute(.strikethroughStyle, range: range)
+        textStorage.removeAttribute(.strikethroughColor, range: range)
+    }
+
+    private func applyChecklistContent(completed: Bool, range: NSRange) {
+        guard let textStorage, range.length > 0, NSMaxRange(range) <= textStorage.length else { return }
+        if completed {
+            textStorage.addAttributes(
+                [
+                    .strikethroughStyle: NSUnderlineStyle.single.rawValue,
+                    .strikethroughColor: NSColor.quaternaryLabelColor,
+                    .foregroundColor: NSColor.tertiaryLabelColor
+                ],
+                range: range
+            )
+        } else {
+            textStorage.removeAttribute(.strikethroughStyle, range: range)
+            textStorage.removeAttribute(.strikethroughColor, range: range)
+            textStorage.addAttribute(.foregroundColor, value: GlanceConstants.textBodyColor, range: range)
+        }
+    }
+
+    private func contentHasStrikethrough(in range: NSRange) -> Bool {
+        guard let textStorage, range.length > 0, range.location < textStorage.length else { return false }
+        let value = textStorage.attribute(.strikethroughStyle, at: range.location, effectiveRange: nil)
+        if let number = value as? NSNumber { return number.intValue != 0 }
+        if let style = value as? Int { return style != 0 }
+        return false
     }
 }
 
@@ -199,7 +279,28 @@ enum PanelReadingClick: Equatable {
 enum TextChecklistToggle {
     static let unchecked: unichar = 0x2610
     static let checked: unichar = 0x2611
-    static let hitSlop: CGFloat = 6
+    static let hitSlop: CGFloat = 8
+    static let markSize: CGFloat = 16
+
+    struct Spans: Equatable {
+        var markRange: NSRange
+        var contentRange: NSRange
+        var usesCheckedGlyph: Bool
+    }
+
+    static var markFont: NSFont {
+        .systemFont(ofSize: markSize, weight: .regular)
+    }
+
+    static func markAttributes() -> [NSAttributedString.Key: Any] {
+        let body = GlanceConstants.textBodyFont
+        let mark = markFont
+        return [
+            .font: mark,
+            .foregroundColor: GlanceConstants.textBodyColor,
+            .baselineOffset: (body.capHeight - mark.capHeight) / 2
+        ]
+    }
 
     static func containerPoint(viewPoint: NSPoint, containerOrigin: NSPoint) -> NSPoint {
         NSPoint(x: viewPoint.x - containerOrigin.x, y: viewPoint.y - containerOrigin.y)
@@ -209,23 +310,41 @@ enum TextChecklistToggle {
         glyphBounds.insetBy(dx: -hitSlop, dy: -hitSlop).contains(containerPoint)
     }
 
-    static func replacement(in string: NSString, at charIndex: Int) -> (range: NSRange, replacement: String)? {
+    static func markIndex(in string: NSString, at charIndex: Int) -> Int? {
         guard charIndex >= 0, charIndex < string.length else { return nil }
-        let markIndex: Int
         let ch = string.character(at: charIndex)
         if ch == unchecked || ch == checked {
-            markIndex = charIndex
-        } else if ch == 0x20, charIndex > 0 {
-            let previous = string.character(at: charIndex - 1)
-            guard previous == unchecked || previous == checked else { return nil }
-            markIndex = charIndex - 1
-        } else {
-            return nil
+            return charIndex
         }
-        let mark = string.character(at: markIndex)
-        return (
-            NSRange(location: markIndex, length: 1),
-            mark == unchecked ? "☑" : "☐"
+        if ch == 0x20, charIndex > 0 {
+            let previous = string.character(at: charIndex - 1)
+            if previous == unchecked || previous == checked {
+                return charIndex - 1
+            }
+        }
+        return nil
+    }
+
+    static func spans(in string: NSString, markIndex: Int) -> Spans? {
+        guard let resolved = Self.markIndex(in: string, at: markIndex) else { return nil }
+        let mark = string.character(at: resolved)
+        let lineRange = string.lineRange(for: NSRange(location: resolved, length: 1))
+        var end = NSMaxRange(lineRange)
+        if end > lineRange.location {
+            let last = string.character(at: end - 1)
+            if last == 10 || last == 13 {
+                end -= 1
+            }
+        }
+        let contentLocation = resolved + 1
+        return Spans(
+            markRange: NSRange(location: resolved, length: 1),
+            contentRange: NSRange(location: contentLocation, length: max(0, end - contentLocation)),
+            usesCheckedGlyph: mark == checked
         )
+    }
+
+    static func isCompleted(usesCheckedGlyph: Bool, contentHasStrikethrough: Bool) -> Bool {
+        usesCheckedGlyph || contentHasStrikethrough
     }
 }
