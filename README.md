@@ -33,6 +33,10 @@ There is no Windows client yet. Shared data contracts are documented so a future
 - No cloud
 - Open source
 
+## V0.18.10
+
+Text checklist strikethroughs sit on the visual center of the letters.
+
 ## V0.18.9
 
 Text checklist circles match the body type size.
