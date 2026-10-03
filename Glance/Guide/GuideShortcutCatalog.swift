@@ -109,6 +109,7 @@ enum GuideShortcutCatalog {
             GuideShortcutGroup(id: "quickCapture", title: "Quick Capture", items: quickCapture),
             GuideShortcutGroup(id: "clipboard", title: "剪贴板", items: clipboard),
             GuideShortcutGroup(id: "fileShelf", title: "文件架", items: fileShelf),
+            GuideShortcutGroup(id: "snippets", title: "片段库", items: snippets),
             GuideShortcutGroup(id: "editing", title: "编辑", items: editing),
             GuideShortcutGroup(id: "dialogs", title: "弹窗", items: dialogs)
         ]
@@ -132,6 +133,12 @@ enum GuideShortcutCatalog {
             title: ShortcutAction.fileShelf.title,
             detail: nil,
             source: .dynamic(.fileShelf)
+        ),
+        GuideShortcutItem(
+            id: "snippets",
+            title: ShortcutAction.snippets.title,
+            detail: nil,
+            source: .dynamic(.snippets)
         ),
         GuideShortcutItem(
             id: "clipboardCapture",
@@ -292,6 +299,39 @@ enum GuideShortcutCatalog {
         GuideShortcutItem(
             id: "fileShelfCancel",
             title: "关闭文件架",
+            detail: nil,
+            source: .keys([.escape])
+        )
+    ]
+
+    static let snippets: [GuideShortcutItem] = [
+        GuideShortcutItem(
+            id: "snippetCopy",
+            title: "复制片段",
+            detail: nil,
+            source: .keys([.enter])
+        ),
+        GuideShortcutItem(
+            id: "snippetEdit",
+            title: "编辑片段",
+            detail: nil,
+            source: .keys([.command, .enter])
+        ),
+        GuideShortcutItem(
+            id: "snippetCreate",
+            title: "新建片段",
+            detail: nil,
+            source: .keys([.command, .character("N")])
+        ),
+        GuideShortcutItem(
+            id: "snippetDelete",
+            title: "删除片段",
+            detail: nil,
+            source: .keys([.character("Delete")])
+        ),
+        GuideShortcutItem(
+            id: "snippetCancel",
+            title: "关闭片段库",
             detail: nil,
             source: .keys([.escape])
         )
