@@ -68,6 +68,7 @@ final class ClipboardHistoryService: ObservableObject {
 
     func toggleFavorite(id: UUID, at date: Date = Date()) {
         guard let index = records.firstIndex(where: { $0.id == id }) else { return }
+        let previous = records[index]
         if records[index].isFavorite {
             records[index].isFavorite = false
             records[index].favoritedAt = nil
@@ -75,7 +76,7 @@ final class ClipboardHistoryService: ObservableObject {
             records[index].isFavorite = true
             records[index].favoritedAt = date
         }
-        persistPreservingMemory()
+        persistRollingBack { records[index] = previous }
     }
 
     func delete(id: UUID) {
@@ -141,8 +142,9 @@ final class ClipboardHistoryService: ObservableObject {
     func reuse(_ id: UUID, at date: Date = Date()) -> ClipboardCaptureContent? {
         guard let content = content(for: id) else { return nil }
         guard let index = records.firstIndex(where: { $0.id == id }) else { return content }
+        let previousCopiedAt = records[index].lastCopiedAt
         records[index].lastCopiedAt = date
-        persistPreservingMemory()
+        persistRollingBack { records[index].lastCopiedAt = previousCopiedAt }
         return content
     }
 
@@ -162,8 +164,9 @@ final class ClipboardHistoryService: ObservableObject {
         png: Data?
     ) -> ClipboardHistoryRecord? {
         if let index = records.firstIndex(where: { $0.contentHash == hash }) {
+            let previousCopiedAt = records[index].lastCopiedAt
             records[index].lastCopiedAt = date
-            persistPreservingMemory()
+            persistRollingBack { records[index].lastCopiedAt = previousCopiedAt }
             return records[index]
         }
 
@@ -209,10 +212,11 @@ final class ClipboardHistoryService: ObservableObject {
         return record
     }
 
-    private func persistPreservingMemory() {
+    private func persistRollingBack(_ restore: () -> Void) {
         do {
             try store.save(records)
         } catch {
+            restore()
             NSLog("Glance clipboard: failed to persist history: %@", error.localizedDescription)
         }
     }

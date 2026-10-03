@@ -35,9 +35,13 @@ final class QuickCaptureWindowController: NSWindowController, NSTextViewDelegate
     }
 
     func toggle() {
-        if isCaptureVisible {
+        switch UtilityWindowPresentation.toggleAction(for: window) {
+        case .dismiss:
             cancel()
-        } else {
+        case .bringForward:
+            UtilityWindowPresentation.bringForward(window)
+            window?.makeFirstResponder(textView)
+        case .present:
             present()
         }
     }

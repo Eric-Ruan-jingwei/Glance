@@ -154,6 +154,8 @@ struct ClipboardHistoryView: View {
     private var content: some View {
         if !model.service.canPersist, case .unsupportedFutureSchema = model.service.loadOutcome {
             emptyState(title: ClipboardHistoryCopy.futureSchema, detail: nil, action: nil)
+        } else if !model.service.canPersist {
+            emptyState(title: ClipboardHistoryCopy.unreadable, detail: nil, action: nil)
         } else if !model.service.preferences.isRecordingEnabled && model.service.records.isEmpty {
             emptyState(
                 title: ClipboardHistoryCopy.enableTitle,

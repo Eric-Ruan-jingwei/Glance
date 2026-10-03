@@ -83,46 +83,54 @@ struct PanelLibraryView: View {
                             detail: GlanceEmptyCopy.filterDetail
                         )
                     case .none:
-                        List(selection: $model.selectedPanelIDs) {
-                            ForEach(model.visible) { summary in
-                                PanelLibraryRow(
-                                    summary: summary,
-                                    workspaces: model.workspaces,
-                                    isSelected: model.selectedPanelIDs.contains(summary.id),
-                                    onReveal: { model.revealPanel(summary.id) },
-                                    onHide: { model.hidePanel(summary.id) },
-                                    onRename: { model.promptRename(summary) },
-                                    onEditTags: { model.promptEditTags(summary) },
-                                    onDelete: { model.confirmDelete(summary.id) },
-                                    onOpenFolder: { model.openPayloadFolder(summary.id) },
-                                    onMove: { model.movePanelToWorkspace(summary.id, workspaceID: $0) }
-                                )
-                                .tag(summary.id)
-                                .listRowInsets(
-                                    EdgeInsets(
-                                        top: GlanceTheme.Space.sm,
-                                        leading: GlanceTheme.Space.md,
-                                        bottom: GlanceTheme.Space.sm,
-                                        trailing: GlanceTheme.Space.md
+                        ScrollViewReader { proxy in
+                            List(selection: $model.selectedPanelIDs) {
+                                ForEach(model.visible) { summary in
+                                    PanelLibraryRow(
+                                        summary: summary,
+                                        workspaces: model.workspaces,
+                                        isSelected: model.selectedPanelIDs.contains(summary.id),
+                                        onReveal: { model.revealPanel(summary.id) },
+                                        onHide: { model.hidePanel(summary.id) },
+                                        onRename: { model.promptRename(summary) },
+                                        onEditTags: { model.promptEditTags(summary) },
+                                        onDelete: { model.confirmDelete(summary.id) },
+                                        onOpenFolder: { model.openPayloadFolder(summary.id) },
+                                        onMove: { model.movePanelToWorkspace(summary.id, workspaceID: $0) }
                                     )
-                                )
-                                .contentShape(Rectangle())
-                                .onTapGesture(count: 2) {
-                                    model.selectSingle(summary.id)
-                                    model.revealPanel(summary.id)
+                                    .tag(summary.id)
+                                    .id(summary.id)
+                                    .listRowInsets(
+                                        EdgeInsets(
+                                            top: GlanceTheme.Space.sm,
+                                            leading: GlanceTheme.Space.md,
+                                            bottom: GlanceTheme.Space.sm,
+                                            trailing: GlanceTheme.Space.md
+                                        )
+                                    )
+                                    .contentShape(Rectangle())
+                                    .onTapGesture(count: 2) {
+                                        model.selectSingle(summary.id)
+                                        model.revealPanel(summary.id)
+                                    }
                                 }
                             }
-                        }
-                        .listStyle(.inset)
-                        .safeAreaInset(edge: .top, spacing: 0) {
-                            if model.showsBatchToolbar {
-                                batchToolbar
+                            .listStyle(.inset)
+                            .onChange(of: model.pendingScrollID) { _, id in
+                                guard let id else { return }
+                                proxy.scrollTo(id, anchor: .center)
+                                model.clearPendingScroll()
                             }
+                            .safeAreaInset(edge: .top, spacing: 0) {
+                                if model.showsBatchToolbar {
+                                    batchToolbar
+                                }
+                            }
+                            .animation(
+                                reduceMotion ? nil : .easeInOut(duration: GlanceMotion.duration),
+                                value: model.showsBatchToolbar
+                            )
                         }
-                        .animation(
-                            reduceMotion ? nil : .easeInOut(duration: GlanceMotion.duration),
-                            value: model.showsBatchToolbar
-                        )
                     }
                 }
                 .navigationTitle("Glance")

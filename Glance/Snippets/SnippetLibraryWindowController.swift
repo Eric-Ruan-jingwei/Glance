@@ -31,9 +31,12 @@ final class SnippetLibraryWindowController: NSWindowController {
     }
 
     func toggle() {
-        if isLibraryVisible {
+        switch UtilityWindowPresentation.toggleAction(for: window) {
+        case .dismiss:
             dismiss()
-        } else {
+        case .bringForward:
+            UtilityWindowPresentation.bringForward(window)
+        case .present:
             present()
         }
     }

@@ -30,4 +30,8 @@ enum GlanceNoticeCopy {
     static let globallyHidden = "面板当前已全局隐藏"
     static let panelCreateFailed = "无法创建面板"
     static let clipboardWriteFailed = "无法写入剪贴板"
+    static let cannotSave = "无法保存更改"
+    static let launchAtLoginFailed = "无法更改开机启动设置"
+    static let startupFailed = "Glance 无法启动"
+    static let startupFailedDetail = "无法准备本机数据文件夹。现有文件没有被覆盖。"
 }

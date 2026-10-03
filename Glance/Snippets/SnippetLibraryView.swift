@@ -241,6 +241,8 @@ struct SnippetLibraryView: View {
     private var content: some View {
         if !model.service.canPersist, case .unsupportedFutureSchema = model.service.loadOutcome {
             emptyState(title: SnippetCopy.futureSchema, detail: nil, action: nil)
+        } else if !model.service.canPersist {
+            emptyState(title: SnippetCopy.unreadable, detail: nil, action: nil)
         } else if displayedEmpty {
             emptyState(title: emptyTitle, detail: emptyDetail, action: emptyAction)
         } else {

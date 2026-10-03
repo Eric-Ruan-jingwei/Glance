@@ -250,7 +250,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, GlanceWindowHost {
         if let fileShelfWindow {
             return fileShelfWindow
         }
-        let window = FileShelfWindowController(service: environment!.fileShelfService)
+        let window = FileShelfWindowController(
+            service: environment!.fileShelfService,
+            monitor: environment!.clipboardHistoryMonitor
+        )
         window.onCreatePanel = { [weak self] id, screen in
             self?.actionCoordinator?.createPanel(fromFileShelfID: id, screen: screen)
                 ?? .failed(GlanceNoticeCopy.panelCreateFailed)
@@ -290,10 +293,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, GlanceWindowHost {
     }
 
     private func presentStartupFailure(_ error: Error) {
+        NSLog("Glance startup failed: %@", error.localizedDescription)
         let alert = NSAlert()
         alert.alertStyle = .critical
-        alert.messageText = "Glance 无法启动"
-        alert.informativeText = error.localizedDescription
+        alert.messageText = GlanceNoticeCopy.startupFailed
+        alert.informativeText = GlanceNoticeCopy.startupFailedDetail
         alert.runModal()
         NSApp.terminate(nil)
     }

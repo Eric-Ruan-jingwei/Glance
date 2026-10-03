@@ -34,9 +34,12 @@ final class ClipboardHistoryWindowController: NSWindowController {
     }
 
     func toggle() {
-        if isShelfVisible {
+        switch UtilityWindowPresentation.toggleAction(for: window) {
+        case .dismiss:
             dismiss()
-        } else {
+        case .bringForward:
+            UtilityWindowPresentation.bringForward(window)
+        case .present:
             present()
         }
     }

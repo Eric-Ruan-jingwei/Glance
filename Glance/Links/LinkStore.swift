@@ -54,24 +54,30 @@ enum LinkCodec {
 
 final class LinkStore {
     typealias MetadataWriter = (Data, URL) throws -> Void
+    typealias ItemMover = (URL, URL) throws -> Void
 
     let root: URL
     let metadataURL: URL
     private let fileManager: FileManager
     private let writePrimaryMetadata: MetadataWriter
+    private let moveItem: ItemMover
     private(set) var lastLoadOutcome: LinkLoadOutcome = .missing
     private(set) var isWritable = true
 
     init(
         root: URL,
         fileManager: FileManager = .default,
-        writePrimaryMetadata: MetadataWriter? = nil
+        writePrimaryMetadata: MetadataWriter? = nil,
+        moveItem: ItemMover? = nil
     ) {
         self.root = root
         self.metadataURL = root.appendingPathComponent("links.json")
         self.fileManager = fileManager
         self.writePrimaryMetadata = writePrimaryMetadata ?? { data, url in
             try data.write(to: url, options: .atomic)
+        }
+        self.moveItem = moveItem ?? { from, to in
+            try fileManager.moveItem(at: from, to: to)
         }
         do {
             try fileManager.createDirectory(at: root, withIntermediateDirectories: true)
@@ -104,9 +110,14 @@ final class LinkStore {
             )
             return []
         } catch {
-            quarantineCorruptMetadata()
-            lastLoadOutcome = .recoveredFromCorruption
-            isWritable = true
+            if quarantineCorruptMetadata() {
+                lastLoadOutcome = .recoveredFromCorruption
+                isWritable = true
+            } else {
+                lastLoadOutcome = .corruptUnquarantined
+                isWritable = false
+                NSLog("Glance links: corrupt links.json could not be quarantined; leaving the file untouched")
+            }
             return []
         }
     }
@@ -122,14 +133,20 @@ final class LinkStore {
         }
     }
 
-    private func quarantineCorruptMetadata() {
+    private func quarantineCorruptMetadata() -> Bool {
         let stamp = ISO8601DateFormatter().string(from: Date()).replacingOccurrences(of: ":", with: "-")
         let destination = root.appendingPathComponent("links.corrupted-\(stamp).json")
-        do {
-            try fileManager.moveItem(at: metadataURL, to: destination)
+        let relocated = MetadataQuarantine.relocate(
+            from: metadataURL,
+            to: destination,
+            moveItem: moveItem,
+            fileExists: { fileManager.fileExists(atPath: $0.path) }
+        )
+        if relocated {
             NSLog("Glance links: quarantined corrupt links.json as %@", destination.lastPathComponent)
-        } catch {
+        } else {
             NSLog("Glance links: failed to quarantine corrupt links.json")
         }
+        return relocated
     }
 }

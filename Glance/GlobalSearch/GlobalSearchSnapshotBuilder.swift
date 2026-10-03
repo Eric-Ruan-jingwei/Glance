@@ -41,23 +41,39 @@ enum GlobalSearchSnapshotBuilder {
     }
 
     static func clipboardUnavailable(_ outcome: ClipboardHistoryLoadOutcome) -> Bool {
-        if case .unsupportedFutureSchema = outcome { return true }
-        return false
+        switch outcome {
+        case .unsupportedFutureSchema, .corruptUnquarantined, .unavailable:
+            return true
+        case .missing, .loaded, .recoveredFromCorruption:
+            return false
+        }
     }
 
     static func fileShelfUnavailable(_ outcome: FileShelfLoadOutcome) -> Bool {
-        if case .unsupportedFutureSchema = outcome { return true }
-        return false
+        switch outcome {
+        case .unsupportedFutureSchema, .corruptUnquarantined, .unavailable:
+            return true
+        case .missing, .loaded, .recoveredFromCorruption:
+            return false
+        }
     }
 
     static func snippetsUnavailable(_ outcome: SnippetLoadOutcome) -> Bool {
-        if case .unsupportedFutureSchema = outcome { return true }
-        return false
+        switch outcome {
+        case .unsupportedFutureSchema, .corruptUnquarantined, .unavailable:
+            return true
+        case .missing, .loaded, .recoveredFromCorruption:
+            return false
+        }
     }
 
     static func linksUnavailable(_ outcome: LinkLoadOutcome) -> Bool {
-        if case .unsupportedFutureSchema = outcome { return true }
-        return false
+        switch outcome {
+        case .unsupportedFutureSchema, .corruptUnquarantined, .unavailable:
+            return true
+        case .missing, .loaded, .recoveredFromCorruption:
+            return false
+        }
     }
 
     static func document(from record: ClipboardHistoryRecord) -> GlobalSearchDocument {

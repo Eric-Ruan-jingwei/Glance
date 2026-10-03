@@ -67,6 +67,7 @@ final class FileShelfService: ObservableObject {
 
     func toggleFavorite(id: UUID, at date: Date = Date()) {
         guard let index = records.firstIndex(where: { $0.id == id }) else { return }
+        let previous = records[index]
         if records[index].isFavorite {
             records[index].isFavorite = false
             records[index].favoritedAt = nil
@@ -74,7 +75,7 @@ final class FileShelfService: ObservableObject {
             records[index].isFavorite = true
             records[index].favoritedAt = date
         }
-        persistPreservingMemory()
+        persistRollingBack { records[index] = previous }
     }
 
     func remove(id: UUID) {
@@ -249,12 +250,14 @@ final class FileShelfService: ObservableObject {
 
     private func touch(_ id: UUID, at date: Date) {
         guard let index = records.firstIndex(where: { $0.id == id }) else { return }
+        let previous = records[index]
         records[index].lastUsedAt = date
-        persistPreservingMemory()
+        persistRollingBack { records[index] = previous }
     }
 
     private func refreshSnapshotIfNeeded(at index: Int, path: String) {
         let snapshot = FileShelfMetadataSnapshot.capture(path: path, fileManager: fileManager)
+        let previous = records[index]
         var changed = false
         if records[index].displayName != snapshot.displayName {
             records[index].displayName = snapshot.displayName
@@ -269,14 +272,15 @@ final class FileShelfService: ObservableObject {
             changed = true
         }
         if changed {
-            persistPreservingMemory()
+            persistRollingBack { records[index] = previous }
         }
     }
 
-    private func persistPreservingMemory() {
+    private func persistRollingBack(_ restore: () -> Void) {
         do {
             try store.save(records)
         } catch {
+            restore()
             NSLog("Glance file shelf: failed to persist: %@", error.localizedDescription)
         }
     }

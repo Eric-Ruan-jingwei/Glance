@@ -6,6 +6,7 @@ final class FileShelfWindowController: NSWindowController {
     var onCreatePanel: ((UUID, NSScreen?) -> GlanceActionOutcome)?
 
     private let model: FileShelfViewModel
+    private let clipboardWriter: GlanceClipboardWriter
     private let quickLook = FileShelfQuickLookController()
     private var keyMonitor: Any?
     private var resignObserver: NSObjectProtocol?
@@ -17,8 +18,9 @@ final class FileShelfWindowController: NSWindowController {
         window?.isVisible == true
     }
 
-    init(service: FileShelfService) {
+    init(service: FileShelfService, monitor: ClipboardHistoryMonitor) {
         self.model = FileShelfViewModel(service: service)
+        self.clipboardWriter = GlanceClipboardWriter(monitor: monitor)
         let panel = FileShelfPanel(
             contentRect: NSRect(origin: .zero, size: GlanceConstants.fileShelfSize)
         )
@@ -32,9 +34,12 @@ final class FileShelfWindowController: NSWindowController {
     }
 
     func toggle() {
-        if isShelfVisible {
+        switch UtilityWindowPresentation.toggleAction(for: window) {
+        case .dismiss:
             dismiss()
-        } else {
+        case .bringForward:
+            UtilityWindowPresentation.bringForward(window)
+        case .present:
             present()
         }
     }
@@ -137,13 +142,14 @@ final class FileShelfWindowController: NSWindowController {
         beginDragAccess(path: path)
         model.service.markUsed(id: id)
         MacFileShelfActions.copyFile(path: path)
+        clipboardWriter.adoptCurrent()
     }
 
     private func copyPath(_ id: UUID) {
         let resolved = model.service.resolve(id)
         let path = resolved.urlPath ?? model.service.records.first { $0.id == id }?.originalPath
         guard let path else { return }
-        MacFileShelfActions.copyPath(path)
+        _ = clipboardWriter.write(.text(path))
     }
 
     private func remove(_ id: UUID) {
@@ -174,7 +180,10 @@ final class FileShelfWindowController: NSWindowController {
         suppressResignDismiss = false
         window?.makeKeyAndOrderFront(nil)
         guard let url = urls.first else { return }
-        _ = model.service.relink(id: id, to: url.path)
+        if !model.service.relink(id: id, to: url.path) {
+            NSSound.beep()
+            model.service.notice = GlanceNoticeCopy.cannotSave
+        }
     }
 
     private func beginDragAccess(path: String) {

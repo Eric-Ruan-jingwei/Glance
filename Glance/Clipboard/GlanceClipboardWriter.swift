@@ -26,4 +26,8 @@ final class GlanceClipboardWriter {
         monitor.adopt(changeCount: count)
         return true
     }
+
+    func adoptCurrent() {
+        monitor.adoptCurrentChangeCount()
+    }
 }

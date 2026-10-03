@@ -194,8 +194,9 @@ struct SettingsView: View {
                     launchAtLogin = LaunchAtLogin.isEnabled
                     launchError = nil
                 } catch {
+                    NSLog("Glance launch at login failed: %@", error.localizedDescription)
                     launchAtLogin = LaunchAtLogin.isEnabled
-                    launchError = error.localizedDescription
+                    launchError = GlanceNoticeCopy.launchAtLoginFailed
                 }
             }
         )

@@ -148,6 +148,7 @@ enum FileShelfCopy {
     static let emptyFavoritesDetail = "把常用文件标记为 ★，之后可以随时打开或拖出。"
     static let emptySearch = "没有找到匹配的文件"
     static let futureSchema = "此版本无法读取文件架数据"
+    static let unreadable = "文件架数据无法读取，已保留原文件"
     static let missing = "文件已移动或不存在"
     static let openHint = "↩ 打开"
     static let revealHint = "⌘↩ Finder"
@@ -173,6 +174,7 @@ enum FileShelfLoadOutcome: Equatable {
     case missing
     case loaded
     case recoveredFromCorruption
+    case corruptUnquarantined
     case unsupportedFutureSchema(Int)
     case unavailable
 }

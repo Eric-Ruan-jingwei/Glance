@@ -3,6 +3,7 @@ import Foundation
 enum PersistenceDiagnostic: Equatable {
     case recoveredFromBackup
     case quarantinedCorruptMetadata
+    case corruptUnquarantined
     case unsupportedFutureSchema(Int)
 
     static func from(outcome: PanelDatabaseLoadOutcome) -> PersistenceDiagnostic? {
@@ -11,6 +12,8 @@ enum PersistenceDiagnostic: Equatable {
             return .recoveredFromBackup
         case .quarantinedCorruptAndEmpty:
             return .quarantinedCorruptMetadata
+        case .corruptUnquarantined:
+            return .corruptUnquarantined
         case .unsupportedFutureSchema(let version):
             return .unsupportedFutureSchema(version)
         case .missing, .loaded:
@@ -28,6 +31,8 @@ enum PersistenceDiagnostic: Equatable {
             return "已从本地备份恢复面板信息"
         case .quarantinedCorruptMetadata:
             return "主数据文件无法读取"
+        case .corruptUnquarantined:
+            return "面板数据无法读取"
         case .unsupportedFutureSchema:
             return "这份 Glance 数据由更新版本创建"
         }
@@ -39,8 +44,11 @@ enum PersistenceDiagnostic: Equatable {
             return "Glance 检测到主数据文件无法读取，并已从本地备份恢复面板信息。建议确认面板内容是否完整。"
         case .quarantinedCorruptMetadata:
             return "损坏的 metadata 文件已保留为 panels.corrupted-*.json。Glance 没有删除该文件。当前面板列表可能为空。"
+        case .corruptUnquarantined:
+            return "Glance 检测到损坏的面板数据，但无法隔离该文件，因此没有覆盖它。当前面板列表可能为空。"
         case .unsupportedFutureSchema:
             return "当前版本不会修改或降级该数据，也不会覆盖现有文件。请改用更新版本的 Glance 打开。"
         }
     }
 }
+

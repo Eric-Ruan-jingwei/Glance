@@ -200,6 +200,8 @@ struct FileShelfView: View {
     private var content: some View {
         if !model.service.canPersist, case .unsupportedFutureSchema = model.service.loadOutcome {
             emptyState(title: FileShelfCopy.futureSchema, detail: nil)
+        } else if !model.service.canPersist {
+            emptyState(title: FileShelfCopy.unreadable, detail: nil)
         } else if displayedEmpty {
             emptyState(title: emptyTitle, detail: emptyDetail)
         } else {

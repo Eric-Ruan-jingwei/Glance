@@ -177,6 +177,7 @@ enum SnippetCopy {
     static let emptyDetail = "把经常重复使用的文字保存到这里，以后可以快速搜索并复制。"
     static let emptySearch = "没有找到匹配的片段"
     static let futureSchema = "此版本无法读取片段库数据"
+    static let unreadable = "片段库数据无法读取，已保留原文件"
     static let copyHint = "↩ 复制"
     static let editHint = "⌘↩ 编辑"
     static let createHint = "⌘N 新建"
@@ -207,6 +208,7 @@ enum SnippetLoadOutcome: Equatable {
     case missing
     case loaded
     case recoveredFromCorruption
+    case corruptUnquarantined
     case unsupportedFutureSchema(Int)
     case unavailable
 }

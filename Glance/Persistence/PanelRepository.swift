@@ -5,6 +5,7 @@ enum PanelDatabaseLoadOutcome: Equatable {
     case loaded(migratedFromLegacy: Bool)
     case recoveredFromBackup
     case quarantinedCorruptAndEmpty
+    case corruptUnquarantined
     case unsupportedFutureSchema(Int)
 }
 
@@ -17,12 +18,14 @@ private enum PanelDatabaseApplyResult {
 @MainActor
 final class PanelRepository {
     typealias PrimaryMetadataWriter = (Data, URL) throws -> Void
+    typealias ItemMover = (URL, URL) throws -> Void
 
     private var records: [UUID: PanelRecord] = [:]
     private var workspaces: [String: WorkspaceRecord] = [:]
     private let fileURL: URL
     private let fileManager: FileManager
     private let writePrimaryMetadata: PrimaryMetadataWriter
+    private let moveItem: ItemMover
     private(set) var lastLoadOutcome: PanelDatabaseLoadOutcome = .missing
 
     var backupURL: URL {
@@ -32,12 +35,16 @@ final class PanelRepository {
     init(
         fileURL: URL,
         fileManager: FileManager = .default,
-        writePrimaryMetadata: PrimaryMetadataWriter? = nil
+        writePrimaryMetadata: PrimaryMetadataWriter? = nil,
+        moveItem: ItemMover? = nil
     ) throws {
         self.fileURL = fileURL
         self.fileManager = fileManager
         self.writePrimaryMetadata = writePrimaryMetadata ?? { data, url in
             try data.write(to: url, options: .atomic)
+        }
+        self.moveItem = moveItem ?? { from, to in
+            try fileManager.moveItem(at: from, to: to)
         }
         let directory = fileURL.deletingLastPathComponent()
         try fileManager.createDirectory(at: directory, withIntermediateDirectories: true)
@@ -318,6 +325,10 @@ final class PanelRepository {
             )
             return
         }
+        if case .corruptUnquarantined = lastLoadOutcome {
+            NSLog("Glance persistence: refusing to write panels.json because the original file could not be quarantined")
+            return
+        }
         ensureDefaultWorkspace()
         let database = PanelDatabase(
             schemaVersion: PanelDatabase.currentSchemaVersion,
@@ -354,7 +365,13 @@ final class PanelRepository {
             case .unsupportedFutureSchema:
                 return
             case .unreadable:
-                quarantineCorruptFile(at: fileURL)
+                if !quarantineCorruptFile(at: fileURL) {
+                    records = [:]
+                    workspaces = [:]
+                    lastLoadOutcome = .corruptUnquarantined
+                    NSLog("Glance persistence: corrupt panels.json could not be quarantined; leaving the file untouched")
+                    return
+                }
             }
         }
 
@@ -470,9 +487,12 @@ final class PanelRepository {
         if case .unsupportedFutureSchema(let version) = lastLoadOutcome {
             throw PanelDatabaseError.unsupportedFutureSchema(version)
         }
+        if case .corruptUnquarantined = lastLoadOutcome {
+            throw PanelDatabaseError.unreadable
+        }
     }
 
-    private func quarantineCorruptFile(at url: URL) {
+    private func quarantineCorruptFile(at url: URL) -> Bool {
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "en_US_POSIX")
         formatter.timeZone = TimeZone(secondsFromGMT: 0)
@@ -483,17 +503,27 @@ final class PanelRepository {
             if fileManager.fileExists(atPath: destination.path) {
                 try fileManager.removeItem(at: destination)
             }
-            try fileManager.moveItem(at: url, to: destination)
-            NSLog("Glance persistence: preserved corrupt database at %@", destination.path)
+            let relocated = MetadataQuarantine.relocate(
+                from: url,
+                to: destination,
+                moveItem: moveItem,
+                fileExists: { fileManager.fileExists(atPath: $0.path) }
+            )
+            if relocated {
+                NSLog("Glance persistence: preserved corrupt database at %@", destination.path)
+                return true
+            }
+            NSLog("Glance persistence: failed to preserve corrupt database")
         } catch {
             NSLog("Glance persistence: failed to preserve corrupt database: %@", error.localizedDescription)
-            do {
-                try fileManager.copyItem(at: url, to: destination)
-                NSLog("Glance persistence: copied corrupt database to %@", destination.path)
-            } catch {
-                NSLog("Glance persistence: failed to copy corrupt database: %@", error.localizedDescription)
-            }
         }
+        do {
+            try fileManager.copyItem(at: url, to: destination)
+            NSLog("Glance persistence: copied corrupt database to %@", destination.path)
+        } catch {
+            NSLog("Glance persistence: failed to copy corrupt database: %@", error.localizedDescription)
+        }
+        return !fileManager.fileExists(atPath: url.path)
     }
 }
 

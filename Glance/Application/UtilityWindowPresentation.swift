@@ -35,9 +35,29 @@ enum UtilityWindowHandoffPolicy {
     }
 }
 
+enum UtilityWindowToggleAction: Equatable {
+    case present
+    case dismiss
+    case bringForward
+}
+
 enum UtilityWindowPresentation {
+    static func toggleAction(isVisible: Bool, isKey: Bool) -> UtilityWindowToggleAction {
+        guard isVisible else { return .present }
+        return isKey ? .dismiss : .bringForward
+    }
+
+    static func toggleAction(for window: NSWindow?) -> UtilityWindowToggleAction {
+        toggleAction(isVisible: window?.isVisible == true, isKey: window?.isKeyWindow == true)
+    }
+
     static func present(_ window: NSWindow?, size: NSSize) {
         positionOnWorkingScreen(window, size: size)
+        NSApp.activate(ignoringOtherApps: true)
+        window?.makeKeyAndOrderFront(nil)
+    }
+
+    static func bringForward(_ window: NSWindow?) {
         NSApp.activate(ignoringOtherApps: true)
         window?.makeKeyAndOrderFront(nil)
     }

@@ -146,6 +146,7 @@ enum ClipboardHistoryCopy {
     static let emptyFavoritesDetail = "把常用内容标记为 ★，之后可以随时调用。"
     static let emptySearch = "没有找到匹配的内容"
     static let futureSchema = "此版本无法读取剪贴板历史"
+    static let unreadable = "剪贴板数据无法读取，已保留原文件"
     static let reuseHint = "↩ 复制"
     static let panelHint = "⌘↩ 创建面板"
     static let closeHint = "Esc 关闭"
@@ -159,6 +160,7 @@ enum ClipboardHistoryLoadOutcome: Equatable {
     case missing
     case loaded
     case recoveredFromCorruption
+    case corruptUnquarantined
     case unsupportedFutureSchema(Int)
     case unavailable
 }

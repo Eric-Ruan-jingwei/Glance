@@ -13,29 +13,38 @@ struct RecoveredFrame: Equatable {
 }
 
 enum PanelFrameRecovery {
+    static let minimumOperableWidth: Double = 80
+    static let minimumOperableHeight: Double = 48
+
     static func recover(
         frame: PanelFrame,
         displayIdentifier: String,
         displays: [DisplaySnapshot]
     ) -> RecoveredFrame {
-        let original = displays.first { $0.identifier == displayIdentifier }
-        let fallback = displays.first(where: \.isMain) ?? displays.first
-        guard let screen = original ?? fallback else {
-            return RecoveredFrame(frame: clamp(frame, to: frame), displayIdentifier: displayIdentifier, migrated: false)
+        guard !displays.isEmpty else {
+            return RecoveredFrame(frame: frame, displayIdentifier: displayIdentifier, migrated: false)
         }
 
-        var recovered = frame
-        let migrated = original == nil
-        if migrated {
-            recovered.x = screen.visibleFrame.maxX - recovered.width - GlanceLayout.spawnMargin
-            recovered.y = screen.visibleFrame.maxY - recovered.height - GlanceLayout.spawnMargin
+        if let operable = operableDisplay(for: frame, displays: displays) {
+            let oversized = frame.width > operable.visibleFrame.width
+                || frame.height > operable.visibleFrame.height
+            let recovered = oversized ? clamp(frame, to: operable.visibleFrame) : frame
+            return RecoveredFrame(
+                frame: recovered,
+                displayIdentifier: operable.identifier,
+                migrated: operable.identifier != displayIdentifier
+            )
         }
 
-        recovered = clamp(recovered, to: screen.visibleFrame)
+        let target = displays.first { $0.identifier == displayIdentifier }
+            ?? nearestDisplay(to: frame, displays: displays)
+            ?? displays.first(where: \.isMain)
+            ?? displays[0]
+        let recovered = clamp(frame, to: target.visibleFrame)
         return RecoveredFrame(
             frame: recovered,
-            displayIdentifier: screen.identifier,
-            migrated: migrated
+            displayIdentifier: target.identifier,
+            migrated: target.identifier != displayIdentifier
         )
     }
 
@@ -54,5 +63,35 @@ enum PanelFrameRecovery {
             result.y = min(max(result.y, visible.minY), visible.maxY - result.height)
         }
         return result
+    }
+
+    static func isOperable(_ overlap: PanelFrame) -> Bool {
+        overlap.width >= minimumOperableWidth && overlap.height >= minimumOperableHeight
+    }
+
+    static func operableDisplay(for frame: PanelFrame, displays: [DisplaySnapshot]) -> DisplaySnapshot? {
+        var best: (DisplaySnapshot, Double)?
+        for display in displays {
+            guard let overlap = frame.intersection(display.visibleFrame), isOperable(overlap) else {
+                continue
+            }
+            let area = overlap.width * overlap.height
+            if best == nil || area > best!.1 {
+                best = (display, area)
+            }
+        }
+        return best?.0
+    }
+
+    private static func nearestDisplay(to frame: PanelFrame, displays: [DisplaySnapshot]) -> DisplaySnapshot? {
+        displays.min { lhs, rhs in
+            centerDistance(frame, lhs.visibleFrame) < centerDistance(frame, rhs.visibleFrame)
+        }
+    }
+
+    private static func centerDistance(_ lhs: PanelFrame, _ rhs: PanelFrame) -> Double {
+        let dx = lhs.midX - rhs.midX
+        let dy = lhs.midY - rhs.midY
+        return dx * dx + dy * dy
     }
 }

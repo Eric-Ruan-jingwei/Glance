@@ -57,19 +57,22 @@ enum FileShelfCodec {
 
 final class FileShelfStore {
     typealias MetadataWriter = (Data, URL) throws -> Void
+    typealias ItemMover = (URL, URL) throws -> Void
 
     let root: URL
     let metadataURL: URL
     let bookmarksDirectory: URL
     private let fileManager: FileManager
     private let writePrimaryMetadata: MetadataWriter
+    private let moveItem: ItemMover
     private(set) var lastLoadOutcome: FileShelfLoadOutcome = .missing
     private(set) var isWritable = true
 
     init(
         root: URL,
         fileManager: FileManager = .default,
-        writePrimaryMetadata: MetadataWriter? = nil
+        writePrimaryMetadata: MetadataWriter? = nil,
+        moveItem: ItemMover? = nil
     ) {
         self.root = root
         self.metadataURL = root.appendingPathComponent("shelf.json")
@@ -77,6 +80,9 @@ final class FileShelfStore {
         self.fileManager = fileManager
         self.writePrimaryMetadata = writePrimaryMetadata ?? { data, url in
             try data.write(to: url, options: .atomic)
+        }
+        self.moveItem = moveItem ?? { from, to in
+            try fileManager.moveItem(at: from, to: to)
         }
         do {
             try fileManager.createDirectory(at: root, withIntermediateDirectories: true)
@@ -112,9 +118,14 @@ final class FileShelfStore {
             )
             return []
         } catch {
-            quarantineCorruptMetadata()
-            lastLoadOutcome = .recoveredFromCorruption
-            isWritable = true
+            if quarantineCorruptMetadata() {
+                lastLoadOutcome = .recoveredFromCorruption
+                isWritable = true
+            } else {
+                lastLoadOutcome = .corruptUnquarantined
+                isWritable = false
+                NSLog("Glance file shelf: corrupt shelf.json could not be quarantined; leaving the file untouched")
+            }
             return []
         }
     }
@@ -171,14 +182,20 @@ final class FileShelfStore {
         }
     }
 
-    private func quarantineCorruptMetadata() {
+    private func quarantineCorruptMetadata() -> Bool {
         let stamp = ISO8601DateFormatter().string(from: Date()).replacingOccurrences(of: ":", with: "-")
         let destination = root.appendingPathComponent("shelf.corrupted-\(stamp).json")
-        do {
-            try fileManager.moveItem(at: metadataURL, to: destination)
+        let relocated = MetadataQuarantine.relocate(
+            from: metadataURL,
+            to: destination,
+            moveItem: moveItem,
+            fileExists: { fileManager.fileExists(atPath: $0.path) }
+        )
+        if relocated {
             NSLog("Glance file shelf: quarantined corrupt shelf.json as %@", destination.lastPathComponent)
-        } catch {
+        } else {
             NSLog("Glance file shelf: failed to quarantine corrupt shelf.json")
         }
+        return relocated
     }
 }

@@ -11,6 +11,7 @@ final class PanelLibraryModel: ObservableObject {
     @Published var selectedTag: String? = nil
     @Published var selectedPanelIDs: Set<UUID> = []
     @Published var isLoadingSummaries = false
+    @Published private(set) var pendingScrollID: UUID?
 
     var loadSummaries: () -> [PanelSummary] = { [] }
     var loadWorkspaces: () -> [WorkspaceRecord] = { [WorkspaceRecord.makeDefault()] }
@@ -119,6 +120,7 @@ final class PanelLibraryModel: ObservableObject {
         selectedTag = nil
         selectedPanelIDs = []
         pendingRevealID = nil
+        pendingScrollID = nil
         cancelSummaryLoading()
     }
 
@@ -142,7 +144,12 @@ final class PanelLibraryModel: ObservableObject {
         }
         selectedWorkspaceID = summary.workspaceID
         selectedPanelIDs = [id]
+        pendingScrollID = id
         return true
+    }
+
+    func clearPendingScroll() {
+        pendingScrollID = nil
     }
 
     func reload() {

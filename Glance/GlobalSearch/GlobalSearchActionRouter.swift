@@ -23,20 +23,21 @@ enum GlobalSearchActionPlanner {
         source: GlobalSearchSource,
         globallyConcealed: Bool
     ) -> GlobalSearchActionPlan {
+        if source == .panels, globallyConcealed {
+            return .fail(GlobalSearchCopy.globallyHidden)
+        }
+        let deactivate = UtilityWindowHandoffPolicy.afterPrimarySearchAction(source: source).shouldDeactivate
         switch source {
         case .clipboard:
-            return .run(.restoreClipboard, deactivateApp: true)
+            return .run(.restoreClipboard, deactivateApp: deactivate)
         case .fileShelf:
-            return .run(.openFile, deactivateApp: true)
+            return .run(.openFile, deactivateApp: deactivate)
         case .snippets:
-            return .run(.copySnippet, deactivateApp: true)
+            return .run(.copySnippet, deactivateApp: deactivate)
         case .links:
-            return .run(.openLink, deactivateApp: true)
+            return .run(.openLink, deactivateApp: deactivate)
         case .panels:
-            if globallyConcealed {
-                return .fail(GlobalSearchCopy.globallyHidden)
-            }
-            return .run(.revealPanel, deactivateApp: false)
+            return .run(.revealPanel, deactivateApp: deactivate)
         }
     }
 }

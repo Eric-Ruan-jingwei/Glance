@@ -620,6 +620,14 @@ final class PanelWindowController: NSWindowController, NSWindowDelegate {
             window.setFrame(recovered.frame.nsRect, display: true)
             window.invalidateShadow()
         }
+        do {
+            guard let record = try environment.repository.record(id: recordID) else { return }
+            if record.frame == recovered.frame, record.displayIdentifier == recovered.displayIdentifier {
+                return
+            }
+        } catch {
+            return
+        }
         mutateRecord { record in
             record.frame = recovered.frame
             record.displayIdentifier = recovered.displayIdentifier

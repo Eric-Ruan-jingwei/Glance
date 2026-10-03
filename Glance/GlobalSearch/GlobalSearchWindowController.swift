@@ -41,9 +41,12 @@ final class GlobalSearchWindowController: NSWindowController {
     }
 
     func toggle() {
-        if isSearchVisible {
+        switch UtilityWindowPresentation.toggleAction(for: window) {
+        case .dismiss:
             dismiss(deactivate: true)
-        } else {
+        case .bringForward:
+            UtilityWindowPresentation.bringForward(window)
+        case .present:
             present()
         }
     }
@@ -79,9 +82,10 @@ final class GlobalSearchWindowController: NSWindowController {
             uniqueKeysWithValues: panelManager.workspaces().map { ($0.id, $0.name) }
         )
         let panelsBlocked: Bool
-        if case .unsupportedFutureSchema = environment.repository.lastLoadOutcome {
+        switch environment.repository.lastLoadOutcome {
+        case .unsupportedFutureSchema, .corruptUnquarantined:
             panelsBlocked = true
-        } else {
+        case .missing, .loaded, .recoveredFromBackup, .quarantinedCorruptAndEmpty:
             panelsBlocked = false
         }
         return GlobalSearchImmediateSnapshot(
