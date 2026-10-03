@@ -2,11 +2,29 @@
 
 **Pin what matters. Keep it in sight.**
 
-A lightweight, local-first personal workspace for **macOS**.
+Glance is a lightweight, local-first personal workspace for **macOS**.
 
-Glance keeps five kinds of information nearby, and one way to find them again: floating panels for things you need to keep seeing, a local clipboard shelf for things you keep copying, a file shelf for files you will need again soon, snippets for text you will reuse on purpose, a link library for web pages you will open again, and Global Search to recall any of them without first choosing a tool. Links are explicitly saved web resources. Glance does not fetch webpage metadata or favicons. Global Search searches existing local Glance data in memory and does not maintain a separate persistent search index. Clipboard History is not Snippets, and Snippets are not Links. Everything stays on this machine.
+Capture with Quick Capture. Hold temporary work on the Clipboard and File Shelf. Keep reusable text and pages in Snippets and Links. Pin what you still need to see as Panels. Recall any of it with Global Search. Links are explicitly saved web resources. Glance does not fetch webpage metadata or favicons. Global Search searches existing local Glance data in memory and does not maintain a separate persistent search index. Clipboard History is not Snippets, and Snippets are not Links. Everything stays on this machine.
 
 There is no Windows client yet. Shared data contracts are documented so a future Windows app can reuse them.
+
+## Product model
+
+- **Capture** — Quick Capture
+- **Recall** — Global Search
+- **Workspace tools** — Clipboard, File Shelf, Snippets, Links, Panels
+
+Cross-module flow stays explicit and local:
+
+- Clipboard → Snippet
+- Clipboard → Link
+- Clipboard → Panel
+- Snippet → Panel
+- Link → Panel
+- Image / PDF File Shelf → Panel
+- Global Search → Reveal in Source (`⌘Enter`)
+
+Source records are not deleted or rewritten when you create a derived Panel. File Shelf items stay bookmarks; Panels store their own copy of imported images and PDFs.
 
 ## Highlights
 
@@ -34,9 +52,17 @@ There is no Windows client yet. Shared data contracts are documented so a future
 - Batch tag editing
 - Custom panel titles
 - Panel Tags
+- Cross-module Create Panel
+- Global Search Reveal in Source
 - No account
 - No cloud
 - Open source
+
+## V0.24.0
+
+Workflow integration and product hardening. No seventh top-level tool, no schema changes, and no Search database.
+
+Snippet, Link, and Image/PDF File Shelf items can create Panels through the application coordinator. Global Search `⌘Enter` reveals a result in its source library. Utility windows share present/dismiss handoff, clipboard writes go through one helper that suppresses self-ingest, and default shortcut uniqueness is covered in CI.
 
 ## V0.23.1
 
