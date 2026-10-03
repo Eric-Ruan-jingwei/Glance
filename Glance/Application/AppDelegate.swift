@@ -53,7 +53,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             environment.shortcuts.onCaptureClipboard = { [weak manager] in
                 manager?.captureClipboard()
             }
-            environment.shortcuts.registerDefaults()
+            environment.shortcutCoordinator.start()
             manager.restoreAll()
         } catch {
             presentStartupFailure(error)

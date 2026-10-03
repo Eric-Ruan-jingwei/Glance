@@ -7,39 +7,75 @@ enum GlanceHotKeyID: UInt32 {
     case clipboardCapture = 3
 }
 
-/// Registers ⌥⌘G, ⌥⌘J, and ⌥⌘B without Accessibility permission.
+final class CarbonHotKeyRegistrar: HotKeyRegistering {
+    private var refs: [UInt32: EventHotKeyRef] = [:]
+
+    func register(id: UInt32, keyCode: UInt32, modifiers: UInt32) throws {
+        unregister(id: id)
+        var ref: EventHotKeyRef?
+        let hotKeyID = EventHotKeyID(signature: glanceHotKeySignature, id: id)
+        let status = RegisterEventHotKey(
+            keyCode,
+            modifiers,
+            hotKeyID,
+            GetApplicationEventTarget(),
+            0,
+            &ref
+        )
+        guard status == noErr, let ref else {
+            NSLog("Glance shortcuts: RegisterEventHotKey failed for id %u (%d)", id, status)
+            throw ShortcutError.registrationFailed
+        }
+        refs[id] = ref
+    }
+
+    func unregister(id: UInt32) {
+        guard let ref = refs.removeValue(forKey: id) else { return }
+        UnregisterEventHotKey(ref)
+    }
+
+    func unregisterAll() {
+        for id in Array(refs.keys) {
+            unregister(id: id)
+        }
+    }
+}
+
+/// Registers user-configured global shortcuts without Accessibility permission.
 final class ShortcutManager: @unchecked Sendable {
     var onToggleVisibility: (() -> Void)?
     var onQuickCapture: (() -> Void)?
     var onCaptureClipboard: (() -> Void)?
 
-    private var hideShowHotKeyRef: EventHotKeyRef?
-    private var quickCaptureHotKeyRef: EventHotKeyRef?
-    private var clipboardCaptureHotKeyRef: EventHotKeyRef?
+    private let registrar: HotKeyRegistering
+    private let bindSystemHandler: Bool
+    private var registered: [ShortcutAction: GlanceShortcut] = [:]
     private var handlerRef: EventHandlerRef?
+    private var ignoredAction: ShortcutAction?
 
-    func registerDefaults() {
-        unregister()
+    init(
+        registrar: HotKeyRegistering = CarbonHotKeyRegistrar(),
+        bindSystemHandler: Bool = true
+    ) {
+        self.registrar = registrar
+        self.bindSystemHandler = bindSystemHandler
+    }
 
-        registerHotKey(
-            virtualKey: UInt32(kVK_ANSI_G),
-            id: GlanceHotKeyID.hideShow,
-            displayName: GlanceConstants.hideShowShortcutDisplay,
-            storage: &hideShowHotKeyRef
-        )
-        registerHotKey(
-            virtualKey: UInt32(kVK_ANSI_J),
-            id: GlanceHotKeyID.quickCapture,
-            displayName: GlanceConstants.quickCaptureShortcutDisplay,
-            storage: &quickCaptureHotKeyRef
-        )
-        registerHotKey(
-            virtualKey: UInt32(kVK_ANSI_B),
-            id: GlanceHotKeyID.clipboardCapture,
-            displayName: GlanceConstants.clipboardCaptureShortcutDisplay,
-            storage: &clipboardCaptureHotKeyRef
-        )
+    func registeredShortcut(for action: ShortcutAction) -> GlanceShortcut? {
+        registered[action]
+    }
 
+    func menuShortcuts() -> [ShortcutAction: GlanceShortcut] {
+        var result = ShortcutDefaults.all
+        for (action, shortcut) in registered {
+            result[action] = shortcut
+        }
+        return result
+    }
+
+    func installHandler() {
+        guard bindSystemHandler else { return }
+        guard handlerRef == nil else { return }
         var spec = EventTypeSpec(eventClass: OSType(kEventClassKeyboard), eventKind: UInt32(kEventHotKeyPressed))
         let userData = Unmanaged.passUnretained(self).toOpaque()
         let handlerStatus = InstallEventHandler(
@@ -55,70 +91,118 @@ final class ShortcutManager: @unchecked Sendable {
         }
     }
 
+    @discardableResult
+    func register(_ shortcut: GlanceShortcut, for action: ShortcutAction) -> Bool {
+        do {
+            try registerThrowing(shortcut, for: action)
+            return true
+        } catch {
+            NSLog(
+                "Glance global shortcut %@ could not be registered: %@",
+                ShortcutDisplayFormatter.display(shortcut) as NSString,
+                error.localizedDescription as NSString
+            )
+            return false
+        }
+    }
+
+    func replaceShortcut(for action: ShortcutAction, with shortcut: GlanceShortcut) throws {
+        let old = registered[action]
+        registrar.unregister(id: carbonID(for: action))
+        do {
+            try registerThrowing(shortcut, for: action)
+        } catch {
+            if let old {
+                do {
+                    try registerThrowing(old, for: action)
+                } catch {
+                    registered.removeValue(forKey: action)
+                    NSLog(
+                        "Glance shortcuts: failed to restore %@ after rejected replacement",
+                        action.rawValue as NSString
+                    )
+                    throw ShortcutError.restoreFailed
+                }
+            }
+            throw ShortcutError.registrationFailed
+        }
+    }
+
+    func suspend(_ action: ShortcutAction) {
+        ignoredAction = action
+        registrar.unregister(id: carbonID(for: action))
+    }
+
+    func resume(_ action: ShortcutAction) {
+        if ignoredAction == action {
+            ignoredAction = nil
+        }
+        guard let shortcut = registered[action] else { return }
+        _ = register(shortcut, for: action)
+    }
+
     func unregister() {
         if let handlerRef {
             RemoveEventHandler(handlerRef)
             self.handlerRef = nil
         }
-        if let hideShowHotKeyRef {
-            UnregisterEventHotKey(hideShowHotKeyRef)
-            self.hideShowHotKeyRef = nil
+        for action in ShortcutAction.allCases {
+            registrar.unregister(id: carbonID(for: action))
         }
-        if let quickCaptureHotKeyRef {
-            UnregisterEventHotKey(quickCaptureHotKeyRef)
-            self.quickCaptureHotKeyRef = nil
-        }
-        if let clipboardCaptureHotKeyRef {
-            UnregisterEventHotKey(clipboardCaptureHotKeyRef)
-            self.clipboardCaptureHotKeyRef = nil
-        }
+        registered.removeAll()
+        ignoredAction = nil
     }
 
     fileprivate func handleHotKey(id: UInt32) {
-        switch GlanceHotKeyID(rawValue: id) {
+        guard let action = action(forCarbonID: id) else { return }
+        if ignoredAction == action { return }
+        switch action {
         case .hideShow:
             onToggleVisibility?()
         case .quickCapture:
             onQuickCapture?()
         case .clipboardCapture:
             onCaptureClipboard?()
-        case nil:
-            break
         }
     }
 
-    private func registerHotKey(
-        virtualKey: UInt32,
-        id: GlanceHotKeyID,
-        displayName: String,
-        storage: inout EventHotKeyRef?
-    ) {
-        let hotKeyID = EventHotKeyID(signature: fourCharCode("GLNC"), id: id.rawValue)
-        let status = RegisterEventHotKey(
-            virtualKey,
-            UInt32(optionKey | cmdKey),
-            hotKeyID,
-            GetApplicationEventTarget(),
-            0,
-            &storage
+    private func registerThrowing(_ shortcut: GlanceShortcut, for action: ShortcutAction) throws {
+        guard let keyCode = MacShortcutAdapter.carbonKeyCode(for: shortcut) else {
+            throw ShortcutError.unsupportedKey
+        }
+        try registrar.register(
+            id: carbonID(for: action),
+            keyCode: keyCode,
+            modifiers: MacShortcutAdapter.carbonModifiers(for: shortcut)
         )
-        if status != noErr {
-            NSLog(
-                "Glance global shortcut %@ could not be registered (%d)",
-                displayName as NSString,
-                status
-            )
+        registered[action] = shortcut
+    }
+
+    private func carbonID(for action: ShortcutAction) -> UInt32 {
+        switch action {
+        case .hideShow: return GlanceHotKeyID.hideShow.rawValue
+        case .quickCapture: return GlanceHotKeyID.quickCapture.rawValue
+        case .clipboardCapture: return GlanceHotKeyID.clipboardCapture.rawValue
+        }
+    }
+
+    private func action(forCarbonID id: UInt32) -> ShortcutAction? {
+        switch GlanceHotKeyID(rawValue: id) {
+        case .hideShow: return .hideShow
+        case .quickCapture: return .quickCapture
+        case .clipboardCapture: return .clipboardCapture
+        case nil: return nil
         }
     }
 }
 
-private func fourCharCode(_ string: String) -> OSType {
+let glanceHotKeySignature: OSType = {
     var result: OSType = 0
-    for scalar in string.unicodeScalars.prefix(4) {
+    for scalar in "GLNC".unicodeScalars.prefix(4) {
         result = (result << 8) + OSType(scalar.value)
     }
     return result
-}
+}()
 
 private let glanceHotKeyHandler: EventHandlerUPP = { _, event, userData in
     guard let userData, let event else {
@@ -134,7 +218,7 @@ private let glanceHotKeyHandler: EventHandlerUPP = { _, event, userData in
         nil,
         &hotKeyID
     )
-    guard status == noErr, hotKeyID.signature == fourCharCode("GLNC") else {
+    guard status == noErr, hotKeyID.signature == glanceHotKeySignature else {
         return OSStatus(eventNotHandledErr)
     }
     let manager = Unmanaged<ShortcutManager>.fromOpaque(userData).takeUnretainedValue()

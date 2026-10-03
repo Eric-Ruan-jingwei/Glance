@@ -8,7 +8,9 @@ final class AppEnvironment {
     let visibility = GlobalVisibilityController()
     let debouncer = SaveDebouncer()
     let interaction = InteractionController()
-    let shortcuts = ShortcutManager()
+    let shortcuts: ShortcutManager
+    let shortcutStore: ShortcutStore
+    let shortcutCoordinator: ShortcutCoordinator
 
     weak var panelManager: PanelManager?
 
@@ -28,5 +30,10 @@ final class AppEnvironment {
         self.applicationSupportRoot = root
         self.payloadStore = try PayloadStore(applicationSupportRoot: root)
         self.repository = try PanelRepository(fileURL: payloadStore.metadataURL)
+        let shortcuts = ShortcutManager()
+        let store = ShortcutStore()
+        self.shortcuts = shortcuts
+        self.shortcutStore = store
+        self.shortcutCoordinator = ShortcutCoordinator(store: store, manager: shortcuts)
     }
 }
