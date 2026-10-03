@@ -14,16 +14,20 @@ final class StatusMenuTests: XCTestCase {
         GlanceMenuFixtures.populate(menu)
         let titles = GlanceMenuQuery.rootTitles(in: menu)
         XCTAssertEqual(titles.first, "快速记录…")
+        XCTAssertEqual(titles.dropFirst().first, "搜索 Glance…")
+        XCTAssertEqual(menu.items.first { $0.title == "搜索 Glance…" }?.title, "搜索 Glance…")
         XCTAssertEqual(menu.items.first { $0.title == "剪贴板…" }?.title, "剪贴板…")
         XCTAssertEqual(menu.items.first { $0.title == "文件架…" }?.title, "文件架…")
         XCTAssertEqual(menu.items.first { $0.title == "片段库…" }?.title, "片段库…")
         XCTAssertEqual(menu.items.first { $0.title == "链接库…" }?.title, "链接库…")
         XCTAssertNotNil(menu.items.first { $0.title == "面板" }?.submenu)
+        let searchIndex = titles.firstIndex(of: "搜索 Glance…")
         let clipboardIndex = titles.firstIndex(of: "剪贴板…")
         let fileShelfIndex = titles.firstIndex(of: "文件架…")
         let snippetsIndex = titles.firstIndex(of: "片段库…")
         let linksIndex = titles.firstIndex(of: "链接库…")
         let panelIndex = titles.firstIndex(of: "面板")
+        XCTAssertEqual(searchIndex.map { $0 + 1 }, clipboardIndex)
         XCTAssertEqual(clipboardIndex.map { $0 + 1 }, fileShelfIndex)
         XCTAssertEqual(fileShelfIndex.map { $0 + 1 }, snippetsIndex)
         XCTAssertEqual(snippetsIndex.map { $0 + 1 }, linksIndex)
@@ -141,6 +145,13 @@ final class StatusMenuTests: XCTestCase {
 
     func testNestedItemsUseLiveShortcuts() {
         var shortcuts = ShortcutDefaults.all
+        shortcuts[.globalSearch] = GlanceShortcut(
+            key: "k",
+            command: false,
+            option: true,
+            control: true,
+            shift: false
+        )
         shortcuts[.clipboardHistory] = GlanceShortcut(
             key: "v",
             command: false,
@@ -178,6 +189,9 @@ final class StatusMenuTests: XCTestCase {
         )
         let menu = NSMenu()
         GlanceMenuFixtures.populate(menu, shortcuts: shortcuts)
+        let search = menu.items.first { $0.title == "搜索 Glance…" }
+        XCTAssertEqual(search?.keyEquivalent, "k")
+        XCTAssertEqual(search?.keyEquivalentModifierMask, [.control, .option])
         let clipboard = menu.items.first { $0.title == "剪贴板…" }
         XCTAssertEqual(clipboard?.keyEquivalent, "v")
         XCTAssertEqual(clipboard?.keyEquivalentModifierMask, [.control, .option])
@@ -198,6 +212,7 @@ final class StatusMenuTests: XCTestCase {
     }
 
     func testCallbacksSurviveMenuNesting() {
+        var search = false
         var clipboard = false
         var fileShelf = false
         var snippets = false
@@ -208,6 +223,8 @@ final class StatusMenuTests: XCTestCase {
         let menu = NSMenu()
         GlanceMenuFixtures.populate(
             menu,
+            onQuickCapture: {},
+            onShowGlobalSearch: { search = true },
             onShowClipboardHistory: { clipboard = true },
             onShowFileShelf: { fileShelf = true },
             onShowSnippets: { snippets = true },
@@ -216,6 +233,7 @@ final class StatusMenuTests: XCTestCase {
             onManagePanels: { manage = true },
             onToggleVisibility: { visibility = true }
         )
+        invoke(menu.items.first { $0.title == "搜索 Glance…" })
         invoke(menu.items.first { $0.title == "剪贴板…" })
         invoke(menu.items.first { $0.title == "文件架…" })
         invoke(menu.items.first { $0.title == "片段库…" })
@@ -223,6 +241,7 @@ final class StatusMenuTests: XCTestCase {
         invoke(GlanceMenuQuery.item(titled: "管理面板…", in: menu))
         invoke(GlanceMenuQuery.item(titled: "从当前剪贴板创建…", in: menu))
         invoke(GlanceMenuQuery.item(titled: "隐藏全部", in: menu))
+        XCTAssertTrue(search)
         XCTAssertTrue(clipboard)
         XCTAssertTrue(fileShelf)
         XCTAssertTrue(snippets)

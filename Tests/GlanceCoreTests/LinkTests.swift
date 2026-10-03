@@ -25,6 +25,7 @@ final class LinkPolicyTests: XCTestCase {
         XCTAssertEqual(GlanceHotKeyID.clipboardHistory.rawValue, 4)
         XCTAssertEqual(GlanceHotKeyID.fileShelf.rawValue, 5)
         XCTAssertEqual(GlanceHotKeyID.snippets.rawValue, 6)
+        XCTAssertEqual(GlanceHotKeyID.globalSearch.rawValue, 8)
     }
 
     func testCodecPreservesQueryFragmentEncodingAndUnicodeTitle() throws {

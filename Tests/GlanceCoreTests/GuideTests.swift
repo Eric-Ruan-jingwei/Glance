@@ -216,14 +216,21 @@ final class GuideTests: XCTestCase {
         XCTAssertTrue(GuideGettingStartedCopy.step1Detail.contains("临时文件"))
         XCTAssertTrue(GuideGettingStartedCopy.step1Detail.contains("片段库"))
         XCTAssertTrue(GuideGettingStartedCopy.step1Detail.contains("网页") || GuideGettingStartedCopy.step1Detail.contains("在线资源"))
+        XCTAssertTrue(GuideGettingStartedCopy.step1Detail.contains("全局搜索"))
         XCTAssertEqual(GuideModel.onboardingPageCount, 4)
     }
 
-    func testMoreFeaturesLeadsWithClipboard() {
-        XCTAssertEqual(GuideFeatureCatalog.items.first?.title, "剪贴板")
+    func testMoreFeaturesLeadsWithGlobalSearch() {
+        XCTAssertEqual(GuideFeatureCatalog.items.first?.title, "全局搜索")
+        XCTAssertTrue(GuideFeatureCatalog.items.first?.body.contains("剪贴板") == true)
+        XCTAssertTrue(GuideFeatureCatalog.items.first?.body.contains("文件架") == true)
+        XCTAssertTrue(GuideFeatureCatalog.items.first?.body.contains("片段库") == true)
+        XCTAssertTrue(GuideFeatureCatalog.items.first?.body.contains("链接库") == true)
+        XCTAssertTrue(GuideFeatureCatalog.items.first?.body.contains("面板") == true)
+        XCTAssertTrue(GuideFeatureCatalog.items.first?.body.contains("不会访问网络") == true)
         XCTAssertEqual(
             GuideFeatureCatalog.items.map(\.title),
-            ["剪贴板", "文件架", "片段库", "链接库", "Workspaces", "Tags", "Panel Manager"]
+            ["全局搜索", "剪贴板", "文件架", "片段库", "链接库", "Workspaces", "Tags", "Panel Manager"]
         )
         XCTAssertNotEqual(GuideFeatureCatalog.items.last?.title, "剪贴板")
     }
@@ -319,6 +326,42 @@ final class GuideTests: XCTestCase {
         XCTAssertEqual(
             GuideShortcutCatalog.groups.first { $0.id == "links" }?.items.map(\.id),
             ["linkOpen", "linkEdit", "linkCreate", "linkCopy", "linkDelete", "linkCancel"]
+        )
+    }
+
+    func testCatalogIncludesGlobalSearchDynamicActionAndOperations() {
+        let item = GuideShortcutCatalog.item(id: "globalSearch")
+        XCTAssertEqual(item?.title, "搜索 Glance")
+        if case .dynamic(let action) = item?.source {
+            XCTAssertEqual(action, .globalSearch)
+        } else {
+            XCTFail("global search must read the live shortcut")
+        }
+        let custom = GlanceShortcut(key: "k", command: false, option: true, control: true, shift: false)
+        XCTAssertEqual(
+            item?.tokens { action in
+                action == .globalSearch ? custom : ShortcutDefaults.shortcut(for: action)
+            }.map(\.display),
+            ["⌃", "⌥", "K"]
+        )
+        XCTAssertEqual(GuideShortcutCatalog.groups.first { $0.id == "globalSearch" }?.title, "全局搜索")
+        XCTAssertEqual(
+            GuideShortcutCatalog.groups.first { $0.id == "globalSearch" }?.items.map(\.id),
+            [
+                "globalSearchPrevious",
+                "globalSearchNext",
+                "globalSearchActivate",
+                "globalSearchCancel"
+            ]
+        )
+        let provider = ShortcutDefaults.shortcut(for:)
+        XCTAssertEqual(
+            GuideShortcutCatalog.item(id: "globalSearchActivate")?.tokens(using: provider).map(\.display),
+            ["↩"]
+        )
+        XCTAssertEqual(
+            GuideShortcutCatalog.item(id: "globalSearchCancel")?.tokens(using: provider).map(\.display),
+            ["Esc"]
         )
     }
 

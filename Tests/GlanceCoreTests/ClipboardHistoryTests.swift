@@ -115,6 +115,7 @@ final class ClipboardHistoryModelTests: XCTestCase {
         XCTAssertEqual(GlanceHotKeyID.fileShelf.rawValue, 5)
         XCTAssertEqual(GlanceHotKeyID.snippets.rawValue, 6)
         XCTAssertEqual(GlanceHotKeyID.links.rawValue, 7)
+        XCTAssertEqual(GlanceHotKeyID.globalSearch.rawValue, 8)
         XCTAssertEqual(GlanceHotKeyID.clipboardCapture.rawValue, 3)
         XCTAssertEqual(ShortcutAction.clipboardCapture.title, "从当前剪贴板创建")
     }
