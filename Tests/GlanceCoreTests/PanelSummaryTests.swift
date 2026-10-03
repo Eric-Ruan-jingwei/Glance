@@ -256,16 +256,30 @@ final class PanelSummaryBuilderTests: XCTestCase {
     func testPNGSizeSubtitle() throws {
         let directory = try makeDirectory()
         defer { try? FileManager.default.removeItem(at: directory) }
-        var data = Data([137, 80, 78, 71, 13, 10, 26, 10])
-        data.append(contentsOf: [0, 0, 0, 13, 73, 72, 68, 82])
-        data.append(contentsOf: [0, 0, 4, 176, 0, 0, 3, 32])
-        try data.write(to: directory.appendingPathComponent("image.png"))
+        try GlanceTestPNG.data(width: 1200, height: 800)
+            .write(to: directory.appendingPathComponent("image.png"))
         let summary = PanelSummaryBuilder.summarize(
             record: record(kind: PanelKind.image),
             payloadDirectory: directory
         )
         XCTAssertEqual(summary.title, PanelSummaryFallback.image)
         XCTAssertEqual(summary.subtitle, "1200 × 800")
+        XCTAssertFalse(summary.isUnreadable)
+    }
+
+    func testCorruptImageFallbackLeavesBytes() throws {
+        let directory = try makeDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let url = directory.appendingPathComponent("image.png")
+        let original = Data("not-an-image".utf8)
+        try original.write(to: url)
+        let summary = PanelSummaryBuilder.summarize(
+            record: record(kind: PanelKind.image),
+            payloadDirectory: directory
+        )
+        XCTAssertEqual(summary.title, PanelSummaryFallback.unreadable)
+        XCTAssertTrue(summary.isUnreadable)
+        XCTAssertEqual(try Data(contentsOf: url), original)
     }
 
     func testPDFSummaryTitlePageCountAndBrokenMetadata() throws {

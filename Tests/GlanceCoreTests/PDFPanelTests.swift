@@ -146,6 +146,83 @@ final class PDFPanelCreationTests: XCTestCase {
         }
     }
 
+    func testCopyFailureLeavesNoPanelDirectory() throws {
+        try withTempRoot { root in
+            let store = try PayloadStore(applicationSupportRoot: root)
+            let source = root.appendingPathComponent("source.pdf")
+            try GlanceTestPDF.data(pageCount: 1).write(to: source)
+            let metadata = try PDFDocumentInspector.inspect(source)
+            let id = UUID()
+            XCTAssertThrowsError(
+                try PanelCreationSession.materialize(
+                    id: id,
+                    store: store,
+                    writePayload: { directory in
+                        try PDFPayloadFile.importDocument(
+                            from: source,
+                            metadata: metadata,
+                            to: directory,
+                            copyItem: { _, _ in throw ForcedMetadataWriteError() }
+                        )
+                    },
+                    insert: {
+                        XCTFail("metadata insert must not run after copy failure")
+                    }
+                )
+            ) { error in
+                XCTAssertEqual(error as? PDFImportError, .copyFailed)
+            }
+            XCTAssertTrue(try PanelRepository(fileURL: store.metadataURL).all().isEmpty)
+            XCTAssertFalse(
+                FileManager.default.fileExists(
+                    atPath: store.panelsRoot.appendingPathComponent(id.uuidString).path
+                )
+            )
+        }
+    }
+
+    func testCopySeamSuccessWritesDocumentBeforeInsert() throws {
+        try withTempRoot { root in
+            let store = try PayloadStore(applicationSupportRoot: root)
+            let repository = try PanelRepository(fileURL: store.metadataURL)
+            let source = root.appendingPathComponent("source.pdf")
+            try GlanceTestPDF.data(pageCount: 1).write(to: source)
+            let metadata = try PDFDocumentInspector.inspect(source)
+            let id = UUID()
+            var copyRan = false
+            var insertRan = false
+            try PanelCreationSession.materialize(
+                id: id,
+                store: store,
+                writePayload: { directory in
+                    try PDFPayloadFile.importDocument(
+                        from: source,
+                        metadata: metadata,
+                        to: directory,
+                        copyItem: { from, to in
+                            XCTAssertFalse(insertRan)
+                            copyRan = true
+                            try FileManager.default.copyItem(at: from, to: to)
+                        }
+                    )
+                },
+                insert: {
+                    XCTAssertTrue(copyRan)
+                    insertRan = true
+                    try repository.insert(GlanceTestFixtures.sampleRecord(id: id).withKind(PanelKind.pdf))
+                }
+            )
+            XCTAssertTrue(copyRan)
+            XCTAssertTrue(insertRan)
+            XCTAssertEqual(try repository.all().map(\.id), [id])
+            XCTAssertTrue(
+                PDFPayloadFile.documentExists(
+                    in: store.panelsRoot.appendingPathComponent(id.uuidString, isDirectory: true)
+                )
+            )
+        }
+    }
+
     func testPDFRecordKeepsSchemaWithoutPDFFields() throws {
         let record = PanelRecord(
             kindIdentifier: PanelKind.pdf,

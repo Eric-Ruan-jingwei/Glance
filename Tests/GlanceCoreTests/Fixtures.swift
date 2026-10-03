@@ -1,4 +1,6 @@
 import Foundation
+import ImageIO
+import CoreGraphics
 
 #if canImport(GlanceCore)
 @testable import GlanceCore
@@ -289,6 +291,33 @@ enum GlanceTestFixtures {
       ]
     }
     """
+}
+
+enum GlanceTestPNG {
+    static func data(width: Int, height: Int) -> Data {
+        let colorSpace = CGColorSpaceCreateDeviceRGB()
+        guard
+            let context = CGContext(
+                data: nil,
+                width: width,
+                height: height,
+                bitsPerComponent: 8,
+                bytesPerRow: 0,
+                space: colorSpace,
+                bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+            ),
+            let image = context.makeImage()
+        else {
+            return Data()
+        }
+        let data = NSMutableData()
+        guard let destination = CGImageDestinationCreateWithData(data, "public.png" as CFString, 1, nil) else {
+            return Data()
+        }
+        CGImageDestinationAddImage(destination, image, nil)
+        CGImageDestinationFinalize(destination)
+        return data as Data
+    }
 }
 
 struct ForcedMetadataWriteError: Error {}
