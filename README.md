@@ -33,6 +33,10 @@ There is no Windows client yet. Shared data contracts are documented so a future
 - No cloud
 - Open source
 
+## V0.18.4
+
+Text checklist marks toggle on click while editing, and the hit target follows the text layout.
+
 ## V0.18.3
 
 Quick Capture placeholder now lines up with the insertion caret.
