@@ -5,6 +5,7 @@ enum ShortcutAction: String, CaseIterable, Equatable {
     case clipboardHistory
     case fileShelf
     case snippets
+    case links
     case clipboardCapture
     case hideShow
 
@@ -14,6 +15,7 @@ enum ShortcutAction: String, CaseIterable, Equatable {
         case .clipboardHistory: return "剪贴板"
         case .fileShelf: return "文件架"
         case .snippets: return "片段库"
+        case .links: return "链接库"
         case .clipboardCapture: return "从当前剪贴板创建"
         case .hideShow: return "隐藏 / 显示全部"
         }
@@ -96,6 +98,13 @@ enum ShortcutDefaults {
         control: false,
         shift: false
     )
+    static let links = GlanceShortcut(
+        key: "l",
+        command: true,
+        option: true,
+        control: false,
+        shift: false
+    )
     static let clipboardCapture = GlanceShortcut(
         key: "b",
         command: true,
@@ -117,6 +126,7 @@ enum ShortcutDefaults {
         case .clipboardHistory: return clipboardHistory
         case .fileShelf: return fileShelf
         case .snippets: return snippets
+        case .links: return links
         case .clipboardCapture: return clipboardCapture
         case .hideShow: return hideShow
         }

@@ -8,6 +8,7 @@ enum AppLifecycle {
         environment?.clipboardHistoryService.flush()
         environment?.fileShelfService.flush()
         environment?.snippetService.flush()
+        environment?.linkService.flush()
         manager?.shutdown()
         do {
             try environment?.repository.save()

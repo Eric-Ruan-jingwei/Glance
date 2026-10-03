@@ -25,6 +25,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var clipboardWindow: ClipboardHistoryWindowController?
     private var fileShelfWindow: FileShelfWindowController?
     private var snippetWindow: SnippetLibraryWindowController?
+    private var linkWindow: LinkLibraryWindowController?
     private var guideWindow: GuideWindowController?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -41,6 +42,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 onShowClipboardHistory: { [weak self] in self?.toggleClipboardHistory() },
                 onShowFileShelf: { [weak self] in self?.toggleFileShelf() },
                 onShowSnippets: { [weak self] in self?.toggleSnippets() },
+                onShowLinks: { [weak self] in self?.toggleLinks() },
                 shortcutSnapshot: { [weak environment] in
                     environment?.shortcutCoordinator.shortcuts ?? ShortcutDefaults.all
                 }
@@ -72,6 +74,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
             environment.shortcuts.onShowSnippets = { [weak self] in
                 self?.toggleSnippets()
+            }
+            environment.shortcuts.onShowLinks = { [weak self] in
+                self?.toggleLinks()
             }
             environment.shortcutCoordinator.start()
             environment.startClipboardMonitoringIfNeeded()
@@ -128,6 +133,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             window.onSaveAsSnippet = { [weak self] text in
                 self?.saveClipboardTextAsSnippet(text)
             }
+            window.onSaveAsLink = { [weak self] url in
+                self?.saveClipboardTextAsLink(url)
+            }
             clipboardWindow = window
         }
         clipboardWindow?.toggle()
@@ -156,6 +164,31 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             clipboardWindow?.dismiss()
         }
         snippetWindow?.presentEditor(prefilled: text)
+    }
+
+    private func toggleLinks() {
+        guard let environment else { return }
+        if linkWindow == nil {
+            linkWindow = LinkLibraryWindowController(
+                service: environment.linkService,
+                monitor: environment.clipboardHistoryMonitor
+            )
+        }
+        linkWindow?.toggle()
+    }
+
+    private func saveClipboardTextAsLink(_ url: String) {
+        guard let environment else { return }
+        if linkWindow == nil {
+            linkWindow = LinkLibraryWindowController(
+                service: environment.linkService,
+                monitor: environment.clipboardHistoryMonitor
+            )
+        }
+        if clipboardWindow?.isShelfVisible == true {
+            clipboardWindow?.dismiss()
+        }
+        linkWindow?.presentEditor(prefilledURL: url)
     }
 
     private func toggleFileShelf() {

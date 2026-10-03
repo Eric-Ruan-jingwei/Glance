@@ -21,6 +21,8 @@ final class AppEnvironment {
     let fileShelfService: FileShelfService
     let snippetStore: SnippetStore
     let snippetService: SnippetService
+    let linkStore: LinkStore
+    let linkService: LinkService
 
     weak var panelManager: PanelManager?
 
@@ -84,6 +86,11 @@ final class AppEnvironment {
         )
         self.snippetStore = snippetStore
         self.snippetService = SnippetService(store: snippetStore)
+        let linkStore = LinkStore(
+            root: root.appendingPathComponent("Links", isDirectory: true)
+        )
+        self.linkStore = linkStore
+        self.linkService = LinkService(store: linkStore)
     }
 
     func startClipboardMonitoringIfNeeded() {

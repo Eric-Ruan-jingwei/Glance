@@ -8,6 +8,7 @@ enum GlanceHotKeyID: UInt32 {
     case clipboardHistory = 4
     case fileShelf = 5
     case snippets = 6
+    case links = 7
 }
 
 final class CarbonHotKeyRegistrar: HotKeyRegistering {
@@ -52,6 +53,7 @@ final class ShortcutManager: @unchecked Sendable {
     var onShowClipboardHistory: (() -> Void)?
     var onShowFileShelf: (() -> Void)?
     var onShowSnippets: (() -> Void)?
+    var onShowLinks: (() -> Void)?
 
     private let registrar: HotKeyRegistering
     private let bindSystemHandler: Bool
@@ -188,6 +190,8 @@ final class ShortcutManager: @unchecked Sendable {
             onShowFileShelf?()
         case .snippets:
             onShowSnippets?()
+        case .links:
+            onShowLinks?()
         }
     }
 
@@ -211,7 +215,8 @@ final class ShortcutManager: @unchecked Sendable {
         case .clipboardHistory: return GlanceHotKeyID.clipboardHistory.rawValue
         case .fileShelf: return GlanceHotKeyID.fileShelf.rawValue
         case .snippets: return GlanceHotKeyID.snippets.rawValue
-    }
+        case .links: return GlanceHotKeyID.links.rawValue
+        }
     }
 
     private func action(forCarbonID id: UInt32) -> ShortcutAction? {
@@ -222,6 +227,7 @@ final class ShortcutManager: @unchecked Sendable {
         case .clipboardHistory: return .clipboardHistory
         case .fileShelf: return .fileShelf
         case .snippets: return .snippets
+        case .links: return .links
         case nil: return nil
         }
     }

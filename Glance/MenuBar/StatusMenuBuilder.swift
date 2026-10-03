@@ -10,6 +10,7 @@ enum StatusMenuBuilder {
         onShowClipboardHistory: @escaping () -> Void = {},
         onShowFileShelf: @escaping () -> Void = {},
         onShowSnippets: @escaping () -> Void = {},
+        onShowLinks: @escaping () -> Void = {},
         onCaptureClipboard: @escaping () -> Void = {},
         onSelectWorkspace: @escaping (String) -> Void = { _ in },
         onCreateWorkspace: @escaping () -> Void = {},
@@ -33,6 +34,7 @@ enum StatusMenuBuilder {
         let clipboardHistory = shortcuts[.clipboardHistory] ?? ShortcutDefaults.clipboardHistory
         let fileShelf = shortcuts[.fileShelf] ?? ShortcutDefaults.fileShelf
         let snippets = shortcuts[.snippets] ?? ShortcutDefaults.snippets
+        let links = shortcuts[.links] ?? ShortcutDefaults.links
 
         menu.addItem(
             actionItem(
@@ -69,6 +71,15 @@ enum StatusMenuBuilder {
                 symbol: "text.quote",
                 keyEquivalent: ShortcutDisplayFormatter.keyEquivalent(snippets),
                 modifiers: MacShortcutAdapter.menuModifierMask(for: snippets)
+            )
+        )
+        menu.addItem(
+            actionItem(
+                "链接库…",
+                onShowLinks,
+                symbol: "link",
+                keyEquivalent: ShortcutDisplayFormatter.keyEquivalent(links),
+                modifiers: MacShortcutAdapter.menuModifierMask(for: links)
             )
         )
         menu.addItem(
