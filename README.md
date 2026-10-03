@@ -33,6 +33,10 @@ There is no Windows client yet. Shared data contracts are documented so a future
 - No cloud
 - Open source
 
+## V0.18.3
+
+Quick Capture placeholder now lines up with the insertion caret.
+
 ## V0.18.2
 
 Quick Capture Return submits even when the Guide window is open.
