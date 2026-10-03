@@ -26,7 +26,7 @@ There is no Windows client yet. Shared data contracts are documented so a future
 - No cloud
 - Open source
 
-## V0.14 已支持
+## V0.14.1 已支持
 
 - Text panel
 - Markdown panel (rendered preview, double-click to edit raw UTF-8 `.md`)
@@ -38,7 +38,7 @@ There is no Windows client yet. Shared data contracts are documented so a future
 - Panel Manager — browse, search, reveal, hide, delete, and move existing panels; the sidebar switches the active workspace
 - Workspaces — organize panels by workspace and switch the visible set of panels without changing their content or per-panel hidden state
 - Custom panel titles — give long-lived panels a stable custom name without modifying their underlying content. Clearing a custom title restores the automatic content-derived title
-- Panel Tags — add multiple lightweight tags to panels for search and filtering without affecting workspace membership or visibility
+- Panel Tags — add multiple lightweight tags to panels for search and filtering without affecting workspace membership or visibility. The tag editor commits pending input when Save is pressed.
 - Per-panel hide/show — hide a panel without deleting it; the state survives relaunch
 - Panel edge snapping
 - Panel layout presets
