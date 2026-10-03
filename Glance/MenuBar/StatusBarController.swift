@@ -5,16 +5,19 @@ final class StatusBarController: NSObject, NSMenuDelegate {
     private let manager: PanelManager
     private let onSettings: () -> Void
     private let onManagePanels: () -> Void
+    private let shortcutSnapshot: () -> [ShortcutAction: GlanceShortcut]
     private var statusItem: NSStatusItem?
 
     init(
         manager: PanelManager,
         onSettings: @escaping () -> Void,
-        onManagePanels: @escaping () -> Void
+        onManagePanels: @escaping () -> Void,
+        shortcutSnapshot: @escaping () -> [ShortcutAction: GlanceShortcut] = { ShortcutDefaults.all }
     ) {
         self.manager = manager
         self.onSettings = onSettings
         self.onManagePanels = onManagePanels
+        self.shortcutSnapshot = shortcutSnapshot
     }
 
     func install() {
@@ -48,7 +51,8 @@ final class StatusBarController: NSObject, NSMenuDelegate {
             onSettings: { [weak self] in self?.onSettings() },
             onQuit: {
                 NSApp.terminate(nil)
-            }
+            },
+            shortcuts: shortcutSnapshot()
         )
     }
 }

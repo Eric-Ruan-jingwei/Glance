@@ -32,7 +32,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             let statusBar = StatusBarController(
                 manager: manager,
                 onSettings: { [weak self] in self?.showSettings() },
-                onManagePanels: { [weak self] in self?.showPanelLibrary() }
+                onManagePanels: { [weak self] in self?.showPanelLibrary() },
+                shortcutSnapshot: { [weak environment] in
+                    environment?.shortcuts.menuShortcuts() ?? ShortcutDefaults.all
+                }
             )
             statusBar.install()
             self.statusBar = statusBar

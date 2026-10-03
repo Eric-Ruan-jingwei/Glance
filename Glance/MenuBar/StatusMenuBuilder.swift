@@ -15,24 +15,29 @@ enum StatusMenuBuilder {
         onNewPDF: @escaping () -> Void = {},
         onToggleVisibility: @escaping () -> Void,
         onSettings: @escaping () -> Void,
-        onQuit: @escaping () -> Void
+        onQuit: @escaping () -> Void,
+        shortcuts: [ShortcutAction: GlanceShortcut] = ShortcutDefaults.all
     ) {
         menu.removeAllItems()
+
+        let quickCapture = shortcuts[.quickCapture] ?? ShortcutDefaults.quickCapture
+        let clipboardCapture = shortcuts[.clipboardCapture] ?? ShortcutDefaults.clipboardCapture
+        let hideShow = shortcuts[.hideShow] ?? ShortcutDefaults.hideShow
 
         menu.addItem(
             actionItem(
                 "快速记录…",
                 onQuickCapture,
-                keyEquivalent: GlanceConstants.quickCaptureKeyEquivalent,
-                modifiers: [.option, .command]
+                keyEquivalent: ShortcutDisplayFormatter.keyEquivalent(quickCapture),
+                modifiers: MacShortcutAdapter.menuModifierMask(for: quickCapture)
             )
         )
         menu.addItem(
             actionItem(
                 "从剪贴板创建…",
                 onCaptureClipboard,
-                keyEquivalent: GlanceConstants.clipboardCaptureKeyEquivalent,
-                modifiers: [.option, .command],
+                keyEquivalent: ShortcutDisplayFormatter.keyEquivalent(clipboardCapture),
+                modifiers: MacShortcutAdapter.menuModifierMask(for: clipboardCapture),
                 enabled: clipboardCaptureEnabled
             )
         )
@@ -49,8 +54,8 @@ enum StatusMenuBuilder {
             actionItem(
                 allHidden ? "显示全部" : "隐藏全部",
                 onToggleVisibility,
-                keyEquivalent: GlanceConstants.hideShowKeyEquivalent,
-                modifiers: [.option, .command]
+                keyEquivalent: ShortcutDisplayFormatter.keyEquivalent(hideShow),
+                modifiers: MacShortcutAdapter.menuModifierMask(for: hideShow)
             )
         )
         menu.addItem(.separator())
