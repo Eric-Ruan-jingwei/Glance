@@ -14,6 +14,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
 
+      - name: Verify version metadata
+        run: ./scripts/verify-version-metadata.sh
+
       - name: Swift debug build
         run: swift build
 
@@ -49,3 +52,15 @@ jobs:
           test -x dist/Glance.app/Contents/MacOS/Glance
           test -f dist/Glance.app/Contents/Info.plist
           test -f dist/Glance.app/Contents/Resources/AppIcon.icns
+          source_marketing="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' Glance/Info.plist)"
+          source_build="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' Glance/Info.plist)"
+          app_marketing="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' dist/Glance.app/Contents/Info.plist)"
+          app_build="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' dist/Glance.app/Contents/Info.plist)"
+          if [[ "$app_marketing" != "$source_marketing" || "$app_build" != "$source_build" ]]; then
+            echo "Version metadata mismatch:"
+            echo "Info.plist marketing version: $source_marketing"
+            echo "Built Glance.app marketing version: $app_marketing"
+            echo "Info.plist build version: $source_build"
+            echo "Built Glance.app build version: $app_build"
+            exit 1
+          fi
