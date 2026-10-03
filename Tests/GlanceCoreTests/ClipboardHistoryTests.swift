@@ -113,6 +113,7 @@ final class ClipboardHistoryModelTests: XCTestCase {
         XCTAssertEqual(GlanceConstants.clipboardHistoryShortcutDisplay, "⌥⌘V")
         XCTAssertEqual(GlanceHotKeyID.clipboardHistory.rawValue, 4)
         XCTAssertEqual(GlanceHotKeyID.fileShelf.rawValue, 5)
+        XCTAssertEqual(GlanceHotKeyID.snippets.rawValue, 6)
         XCTAssertEqual(GlanceHotKeyID.clipboardCapture.rawValue, 3)
         XCTAssertEqual(ShortcutAction.clipboardCapture.title, "从当前剪贴板创建")
     }
@@ -463,6 +464,7 @@ final class ClipboardHistoryStoreAndServiceTests: XCTestCase {
         XCTAssertEqual(menu.items[0].title, "快速记录…")
         XCTAssertEqual(menu.items.first { $0.title == "剪贴板…" }?.title, "剪贴板…")
         XCTAssertEqual(menu.items.first { $0.title == "文件架…" }?.title, "文件架…")
+        XCTAssertEqual(menu.items.first { $0.title == "片段库…" }?.title, "片段库…")
         XCTAssertNotNil(menu.items.first { $0.title == "面板" }?.submenu)
         let history = menu.items.first { $0.title == "剪贴板…" }
         XCTAssertEqual(history?.keyEquivalent, "v")

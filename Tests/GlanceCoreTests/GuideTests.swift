@@ -211,9 +211,10 @@ final class GuideTests: XCTestCase {
     func testGettingStartedStepOneMentionsPanelsAndClipboard() {
         XCTAssertEqual(GuideGettingStartedCopy.step1Title, "把常用信息和工具留在手边")
         XCTAssertTrue(GuideGettingStartedCopy.step1Detail.contains("个人办公工具入口"))
-        XCTAssertTrue(GuideGettingStartedCopy.step1Detail.contains("桌面面板"))
+        XCTAssertTrue(GuideGettingStartedCopy.step1Detail.contains("持续参考"))
         XCTAssertTrue(GuideGettingStartedCopy.step1Detail.contains("复制"))
-        XCTAssertTrue(GuideGettingStartedCopy.step1Detail.contains("文件架"))
+        XCTAssertTrue(GuideGettingStartedCopy.step1Detail.contains("临时文件"))
+        XCTAssertTrue(GuideGettingStartedCopy.step1Detail.contains("片段库"))
         XCTAssertEqual(GuideModel.onboardingPageCount, 4)
     }
 
@@ -221,7 +222,7 @@ final class GuideTests: XCTestCase {
         XCTAssertEqual(GuideFeatureCatalog.items.first?.title, "剪贴板")
         XCTAssertEqual(
             GuideFeatureCatalog.items.map(\.title),
-            ["剪贴板", "文件架", "Workspaces", "Tags", "Panel Manager"]
+            ["剪贴板", "文件架", "片段库", "Workspaces", "Tags", "Panel Manager"]
         )
         XCTAssertNotEqual(GuideFeatureCatalog.items.last?.title, "剪贴板")
     }
@@ -260,6 +261,7 @@ final class GuideTests: XCTestCase {
             ["⌃", "⌥", "F"]
         )
         XCTAssertEqual(GuideShortcutCatalog.groups.first { $0.id == "fileShelf" }?.title, "文件架")
+        XCTAssertEqual(GuideShortcutCatalog.groups.first { $0.id == "snippets" }?.title, "片段库")
         XCTAssertEqual(
             GuideShortcutCatalog.groups.first { $0.id == "fileShelf" }?.items.map(\.id),
             [
@@ -272,6 +274,28 @@ final class GuideTests: XCTestCase {
                 "fileShelfFavoriteTab",
                 "fileShelfCancel"
             ]
+        )
+    }
+
+    func testCatalogIncludesSnippetsDynamicAction() {
+        let item = GuideShortcutCatalog.item(id: "snippets")
+        XCTAssertEqual(item?.title, "片段库")
+        if case .dynamic(let action) = item?.source {
+            XCTAssertEqual(action, .snippets)
+        } else {
+            XCTFail("snippets must read the live shortcut")
+        }
+        let custom = GlanceShortcut(key: "s", command: false, option: true, control: true, shift: false)
+        XCTAssertEqual(
+            item?.tokens { action in
+                action == .snippets ? custom : ShortcutDefaults.shortcut(for: action)
+            }.map(\.display),
+            ["⌃", "⌥", "S"]
+        )
+        XCTAssertEqual(GuideShortcutCatalog.groups.first { $0.id == "snippets" }?.title, "片段库")
+        XCTAssertEqual(
+            GuideShortcutCatalog.groups.first { $0.id == "snippets" }?.items.map(\.id),
+            ["snippetCopy", "snippetEdit", "snippetCreate", "snippetDelete", "snippetCancel"]
         )
     }
 
