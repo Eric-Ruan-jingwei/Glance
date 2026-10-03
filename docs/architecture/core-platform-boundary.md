@@ -36,7 +36,7 @@ Dirty state
 Portable data contracts
 ```
 
-Examples in this tree: `PanelRecord`, `PanelFrame`, `PanelDatabase`, `PanelRepository`, `PanelInteractionPolicy`, `PanelInteractionState`, `PanelModeTransition`, `PanelOpacity`, `PayloadDirtyFlag`, `PanelPlacementEngine` (geometry), `PanelSnapEngine`, `PanelLayoutPreset`, `PanelSnapConfiguration`, `PanelFrameRecovery` (geometry), `ApplicationDataLocation`, `PayloadStore`, `MarkdownPayloadFile`, `MarkdownDocument`, `TodoItem`, `TodoDocument`, `TodoMutation`, `TodoPayloadFile`, `QuickCaptureRequest`, `QuickCaptureKind`, `ClipboardCaptureContent`, `ClipboardCaptureRouter`, `PanelInitialContent`, `PanelCreationSession`, `PanelRevealPolicy`, `PanelSummary`, `PanelSummaryQuery`, `PanelSummaryText`, `PDFDocumentMetadata`, `PDFPayloadFile`, `ShortcutAction`, `GlanceShortcut`, `ShortcutStore`, `ShortcutValidator`.
+Examples in this tree: `PanelRecord`, `PanelFrame`, `PanelDatabase`, `PanelRepository`, `PanelInteractionPolicy`, `PanelInteractionState`, `PanelModeTransition`, `PanelOpacity`, `PayloadDirtyFlag`, `PanelPlacementEngine` (geometry), `PanelSnapEngine`, `PanelLayoutPreset`, `PanelSnapConfiguration`, `PanelFrameRecovery` (geometry), `ApplicationDataLocation`, `PayloadStore`, `MarkdownPayloadFile`, `MarkdownDocument`, `TodoItem`, `TodoDocument`, `TodoMutation`, `TodoPayloadFile`, `QuickCaptureRequest`, `QuickCaptureKind`, `ClipboardCaptureContent`, `ClipboardCaptureRouter`, `PanelInitialContent`, `PanelCreationSession`, `PanelVisibilityPolicy`, `PanelVisibilityTransaction`, `PanelSummary`, `PanelSummaryQuery`, `PanelSummaryText`, `PDFDocumentMetadata`, `PDFPayloadFile`, `ShortcutAction`, `GlanceShortcut`, `ShortcutStore`, `ShortcutValidator`.
 
 These types should stay on Foundation (or pure Swift). They must not depend on `NSRect`, `NSWindow`, or other AppKit types.
 
@@ -63,6 +63,7 @@ Panel Library window
 shortcut recorder UI
 NSScreen.visibleFrame
 drag / modifier flags for snap
+NSWindow orderOut / orderFront
 ```
 
 AppKit adapters convert `PanelFrame` ↔ `NSRect`. Carbon hotkeys, `SMAppService`, `NSPasteboard`, `NSScreen`, SwiftUI settings windows, and the Quick Capture `NSPanel` stay here.
@@ -74,6 +75,15 @@ Clipboard Capture is also not persisted as a separate object. `ClipboardCaptureC
 PDF payload files (`document.pdf`, `pdf.json`) are portable. `MacPDFImporter` uses `NSOpenPanel` and PDFKit only to validate and render; it does not write PDFKit archives.
 
 Global shortcut preferences (`ShortcutAction`, `GlanceShortcut`) are app settings, not panel data. They live in `UserDefaults`, outside `panels.json`. `MacShortcutAdapter` maps portable keys onto Carbon virtual key codes, `RegisterEventHotKey`, `NSEvent`, and `NSMenu` key equivalents. The shortcut recorder UI stays on macOS. Recording temporarily suspends the target Carbon hotkey; a successful replace finishes that suspension without a second register, so the new combination can fire immediately. Settings and the status menu show the session’s active registration, not a stale preference snapshot.
+
+Effective panel visibility is layered:
+
+```text
+show when:
+!record.isHidden && !globalConcealed
+```
+
+`PanelRecord.isHidden` is persistent. Global Hide / Show is a runtime override (`GlobalVisibilityController`) and is not stored on the panel. Schema 1 databases migrate missing `isHidden` to `false`. AppKit `NSWindow.orderOut` / `orderFrontRegardless` stay on macOS.
 
 ## Future Windows
 

@@ -17,12 +17,13 @@ There is no Windows client yet. Shared data contracts are documented so a future
 - Quick Capture from any app
 - Clipboard Capture
 - Customizable global shortcuts
+- Per-panel hide/show
 - Panel Manager
 - No account
 - No cloud
 - Open source
 
-## V0.10.1 已支持
+## V0.11 已支持
 
 - Text panel
 - Markdown panel (rendered preview, double-click to edit raw UTF-8 `.md`)
@@ -31,7 +32,8 @@ There is no Windows client yet. Shared data contracts are documented so a future
 - PDF panel
 - Quick Capture — capture text or a Todo without first creating an empty panel. Default: `⌥⌘J`
 - Clipboard Capture — create a Text or Image panel from the current clipboard. Default: `⌥⌘B`
-- Panel Manager — browse, search, reveal, and delete existing panels from one place
+- Panel Manager — browse, search, reveal, hide, and delete existing panels from one place
+- Per-panel hide/show — hide a panel without deleting it; the state survives relaunch
 - Panel edge snapping
 - Panel layout presets
 - Always on top
@@ -39,7 +41,7 @@ There is no Windows client yet. Shared data contracts are documented so a future
 - Click-through
 - Option temporary interaction
 - Opacity
-- Global hide/show. Default: `⌥⌘G`
+- Global hide/show. Default: `⌥⌘G`. Temporary: it does not overwrite per-panel hidden state. Show All restores panels that are not individually hidden.
 - Customizable global shortcuts
 - Launch at login
 - Local persistence
@@ -91,7 +93,7 @@ The default shortcut `⌥⌘J` opens a transient capture window on the display u
 - `Enter` creates one panel and closes capture. `Shift+Enter` inserts a newline in Text mode.
 - Empty or whitespace-only input does not create a panel.
 - `Escape` or a click outside capture closes it and drops the draft.
-- If Glance is globally hidden (Hide / Show, default `⌥⌘G`), capture still appears. A submitted panel is created but stays hidden until you show all panels again.
+- If Glance is globally hidden (Hide / Show, default `⌥⌘G`), capture still appears. A submitted panel is created with `isHidden = false` but stays concealed until you show all panels again.
 
 ### Clipboard Capture
 
@@ -117,9 +119,9 @@ PDFs are copied into Glance's local data directory. Deleting the original file d
 
 ### Panel Manager
 
-`管理面板…` opens a regular macOS window (not a floating panel). It is not stored in `panels.json`. Browse panels, filter by type, search titles, bring a panel forward, or delete it with the same confirmation as the panel menu. Titles are derived from existing payload content; there is no separate rename field.
+`管理面板…` opens a regular macOS window (not a floating panel). It is not stored in `panels.json`. Browse panels, filter by type, search titles, hide or show a panel, bring a visible panel forward, or delete it with the same confirmation as the panel menu. Titles are derived from existing payload content; there is no separate rename field.
 
-If all floating panels are hidden with Hide / Show, the manager stays visible. Revealing one panel from the manager shows only that panel and does not turn Show All back on.
+Panels can be individually hidden without deleting them. Hidden panels stay in the manager (`eye.slash`) and come back with **显示**. Hide / Show (global) is temporary and does not overwrite per-panel hidden state. Show All restores panels that were not individually hidden; it does not cancel an individual hide. The manager stays visible during Global Hide. Showing a panel from the manager while Global Hide is active only clears that panel’s hidden flag; the window stays concealed until Show All.
 
 ### Shortcuts
 
@@ -147,7 +149,7 @@ Each panel can be pinned, locked, made click-through, and faded independently. T
 - **Markdown** shows a rendered preview. Double-click to edit the raw Markdown source. Payload is UTF-8 `content.md`.
 - **Todo** is a lightweight on-screen checklist: add, inline edit, complete, and delete. Payload is UTF-8 `todo.json`. There is no reorder, due date, reminder, or priority system.
 - **PDF** is a local copy of the imported document. Payload is `document.pdf` plus `pdf.json` (filename and page count). There is no annotation, OCR, or full-text search.
-- **Lock** prevents accidental drag, resize, text editing, checklist toggles, Markdown source edits, Todo mutations, and image replace. PDF reading (scroll, select, copy) still works. Right-click, unlock, opacity, pin, click-through, delete, and panel settings still work.
+- **Lock** prevents accidental drag, resize, text editing, checklist toggles, Markdown source edits, Todo mutations, and image replace. PDF reading (scroll, select, copy) still works. Right-click, unlock, opacity, pin, click-through, hide, delete, and panel settings still work.
 - **Click-through** ignores mouse events until you hold Option. Lock still wins: Option can open the menu and settings, but cannot move, resize, or edit a locked panel.
 - **Opacity** ranges from 30% to 100% (`window.alphaValue`). The slider in panel settings updates live and persists after you release.
 

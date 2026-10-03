@@ -33,9 +33,10 @@ Tests may override the root with `GLANCE_DATA_ROOT`. Production user data is nev
 
 `Database/panels.json` is UTF-8 JSON.
 
-- Current envelope: `{ "schemaVersion": 1, "panels": [ ... ] }`
-- V0.1 raw arrays of panel objects are still accepted and rewritten as schema 1
-- Envelopes with `schemaVersion` greater than 1 are **rejected**. The file is left untouched; Glance does not quarantine it or write an empty schema 1 database over it
+- Current envelope: `{ "schemaVersion": 2, "panels": [ ... ] }`
+- Schema 1 envelopes are accepted and migrated in memory: missing `isHidden` becomes `false` (panels stay visible). Timestamps and other fields are unchanged. The repository rewrites recovered/migrated metadata as schema 2
+- V0.1 raw arrays of panel objects are still accepted and rewritten as schema 2
+- Envelopes with `schemaVersion` greater than 2 are **rejected**. The file is left untouched; Glance does not quarantine it or write an empty schema 2 database over it
 
 Each panel object stores geometry as **flat** numbers, not a nested `frame` object:
 
@@ -45,7 +46,34 @@ x, y, width, height
 
 These are portable numeric fields, but coordinates are platform/display-layout restoration hints, not a guarantee of pixel-identical placement across operating systems.
 
-Other fields include `id`, `kindIdentifier`, `displayIdentifier`, `isPinned`, `isLocked`, `isCollapsed`, `isPassThrough`, `opacity`, `themeIdentifier`, `payloadPath`, `payloadVersion`, `createdAt`, `updatedAt`.
+Other fields include `id`, `kindIdentifier`, `displayIdentifier`, `isPinned`, `isLocked`, `isCollapsed`, `isPassThrough`, `isHidden`, `opacity`, `themeIdentifier`, `payloadPath`, `payloadVersion`, `createdAt`, `updatedAt`.
+
+`isHidden` is persistent per-panel visibility. `false` means the panel should be shown unless Global Hide is active. Global Hide / Show is runtime-only and is **not** stored on `PanelRecord`.
+
+Example panel object:
+
+```json
+{
+  "id": "0D74D7D4-33F4-4795-A657-D40F456187A7",
+  "kindIdentifier": "com.glance.panel.text",
+  "x": 1130,
+  "y": 683,
+  "width": 320,
+  "height": 220,
+  "displayIdentifier": "1",
+  "isPinned": true,
+  "isLocked": false,
+  "isCollapsed": false,
+  "isPassThrough": false,
+  "isHidden": false,
+  "opacity": 1,
+  "themeIdentifier": "system",
+  "payloadPath": "Panels/0D74D7D4-33F4-4795-A657-D40F456187A7",
+  "payloadVersion": 1,
+  "createdAt": "2026-10-02T15:32:51Z",
+  "updatedAt": "2026-10-02T15:32:51Z"
+}
+```
 
 `displayIdentifier` is an opaque, platform-local display hint. It is not guaranteed to match across operating systems. If a future client cannot recognize it, fall back to the main or current display and recover/clamp geometry.
 
@@ -128,19 +156,19 @@ Unknown kinds still restore as metadata so a newer client’s panels are not del
 
 Quick Capture is a transient input window. It is **not** stored in `panels.json`, has no `PanelRecord`, and has no payload directory. Closing it discards the draft.
 
-A successful submit creates a normal Text or Todo panel using the existing payload files (`content.rtf` or `todo.json`). `schemaVersion` remains `1`.
+A successful submit creates a normal Text or Todo panel using the existing payload files (`content.rtf` or `todo.json`). New panels always have `isHidden = false`. `schemaVersion` remains `2`.
 
 ## Panel Library
 
-The Panel Manager / Library window is a derived view of existing metadata and payloads. It is **not** stored in `panels.json` and does not add a `title` field. Summaries are rebuilt at runtime.
+The Panel Manager / Library window is a derived view of existing metadata and payloads. It is **not** stored in `panels.json` and does not add a `title` field. Summaries are rebuilt at runtime. Manager hide/show writes `PanelRecord.isHidden` and updates `updatedAt`. Global concealment is not reflected as `isHidden` on summaries.
 
 ## Panel snap and layout
 
-Edge snap and layout presets are interaction-only. They write the resulting `x` / `y` / `width` / `height` and do not add `isSnapped`, `layoutPreset`, or similar fields. `schemaVersion` remains `1`.
+Edge snap and layout presets are interaction-only. They write the resulting `x` / `y` / `width` / `height` and do not add `isSnapped`, `layoutPreset`, or similar fields. `schemaVersion` remains `2`.
 
 ## Clipboard Capture
 
-Clipboard Capture is a user-triggered one-shot read. It is **not** stored as clipboard history and does not add a `source` field. Capture priority is valid image → valid text → unsupported. A successful capture creates a normal Text (`content.rtf`) or Image (`image.png`) panel. `schemaVersion` remains `1`.
+Clipboard Capture is a user-triggered one-shot read. It is **not** stored as clipboard history and does not add a `source` field. Capture priority is valid image → valid text → unsupported. A successful capture creates a normal Text (`content.rtf`) or Image (`image.png`) panel with `isHidden = false`. `schemaVersion` remains `2`.
 
 ## Future clients
 
