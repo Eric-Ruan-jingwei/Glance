@@ -33,6 +33,10 @@ There is no Windows client yet. Shared data contracts are documented so a future
 - No cloud
 - Open source
 
+## V0.18.8
+
+Text checklist marks are circles. Completing an item grays the circle and draws a thicker strikethrough.
+
 ## V0.18.7
 
 Text checklist marks are larger, and clicking them strikes through the line instead of inserting a check.
