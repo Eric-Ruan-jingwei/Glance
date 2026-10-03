@@ -33,10 +33,11 @@ Tests may override the root with `GLANCE_DATA_ROOT`. Production user data is nev
 
 `Database/panels.json` is UTF-8 JSON.
 
-- Current envelope: `{ "schemaVersion": 2, "panels": [ ... ] }`
-- Schema 1 envelopes are accepted and migrated in memory: missing `isHidden` becomes `false` (panels stay visible). Timestamps and other fields are unchanged. The repository rewrites recovered/migrated metadata as schema 2
-- V0.1 raw arrays of panel objects are still accepted and rewritten as schema 2
-- Envelopes with `schemaVersion` greater than 2 are **rejected**. The file is left untouched; Glance does not quarantine it or write an empty schema 2 database over it
+- Current envelope: `{ "schemaVersion": 3, "workspaces": [ ... ], "panels": [ ... ] }`
+- Schema 2 envelopes are accepted and migrated in memory: a Default workspace (`id: "default"`, name `默认`) is created, and every existing panel gets `workspaceID: "default"`. Other panel fields and timestamps are unchanged. The repository rewrites recovered/migrated metadata as schema 3
+- Schema 1 envelopes are accepted and migrated in one hop to schema 3: missing `isHidden` becomes `false`, missing `workspaceID` becomes `"default"`
+- V0.1 raw arrays of panel objects are still accepted and rewritten as schema 3
+- Envelopes with `schemaVersion` greater than 3 are **rejected**. The file is left untouched; Glance does not quarantine it or write an empty schema 3 database over it
 
 Each panel object stores geometry as **flat** numbers, not a nested `frame` object:
 
@@ -46,9 +47,15 @@ x, y, width, height
 
 These are portable numeric fields, but coordinates are platform/display-layout restoration hints, not a guarantee of pixel-identical placement across operating systems.
 
-Other fields include `id`, `kindIdentifier`, `displayIdentifier`, `isPinned`, `isLocked`, `isCollapsed`, `isPassThrough`, `isHidden`, `opacity`, `themeIdentifier`, `payloadPath`, `payloadVersion`, `createdAt`, `updatedAt`.
+Other fields include `id`, `kindIdentifier`, `displayIdentifier`, `isPinned`, `isLocked`, `isCollapsed`, `isPassThrough`, `isHidden`, `workspaceID`, `opacity`, `themeIdentifier`, `payloadPath`, `payloadVersion`, `createdAt`, `updatedAt`.
 
-`isHidden` is persistent per-panel visibility. `false` means the panel should be shown unless Global Hide is active. Global Hide / Show is runtime-only and is **not** stored on `PanelRecord`.
+`isHidden` is persistent per-panel visibility. `false` means the panel should be shown unless it belongs to an inactive workspace or Global Hide is active. Global Hide / Show is runtime-only and is **not** stored on `PanelRecord`.
+
+`workspaceID` is required. Each panel belongs to exactly one workspace. The Default workspace uses the stable id `default`.
+
+`workspaces` is an array of `{ id, name, createdAt, updatedAt }`. The Default workspace always exists, cannot be renamed or deleted, and is named `默认`. User workspaces use UUID ids.
+
+The active workspace is **not** stored in `panels.json`. It is a device preference (`UserDefaults` key `com.glance.workspace.activeID`).
 
 Example panel object:
 
@@ -66,6 +73,7 @@ Example panel object:
   "isCollapsed": false,
   "isPassThrough": false,
   "isHidden": false,
+  "workspaceID": "default",
   "opacity": 1,
   "themeIdentifier": "system",
   "payloadPath": "Panels/0D74D7D4-33F4-4795-A657-D40F456187A7",
@@ -156,19 +164,19 @@ Unknown kinds still restore as metadata so a newer client’s panels are not del
 
 Quick Capture is a transient input window. It is **not** stored in `panels.json`, has no `PanelRecord`, and has no payload directory. Closing it discards the draft.
 
-A successful submit creates a normal Text or Todo panel using the existing payload files (`content.rtf` or `todo.json`). New panels always have `isHidden = false`. `schemaVersion` remains `2`.
+A successful submit creates a normal Text or Todo panel using the existing payload files (`content.rtf` or `todo.json`). New panels always have `isHidden = false` and `workspaceID` equal to the current active workspace (or `default` if that id is missing). `schemaVersion` remains `3`.
 
 ## Panel Library
 
-The Panel Manager / Library window is a derived view of existing metadata and payloads. It is **not** stored in `panels.json` and does not add a `title` field. Summaries are rebuilt at runtime. Manager hide/show writes `PanelRecord.isHidden` and updates `updatedAt`. Global concealment is not reflected as `isHidden` on summaries.
+The Panel Manager / Library window is a derived view of existing metadata and payloads. It is **not** stored in `panels.json` and does not add a `title` field. Summaries are rebuilt at runtime and include `workspaceID` from `PanelRecord`. The sidebar switches the active workspace; search and kind filters apply only to that workspace. Manager hide/show writes `PanelRecord.isHidden` and updates `updatedAt`. Global concealment is not reflected as `isHidden` on summaries. Inactive-workspace membership is not shown as `eye.slash`.
 
 ## Panel snap and layout
 
-Edge snap and layout presets are interaction-only. They write the resulting `x` / `y` / `width` / `height` and do not add `isSnapped`, `layoutPreset`, or similar fields. `schemaVersion` remains `2`.
+Edge snap and layout presets are interaction-only. They write the resulting `x` / `y` / `width` / `height` and do not add `isSnapped`, `layoutPreset`, or similar fields. `schemaVersion` remains `3`.
 
 ## Clipboard Capture
 
-Clipboard Capture is a user-triggered one-shot read. It is **not** stored as clipboard history and does not add a `source` field. Capture priority is valid image → valid text → unsupported. A successful capture creates a normal Text (`content.rtf`) or Image (`image.png`) panel with `isHidden = false`. `schemaVersion` remains `2`.
+Clipboard Capture is a user-triggered one-shot read. It is **not** stored as clipboard history and does not add a `source` field. Capture priority is valid image → valid text → unsupported. A successful capture creates a normal Text (`content.rtf`) or Image (`image.png`) panel with `isHidden = false` and `workspaceID` equal to the current active workspace. `schemaVersion` remains `3`.
 
 ## Future clients
 

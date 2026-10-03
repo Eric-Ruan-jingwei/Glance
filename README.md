@@ -18,12 +18,13 @@ There is no Windows client yet. Shared data contracts are documented so a future
 - Clipboard Capture
 - Customizable global shortcuts
 - Per-panel hide/show
+- Workspaces
 - Panel Manager
 - No account
 - No cloud
 - Open source
 
-## V0.11 已支持
+## V0.12 已支持
 
 - Text panel
 - Markdown panel (rendered preview, double-click to edit raw UTF-8 `.md`)
@@ -32,7 +33,8 @@ There is no Windows client yet. Shared data contracts are documented so a future
 - PDF panel
 - Quick Capture — capture text or a Todo without first creating an empty panel. Default: `⌥⌘J`
 - Clipboard Capture — create a Text or Image panel from the current clipboard. Default: `⌥⌘B`
-- Panel Manager — browse, search, reveal, hide, and delete existing panels from one place
+- Panel Manager — browse, search, reveal, hide, delete, and move existing panels; the sidebar switches the active workspace
+- Workspaces — organize panels by workspace and switch the visible set of panels without changing their content or per-panel hidden state
 - Per-panel hide/show — hide a panel without deleting it; the state survives relaunch
 - Panel edge snapping
 - Panel layout presets
@@ -68,6 +70,12 @@ Status-item menu (defaults shown):
 ```text
 快速记录…              ⌥⌘J
 从剪贴板创建…          ⌥⌘B
+────────────
+工作区
+  默认 ✓
+  …
+  ────────
+  新建工作区…
 ────────────
 管理面板…
 ────────────
@@ -119,9 +127,33 @@ PDFs are copied into Glance's local data directory. Deleting the original file d
 
 ### Panel Manager
 
-`管理面板…` opens a regular macOS window (not a floating panel). It is not stored in `panels.json`. Browse panels, filter by type, search titles, hide or show a panel, bring a visible panel forward, or delete it with the same confirmation as the panel menu. Titles are derived from existing payload content; there is no separate rename field.
+`管理面板…` opens a regular macOS window (not a floating panel). It is not stored in `panels.json`. The left sidebar lists workspaces; choosing one switches the active workspace and lists only that workspace’s panels. Browse panels, filter by type, search titles, hide or show a panel, move it to another workspace, bring a visible panel forward, or delete it with the same confirmation as the panel menu. Titles are derived from existing payload content; there is no separate rename field.
 
-Panels can be individually hidden without deleting them. Hidden panels stay in the manager (`eye.slash`) and come back with **显示**. Hide / Show (global) is temporary and does not overwrite per-panel hidden state. Show All restores panels that were not individually hidden; it does not cancel an individual hide. The manager stays visible during Global Hide. Showing a panel from the manager while Global Hide is active only clears that panel’s hidden flag; the window stays concealed until Show All.
+An empty workspace is valid: the desktop shows no Glance panels, and the manager says **这个工作区还没有面板**.
+
+### Workspaces
+
+Each panel belongs to exactly one workspace. Switching workspaces changes which panels are on the desktop without rewriting their frames, payloads, or per-panel hidden flags.
+
+- **默认** always exists, cannot be renamed or deleted, and uses the stable id `default`.
+- Create a workspace from the status menu or the manager sidebar. Duplicate names are rejected.
+- Deleting a user workspace moves its panels into **默认**; the panels themselves are not deleted.
+- The active workspace is a device preference (`UserDefaults`), not part of `panels.json`.
+- New panels (Text, Markdown, Todo, Image, PDF, Quick Capture, Clipboard Capture) join the current workspace.
+- Effective visibility is: same workspace **and** not individually hidden **and** not globally concealed. Workspace switch does not cancel Global Hide.
+
+### Panel visibility
+
+Panels can be individually hidden without deleting them. Hidden panels stay in the manager (`eye.slash`) and come back with **显示**. Hide / Show (global) is temporary and does not overwrite per-panel hidden state. Show All restores panels that are in the active workspace and were not individually hidden; it does not cancel an individual hide. Switching workspace does not clear Global Hide. The manager stays visible during Global Hide. Showing a panel from the manager while Global Hide is active only clears that panel’s hidden flag; the window stays concealed until Show All.
+
+Right-click a panel:
+
+```text
+移动到工作区
+→ 默认 / …
+```
+
+Moving a panel out of the active workspace hides it immediately. Its `isHidden` flag is unchanged.
 
 ### Shortcuts
 
@@ -189,7 +221,7 @@ Everything lives on disk. See [docs/architecture/data-format.md](docs/architectu
 ```text
 ~/Library/Application Support/Glance/
 ├── Database/
-│   ├── panels.json          schemaVersion envelope
+│   ├── panels.json          schemaVersion 3 envelope (workspaces + panels)
 │   └── panels.backup.json
 └── Panels/
     └── {panel-id}/

@@ -36,7 +36,7 @@ Dirty state
 Portable data contracts
 ```
 
-Examples in this tree: `PanelRecord`, `PanelFrame`, `PanelDatabase`, `PanelRepository`, `PanelInteractionPolicy`, `PanelInteractionState`, `PanelModeTransition`, `PanelOpacity`, `PayloadDirtyFlag`, `PanelPlacementEngine` (geometry), `PanelSnapEngine`, `PanelLayoutPreset`, `PanelSnapConfiguration`, `PanelFrameRecovery` (geometry), `ApplicationDataLocation`, `PayloadStore`, `MarkdownPayloadFile`, `MarkdownDocument`, `TodoItem`, `TodoDocument`, `TodoMutation`, `TodoPayloadFile`, `QuickCaptureRequest`, `QuickCaptureKind`, `ClipboardCaptureContent`, `ClipboardCaptureRouter`, `PanelInitialContent`, `PanelCreationSession`, `PanelVisibilityPolicy`, `PanelVisibilityTransaction`, `PanelSummary`, `PanelSummaryQuery`, `PanelSummaryText`, `PDFDocumentMetadata`, `PDFPayloadFile`, `ShortcutAction`, `GlanceShortcut`, `ShortcutStore`, `ShortcutValidator`.
+Examples in this tree: `PanelRecord`, `PanelFrame`, `PanelDatabase`, `PanelRepository`, `WorkspaceRecord`, `WorkspaceName`, `WorkspaceCatalog`, `WorkspaceMembership`, `ActiveWorkspaceResolver`, `WorkspacePreferenceStore`, `PanelInteractionPolicy`, `PanelInteractionState`, `PanelModeTransition`, `PanelOpacity`, `PayloadDirtyFlag`, `PanelPlacementEngine` (geometry), `PanelSnapEngine`, `PanelLayoutPreset`, `PanelSnapConfiguration`, `PanelFrameRecovery` (geometry), `ApplicationDataLocation`, `PayloadStore`, `MarkdownPayloadFile`, `MarkdownDocument`, `TodoItem`, `TodoDocument`, `TodoMutation`, `TodoPayloadFile`, `QuickCaptureRequest`, `QuickCaptureKind`, `ClipboardCaptureContent`, `ClipboardCaptureRouter`, `PanelInitialContent`, `PanelCreationSession`, `PanelVisibilityPolicy`, `PanelVisibilityTransaction`, `PanelSummary`, `PanelSummaryQuery`, `PanelSummaryText`, `PDFDocumentMetadata`, `PDFPayloadFile`, `ShortcutAction`, `GlanceShortcut`, `ShortcutStore`, `ShortcutValidator`.
 
 These types should stay on Foundation (or pure Swift). They must not depend on `NSRect`, `NSWindow`, or other AppKit types.
 
@@ -60,6 +60,7 @@ PDFView
 Screen APIs
 Quick Capture window
 Panel Library window
+workspace name dialogs
 shortcut recorder UI
 NSScreen.visibleFrame
 drag / modifier flags for snap
@@ -79,11 +80,13 @@ Global shortcut preferences (`ShortcutAction`, `GlanceShortcut`) are app setting
 Effective panel visibility is layered:
 
 ```text
-show when:
-!record.isHidden && !globalConcealed
+effectiveVisible =
+  panel.workspaceID == activeWorkspaceID
+  && !panel.isHidden
+  && !globalConcealed
 ```
 
-`PanelRecord.isHidden` is persistent. Global Hide / Show is a runtime override (`GlobalVisibilityController`) and is not stored on the panel. Schema 1 databases migrate missing `isHidden` to `false`. AppKit `NSWindow.orderOut` / `orderFrontRegardless` stay on macOS.
+These three states are independent. Switching workspace does not change `isHidden` or Global Hide. Global Hide does not change workspace membership. `PanelRecord.isHidden` and `workspaceID` are persistent. Global Hide / Show is a runtime override (`GlobalVisibilityController`) and is not stored on the panel. The active workspace id is a `UserDefaults` preference (`com.glance.workspace.activeID`), not part of `panels.json`. Schema 1 databases migrate missing `isHidden` to `false` and assign `workspaceID = default`. Schema 2 databases keep `isHidden` and assign every panel to the Default workspace. AppKit `NSWindow.orderOut` / `orderFrontRegardless`, the workspace status menu, Panel Manager sidebar, and name dialogs stay on macOS.
 
 ## Future Windows
 
