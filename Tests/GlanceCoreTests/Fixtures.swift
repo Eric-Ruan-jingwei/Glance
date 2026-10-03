@@ -64,6 +64,33 @@ enum GlanceTestFixtures {
     ]
     """
 
+    static let schemaV1EnvelopeJSON = """
+    {
+      "panels" : [
+        {
+          "createdAt" : "2026-10-02T15:32:51Z",
+          "displayIdentifier" : "1",
+          "height" : 220,
+          "id" : "0D74D7D4-33F4-4795-A657-D40F456187A7",
+          "isCollapsed" : false,
+          "isLocked" : true,
+          "isPassThrough" : false,
+          "isPinned" : true,
+          "kindIdentifier" : "com.glance.panel.text",
+          "opacity" : 0.5,
+          "payloadPath" : "Panels/0D74D7D4-33F4-4795-A657-D40F456187A7",
+          "payloadVersion" : 1,
+          "themeIdentifier" : "system",
+          "updatedAt" : "2026-10-02T16:00:00Z",
+          "width" : 320,
+          "x" : 1130,
+          "y" : 683
+        }
+      ],
+      "schemaVersion" : 1
+    }
+    """
+
     static let futureSchemaJSON = """
     {
       "experimentalField" : true,
@@ -82,7 +109,7 @@ enum GlanceTestFixtures {
           "y" : 20
         }
       ],
-      "schemaVersion" : 2
+      "schemaVersion" : 3
     }
     """
 }

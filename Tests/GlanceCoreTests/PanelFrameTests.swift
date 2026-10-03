@@ -47,7 +47,8 @@ final class PanelFrameTests: XCTestCase {
         XCTAssertEqual((panel["width"] as? NSNumber)?.doubleValue, 320)
         XCTAssertEqual((panel["height"] as? NSNumber)?.doubleValue, 220)
         XCTAssertNil(panel["frame"])
-        XCTAssertEqual(root["schemaVersion"] as? Int, 1)
+        XCTAssertEqual(root["schemaVersion"] as? Int, PanelDatabase.currentSchemaVersion)
+        XCTAssertEqual(panel["isHidden"] as? Bool, false)
     }
 }
 

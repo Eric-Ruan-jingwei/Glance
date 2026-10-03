@@ -159,7 +159,7 @@ final class PDFPanelCreationTests: XCTestCase {
         )
         let root = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
         let panel = try XCTUnwrap((root["panels"] as? [[String: Any]])?.first)
-        XCTAssertEqual(root["schemaVersion"] as? Int, 1)
+        XCTAssertEqual(root["schemaVersion"] as? Int, PanelDatabase.currentSchemaVersion)
         XCTAssertEqual(panel["kindIdentifier"] as? String, PanelKind.pdf)
         XCTAssertEqual(panel["payloadVersion"] as? Int, 1)
         XCTAssertNotNil(panel["x"])

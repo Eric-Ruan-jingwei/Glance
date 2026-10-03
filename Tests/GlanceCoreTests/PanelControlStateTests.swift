@@ -119,6 +119,7 @@ final class PanelRecordControlStateTests: XCTestCase {
             isPinned: false,
             isLocked: true,
             isPassThrough: true,
+            isHidden: true,
             opacity: 0.5,
             createdAt: Date(timeIntervalSince1970: 1_700_000_000),
             updatedAt: Date(timeIntervalSince1970: 1_700_000_100)
@@ -131,6 +132,7 @@ final class PanelRecordControlStateTests: XCTestCase {
         XCTAssertFalse(panel.isPinned)
         XCTAssertTrue(panel.isLocked)
         XCTAssertTrue(panel.isPassThrough)
+        XCTAssertTrue(panel.isHidden)
         XCTAssertEqual(panel.opacity, 0.5, accuracy: 0.0001)
         XCTAssertEqual(panel.kindIdentifier, PanelKind.image)
     }
@@ -167,6 +169,7 @@ final class PanelRecordControlStateTests: XCTestCase {
         XCTAssertTrue(panel.isLocked)
         XCTAssertTrue(panel.isPassThrough)
         XCTAssertFalse(panel.isPinned)
+        XCTAssertFalse(panel.isHidden)
     }
 
     func testInitClampsOpacityAboveOne() {

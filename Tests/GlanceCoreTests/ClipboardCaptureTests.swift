@@ -163,11 +163,11 @@ final class ClipboardCapturePersistenceTests: XCTestCase {
         XCTAssertNotNil(NSImage(data: data))
         let record = GlanceTestFixtures.sampleRecord().withKind(PanelKind.image)
         let encoded = try PanelDatabaseCodec.encode(
-            PanelDatabase(schemaVersion: 1, panels: [record])
+            PanelDatabase(schemaVersion: PanelDatabase.currentSchemaVersion, panels: [record])
         )
         let root = try XCTUnwrap(JSONSerialization.jsonObject(with: encoded) as? [String: Any])
         let panel = try XCTUnwrap((root["panels"] as? [[String: Any]])?.first)
-        XCTAssertEqual(root["schemaVersion"] as? Int, 1)
+        XCTAssertEqual(root["schemaVersion"] as? Int, PanelDatabase.currentSchemaVersion)
         XCTAssertNil(panel["source"])
         XCTAssertNil(panel["copiedAt"])
         XCTAssertNotNil(panel["x"])

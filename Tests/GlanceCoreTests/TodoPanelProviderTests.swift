@@ -41,7 +41,7 @@ final class TodoPanelProviderTests: XCTestCase {
         XCTAssertEqual((panel["x"] as? NSNumber)?.doubleValue, 40)
         XCTAssertEqual((panel["width"] as? NSNumber)?.doubleValue, 320)
         XCTAssertNil(panel["frame"])
-        XCTAssertEqual(root["schemaVersion"] as? Int, 1)
+        XCTAssertEqual(root["schemaVersion"] as? Int, PanelDatabase.currentSchemaVersion)
 
         let decoded = try PanelDatabaseCodec.decode(from: data)
         let restored = try XCTUnwrap(decoded.database.panels.first)

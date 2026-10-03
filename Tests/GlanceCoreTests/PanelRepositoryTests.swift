@@ -35,14 +35,14 @@ final class PanelRepositoryTests: XCTestCase {
             let second = try PanelRepository(fileURL: metadataURL)
             XCTAssertEqual(second.lastLoadOutcome, .loaded(migratedFromLegacy: false))
             let decoded = try PanelDatabaseCodec.decode(from: Data(contentsOf: metadataURL))
-            XCTAssertEqual(decoded.database.schemaVersion, 1)
+            XCTAssertEqual(decoded.database.schemaVersion, 2)
         }
     }
 
     func testLegacyCodecDetectsRawArray() throws {
         let decoded = try PanelDatabaseCodec.decode(from: Data(GlanceTestFixtures.legacyArrayJSON.utf8))
         XCTAssertTrue(decoded.migratedFromLegacy)
-        XCTAssertEqual(decoded.database.schemaVersion, 1)
+        XCTAssertEqual(decoded.database.schemaVersion, 2)
         XCTAssertEqual(decoded.database.panels.count, 1)
     }
 
@@ -53,6 +53,7 @@ final class PanelRepositoryTests: XCTestCase {
         XCTAssertFalse(panel.isLocked)
         XCTAssertFalse(panel.isCollapsed)
         XCTAssertFalse(panel.isPassThrough)
+        XCTAssertFalse(panel.isHidden)
         XCTAssertEqual(panel.opacity, 1)
         XCTAssertEqual(panel.themeIdentifier, "system")
         XCTAssertEqual(panel.payloadVersion, 1)
@@ -89,7 +90,7 @@ final class PanelRepositoryTests: XCTestCase {
             let newer = GlanceTestFixtures.sampleRecord(id: id, updatedAt: Date(timeIntervalSince1970: 200))
             newer.frame.x = 99
             let data = try PanelDatabaseCodec.encode(
-                PanelDatabase(schemaVersion: 1, panels: [older, newer])
+                PanelDatabase(schemaVersion: PanelDatabase.currentSchemaVersion, panels: [older, newer])
             )
             try data.write(to: metadataURL)
             let repository = try PanelRepository(fileURL: metadataURL)
@@ -105,15 +106,15 @@ final class PanelRepositoryTests: XCTestCase {
             try repository.insert(GlanceTestFixtures.sampleRecord())
             let primaryDB = try PanelDatabaseCodec.decode(from: Data(contentsOf: metadataURL))
             let backupDB = try PanelDatabaseCodec.decode(from: Data(contentsOf: repository.backupURL))
-            XCTAssertEqual(primaryDB.database.schemaVersion, 1)
-            XCTAssertEqual(backupDB.database.schemaVersion, 1)
+            XCTAssertEqual(primaryDB.database.schemaVersion, 2)
+            XCTAssertEqual(backupDB.database.schemaVersion, 2)
             XCTAssertEqual(primaryDB.database.panels.map(\.id), backupDB.database.panels.map(\.id))
         }
     }
 
     func testFutureSchemaIsRejectedByCodec() {
         XCTAssertThrowsError(try PanelDatabaseCodec.decode(from: Data(GlanceTestFixtures.futureSchemaJSON.utf8))) { error in
-            XCTAssertEqual(error as? PanelDatabaseError, .unsupportedFutureSchema(2))
+            XCTAssertEqual(error as? PanelDatabaseError, .unsupportedFutureSchema(3))
         }
     }
 
@@ -122,7 +123,7 @@ final class PanelRepositoryTests: XCTestCase {
             let original = Data(GlanceTestFixtures.futureSchemaJSON.utf8)
             try original.write(to: metadataURL)
             let repository = try PanelRepository(fileURL: metadataURL)
-            XCTAssertEqual(repository.lastLoadOutcome, .unsupportedFutureSchema(2))
+            XCTAssertEqual(repository.lastLoadOutcome, .unsupportedFutureSchema(3))
             XCTAssertTrue(try repository.all().isEmpty)
             XCTAssertTrue(FileManager.default.fileExists(atPath: metadataURL.path))
             let leftovers = try FileManager.default.contentsOfDirectory(atPath: directory.path)
@@ -139,7 +140,7 @@ final class PanelRepositoryTests: XCTestCase {
             try repository.save()
             XCTAssertEqual(try Data(contentsOf: metadataURL), original)
             XCTAssertThrowsError(try repository.insert(GlanceTestFixtures.sampleRecord())) { error in
-                XCTAssertEqual(error as? PanelDatabaseError, .unsupportedFutureSchema(2))
+                XCTAssertEqual(error as? PanelDatabaseError, .unsupportedFutureSchema(3))
             }
             XCTAssertEqual(try Data(contentsOf: metadataURL), original)
             XCTAssertFalse(FileManager.default.fileExists(atPath: repository.backupURL.path))
