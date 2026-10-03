@@ -41,6 +41,7 @@ enum PanelInitialContent: Equatable {
     case none
     case plainText(String)
     case todoTitle(String)
+    case imagePNG(Data)
 }
 
 enum PanelCreationSession {
