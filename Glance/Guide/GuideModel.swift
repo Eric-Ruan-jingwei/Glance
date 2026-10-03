@@ -36,6 +36,42 @@ enum GlanceGuideEntry {
     static let openSettingsTitle = "修改全局快捷键…"
 }
 
+enum GuideGettingStartedCopy {
+    static let step1Title = "把常用信息和工具留在手边"
+    static let step1Detail = "Glance 是一个常驻 macOS 的轻量个人办公工具入口。可以把需要持续参考的内容固定为桌面面板，也可以保存和收藏最近复制过的内容，方便随时再次调用。"
+}
+
+struct GuideFeatureCopy: Equatable {
+    var title: String
+    var symbol: String
+    var body: String
+}
+
+enum GuideFeatureCatalog {
+    static let items: [GuideFeatureCopy] = [
+        GuideFeatureCopy(
+            title: "剪贴板",
+            symbol: "list.clipboard",
+            body: "Glance 可以在本机保存你之后复制的文字和图片。常用内容可以收藏，并通过剪贴板窗口快速搜索和再次调用。内容只保存在本机。"
+        ),
+        GuideFeatureCopy(
+            title: "Workspaces",
+            symbol: "square.on.square",
+            body: "一个面板只属于一个工作区。切换工作区时，只显示当前工作区中的面板。适合把工作、学习、项目等不同上下文分开。"
+        ),
+        GuideFeatureCopy(
+            title: "Tags",
+            symbol: "tag",
+            body: "一个面板可以拥有多个标签。标签用于搜索和筛选，不会影响面板是否显示。工作区决定当前能看见哪些面板；标签只负责整理和查找。"
+        ),
+        GuideFeatureCopy(
+            title: "Panel Manager",
+            symbol: "square.stack",
+            body: "Panel Manager 用于集中搜索、筛选和整理已有面板。可以搜索、按类型筛选、移动工作区、批量隐藏或显示，以及批量编辑标签。"
+        )
+    ]
+}
+
 @MainActor
 final class GuideModel: ObservableObject {
     static let onboardingPageCount = 4

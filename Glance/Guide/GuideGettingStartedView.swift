@@ -20,8 +20,8 @@ struct GuideGettingStartedPage: View {
     private var whatIsGlance: some View {
         VStack(alignment: .leading, spacing: GlanceTheme.Space.lg) {
             GuideSectionHeader(
-                title: "把重要的东西留在眼前",
-                detail: "Glance 可以把文字、待办、图片和 PDF 固定在桌面上。即使你切换到其他 App，它们也能继续留在眼前。"
+                title: GuideGettingStartedCopy.step1Title,
+                detail: GuideGettingStartedCopy.step1Detail
             )
             HStack(spacing: GlanceTheme.Space.md) {
                 miniPanel("文字", PanelKindSymbol.name(for: PanelKind.text))
