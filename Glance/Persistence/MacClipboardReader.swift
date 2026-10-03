@@ -17,8 +17,9 @@ enum MacClipboardReader {
     }
 
     static func read(_ pasteboard: NSPasteboard = .general) -> ClipboardCaptureContent? {
-        if hasImageType(pasteboard) {
-            guard let png = pngData(from: pasteboard), !png.isEmpty else { return nil }
+        if hasImageType(pasteboard),
+           let png = pngData(from: pasteboard),
+           !png.isEmpty {
             return ClipboardCaptureRouter.content(imagePNG: png, text: nil)
         }
         return ClipboardCaptureRouter.content(
