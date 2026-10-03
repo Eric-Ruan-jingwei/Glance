@@ -17,6 +17,9 @@ There is no Windows client yet. Shared data contracts are documented so a future
 - Quick Capture from any app
 - Clipboard Capture
 - Customizable global shortcuts
+- First-run onboarding
+- In-app usage guide
+- Central shortcut and interaction reference
 - Per-panel hide/show
 - Workspaces
 - Panel Manager
@@ -29,6 +32,14 @@ There is no Windows client yet. Shared data contracts are documented so a future
 - No account
 - No cloud
 - Open source
+
+## V0.18.0
+
+First-run onboarding and an in-app usage guide. No schema or feature change beyond help.
+
+- First-run onboarding
+- In-app usage guide
+- Central shortcut and interaction reference
 
 ## V0.17.2
 
@@ -136,6 +147,7 @@ Status-item menu (defaults shown):
 ────────────
 ⚠ 数据恢复提示…      (only after backup recovery, corrupt metadata, or unsupported schema)
 ────────────
+使用指南…
 设置…
 退出
 ```
