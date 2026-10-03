@@ -6,8 +6,23 @@ struct PanelLibraryView: View {
     var body: some View {
         NavigationSplitView {
             List(selection: $model.selectedWorkspaceID) {
-                ForEach(model.workspaces) { workspace in
-                    Text(workspace.name)
+                Section("工作区") {
+                    ForEach(model.workspaces) { workspace in
+                        Label {
+                            HStack(spacing: GlanceTheme.Space.xs) {
+                                Text(workspace.name)
+                                    .lineLimit(1)
+                                Spacer(minLength: GlanceTheme.Space.xs)
+                                Text("\(model.panelCount(in: workspace.id))")
+                                    .font(.caption2)
+                                    .foregroundStyle(.tertiary)
+                                    .monospacedDigit()
+                            }
+                        } icon: {
+                            Image(systemName: workspace.id == WorkspaceRecord.defaultID
+                                  ? "square.stack"
+                                  : "square.on.square")
+                        }
                         .tag(workspace.id)
                         .contextMenu {
                             if workspace.id != WorkspaceRecord.defaultID {
@@ -19,32 +34,82 @@ struct PanelLibraryView: View {
                                 }
                             }
                         }
+                    }
                 }
             }
-            .navigationSplitViewColumnWidth(min: 140, ideal: 168, max: 220)
+            .listStyle(.sidebar)
+            .navigationSplitViewColumnWidth(
+                min: 140,
+                ideal: GlanceTheme.Size.sidebarIdeal,
+                max: 220
+            )
             .safeAreaInset(edge: .bottom) {
-                Button("新建工作区…") {
+                Button {
                     model.promptCreateWorkspace()
+                } label: {
+                    Label("新建工作区…", systemImage: "plus")
+                        .font(.callout)
                 }
                 .buttonStyle(.borderless)
-                .padding(12)
+                .foregroundStyle(.secondary)
+                .padding(GlanceTheme.Space.md)
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
         } detail: {
             NavigationStack {
-                VStack(spacing: 0) {
-                    Picker("类型", selection: $model.filter) {
-                        ForEach(PanelSummaryKindFilter.allCases, id: \.self) { filter in
-                            Text(filter.title).tag(filter)
+                Group {
+                    if model.isCompletelyEmpty {
+                        emptyState("这个工作区还没有面板")
+                    } else if model.hasNoMatches {
+                        emptyState("没有匹配的面板")
+                    } else {
+                        List(selection: $model.selectedPanelIDs) {
+                            ForEach(model.visible) { summary in
+                                PanelLibraryRow(
+                                    summary: summary,
+                                    workspaces: model.workspaces,
+                                    isSelected: model.selectedPanelIDs.contains(summary.id),
+                                    onReveal: { model.revealPanel(summary.id) },
+                                    onHide: { model.hidePanel(summary.id) },
+                                    onRename: { model.promptRename(summary) },
+                                    onEditTags: { model.promptEditTags(summary) },
+                                    onDelete: { model.confirmDelete(summary.id) },
+                                    onOpenFolder: { model.openPayloadFolder(summary.id) },
+                                    onMove: { model.movePanelToWorkspace(summary.id, workspaceID: $0) }
+                                )
+                                .tag(summary.id)
+                                .listRowInsets(
+                                    EdgeInsets(
+                                        top: GlanceTheme.Space.sm,
+                                        leading: GlanceTheme.Space.md,
+                                        bottom: GlanceTheme.Space.sm,
+                                        trailing: GlanceTheme.Space.md
+                                    )
+                                )
+                                .contentShape(Rectangle())
+                                .onTapGesture(count: 2) {
+                                    model.selectSingle(summary.id)
+                                    model.revealPanel(summary.id)
+                                }
+                            }
                         }
+                        .listStyle(.inset)
                     }
-                    .pickerStyle(.segmented)
-                    .labelsHidden()
-                    .padding(.horizontal, 16)
-                    .padding(.top, 12)
-                    .padding(.bottom, 8)
-
-                    HStack {
+                }
+                .navigationTitle("Glance")
+                .searchable(text: $model.query, placement: .toolbar, prompt: "搜索面板")
+                .toolbar {
+                    ToolbarItem(placement: .automatic) {
+                        Picker("类型", selection: $model.filter) {
+                            ForEach(PanelSummaryKindFilter.allCases, id: \.self) { filter in
+                                Text(filter.title).tag(filter)
+                            }
+                        }
+                        .pickerStyle(.segmented)
+                        .controlSize(.small)
+                        .frame(maxWidth: 340)
+                    }
+                    ToolbarItem {
                         Menu {
                             Button("全部") {
                                 model.selectTagFilter(nil)
@@ -58,10 +123,10 @@ struct PanelLibraryView: View {
                                 }
                             }
                         } label: {
-                            Text(model.tagFilterTitle)
+                            Label(model.tagFilterTitle, systemImage: "line.3.horizontal.decrease")
                         }
-                        .menuStyle(.borderlessButton)
-                        Spacer()
+                    }
+                    ToolbarItem {
                         if !model.visible.isEmpty {
                             Button("全选当前结果") {
                                 model.selectAllVisible()
@@ -69,46 +134,12 @@ struct PanelLibraryView: View {
                             .controlSize(.small)
                         }
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, 8)
-
+                }
+                .safeAreaInset(edge: .top) {
                     if !model.selectedPanelIDs.isEmpty {
                         batchToolbar
                     }
-
-                    Divider()
-
-                    if model.isCompletelyEmpty {
-                        emptyState("这个工作区还没有面板")
-                    } else if model.hasNoMatches {
-                        emptyState("没有匹配的面板")
-                    } else {
-                        List(selection: $model.selectedPanelIDs) {
-                            ForEach(model.visible) { summary in
-                                PanelLibraryRow(
-                                    summary: summary,
-                                    workspaces: model.workspaces,
-                                    onReveal: { model.revealPanel(summary.id) },
-                                    onHide: { model.hidePanel(summary.id) },
-                                    onRename: { model.promptRename(summary) },
-                                    onEditTags: { model.promptEditTags(summary) },
-                                    onDelete: { model.confirmDelete(summary.id) },
-                                    onOpenFolder: { model.openPayloadFolder(summary.id) },
-                                    onMove: { model.movePanelToWorkspace(summary.id, workspaceID: $0) }
-                                )
-                                .tag(summary.id)
-                                .contentShape(Rectangle())
-                                .onTapGesture(count: 2) {
-                                    model.selectSingle(summary.id)
-                                    model.revealPanel(summary.id)
-                                }
-                            }
-                        }
-                        .listStyle(.inset)
-                    }
                 }
-                .navigationTitle("面板")
-                .searchable(text: $model.query, prompt: "搜索面板")
             }
         }
         .frame(minWidth: 720, minHeight: 420)
@@ -131,7 +162,7 @@ struct PanelLibraryView: View {
     }
 
     private var batchToolbar: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: GlanceTheme.Space.sm) {
             Text("已选择 \(model.selectedPanelIDs.count) 个")
                 .font(.callout.weight(.medium))
                 .accessibilityLabel("已选择 \(model.selectedPanelIDs.count) 个面板")
@@ -162,8 +193,9 @@ struct PanelLibraryView: View {
             Spacer(minLength: 0)
         }
         .controlSize(.small)
-        .padding(.horizontal, 16)
-        .padding(.bottom, 8)
+        .padding(.horizontal, GlanceTheme.Space.lg)
+        .padding(.vertical, GlanceTheme.Space.sm)
+        .background(.bar)
     }
 
     private func emptyState(_ message: String) -> some View {
@@ -180,6 +212,7 @@ struct PanelLibraryView: View {
 private struct PanelLibraryRow: View {
     let summary: PanelSummary
     let workspaces: [WorkspaceRecord]
+    let isSelected: Bool
     let onReveal: () -> Void
     let onHide: () -> Void
     let onRename: () -> Void
@@ -188,91 +221,127 @@ private struct PanelLibraryRow: View {
     let onOpenFolder: () -> Void
     let onMove: (String) -> Void
 
+    @State private var isHovered = false
+
     var body: some View {
-        HStack(alignment: .center, spacing: 12) {
-            Image(systemName: symbolName)
-                .font(.title3)
-                .foregroundStyle(summary.isUnreadable ? Color.orange : Color.secondary)
-                .frame(width: 28)
-                .accessibilityLabel(kindAccessibilityLabel)
-            VStack(alignment: .leading, spacing: 3) {
+        HStack(alignment: .center, spacing: GlanceTheme.Space.md) {
+            Image(systemName: PanelKindSymbol.name(
+                for: summary.kindIdentifier,
+                unreadable: summary.isUnreadable
+            ))
+            .font(.body)
+            .foregroundStyle(summary.isUnreadable ? Color.orange : Color.secondary)
+            .frame(width: 28, height: 28)
+            .background(
+                Color.glanceHoverFill,
+                in: RoundedRectangle(cornerRadius: GlanceTheme.Radius.control, style: .continuous)
+            )
+            .accessibilityLabel(kindAccessibilityLabel)
+
+            VStack(alignment: .leading, spacing: GlanceTheme.Space.xxs) {
                 Text(summary.title)
-                    .font(.body.weight(.medium))
+                    .font(.body.weight(.semibold))
+                    .foregroundStyle(.primary)
                     .lineLimit(1)
                     .truncationMode(.tail)
-                HStack(spacing: 6) {
-                    Text(metaLine)
+
+                if let subtitle = summary.subtitle, !subtitle.isEmpty {
+                    Text(subtitle)
+                        .font(.callout)
                         .foregroundStyle(.secondary)
-                        .font(.caption)
                         .lineLimit(1)
-                    Image(systemName: PanelVisibilityMenu.symbolName(isHidden: summary.isHidden))
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                        .accessibilityLabel(summary.isHidden ? "已隐藏" : "已显示")
+                }
+
+                HStack(spacing: GlanceTheme.Space.sm) {
+                    Text(tertiaryLine)
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                        .lineLimit(1)
+                    if summary.isHidden {
+                        Image(systemName: PanelVisibilityMenu.symbolName(isHidden: true))
+                            .font(.caption2)
+                            .foregroundStyle(.tertiary)
+                            .accessibilityLabel("已隐藏")
+                    }
                     if summary.isLocked {
                         Image(systemName: "lock.fill")
                             .font(.caption2)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(.tertiary)
                             .accessibilityLabel("已锁定")
                     }
                     if summary.isPassThrough {
                         Text("穿透")
                             .font(.caption2)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(.tertiary)
                     }
                     if summary.isPinned {
-                        Image(systemName: "pin.fill")
+                        Image(systemName: "star.fill")
                             .font(.caption2)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(.tertiary)
                             .accessibilityLabel("已固定")
                     }
                 }
+
                 if !summary.tags.isEmpty {
-                    HStack(spacing: 4) {
+                    HStack(spacing: GlanceTheme.Space.xs) {
                         ForEach(tagPreview.shown, id: \.self) { tag in
                             PanelTagChip(text: tag)
                         }
                         if tagPreview.overflow > 0 {
                             Text("+\(tagPreview.overflow)")
                                 .font(.caption2)
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(.tertiary)
                         }
                     }
                 }
             }
-            Spacer(minLength: 8)
-            Button(PanelVisibilityMenu.libraryActionTitle(isHidden: summary.isHidden), action: primaryAction)
-                .controlSize(.small)
-            Menu {
+
+            Spacer(minLength: GlanceTheme.Space.sm)
+
+            HStack(spacing: GlanceTheme.Space.xs) {
                 Button(PanelVisibilityMenu.libraryActionTitle(isHidden: summary.isHidden), action: primaryAction)
-                Button("重命名…", action: onRename)
-                Button("编辑标签…", action: onEditTags)
-                Menu(PanelVisibilityMenu.moveToWorkspace) {
-                    ForEach(workspaces) { workspace in
-                        Button {
-                            onMove(workspace.id)
-                        } label: {
-                            if workspace.id == summary.workspaceID {
-                                Label(workspace.name, systemImage: "checkmark")
-                            } else {
-                                Text(workspace.name)
+                    .controlSize(.small)
+                    .opacity(showsSecondaryActions ? 1 : 0)
+                    .allowsHitTesting(showsSecondaryActions)
+                Menu {
+                    Button(PanelVisibilityMenu.libraryActionTitle(isHidden: summary.isHidden), action: primaryAction)
+                    Button("重命名…", action: onRename)
+                    Button("编辑标签…", action: onEditTags)
+                    Menu(PanelVisibilityMenu.moveToWorkspace) {
+                        ForEach(workspaces) { workspace in
+                            Button {
+                                onMove(workspace.id)
+                            } label: {
+                                if workspace.id == summary.workspaceID {
+                                    Label(workspace.name, systemImage: "checkmark")
+                                } else {
+                                    Text(workspace.name)
+                                }
                             }
                         }
                     }
+                    Divider()
+                    Button("打开数据文件夹", action: onOpenFolder)
+                    Divider()
+                    Button("删除", role: .destructive, action: onDelete)
+                } label: {
+                    Image(systemName: "ellipsis")
+                        .foregroundStyle(.secondary)
+                        .frame(width: 22, height: 22)
                 }
-                Divider()
-                Button("打开数据文件夹", action: onOpenFolder)
-                Divider()
-                Button("删除", role: .destructive, action: onDelete)
-            } label: {
-                Image(systemName: "ellipsis.circle")
+                .accessibilityLabel("更多操作")
+                .menuIndicator(.hidden)
+                .fixedSize()
+                .buttonStyle(.borderless)
+                .opacity(showsSecondaryActions ? 1 : 0.28)
             }
-            .accessibilityLabel("更多操作")
-            .menuIndicator(.hidden)
-            .fixedSize()
-            .buttonStyle(.borderless)
         }
-        .padding(.vertical, 4)
+        .padding(.vertical, GlanceTheme.Space.xxs)
+        .onHover { isHovered = $0 }
+    }
+
+    private var showsSecondaryActions: Bool {
+        isHovered || isSelected
     }
 
     private var tagPreview: (shown: [String], overflow: Int) {
@@ -287,33 +356,34 @@ private struct PanelLibraryRow: View {
         }
     }
 
-    private var symbolName: String {
-        if summary.isUnreadable { return "exclamationmark.triangle" }
-        switch summary.kindIdentifier {
-        case "com.glance.panel.text": return "doc.text"
-        case "com.glance.panel.markdown": return "text.alignleft"
-        case "com.glance.panel.todo": return "checklist"
-        case "com.glance.panel.image": return "photo"
-        case "com.glance.panel.pdf": return "doc.richtext"
-        default: return "square.dashed"
-        }
-    }
-
     private var kindAccessibilityLabel: String {
         if summary.isUnreadable { return "无法读取内容" }
         return PanelSummaryKindLabel.displayName(for: summary.kindIdentifier)
     }
 
-    private var metaLine: String {
+    private var tertiaryLine: String {
         let kind = PanelSummaryKindLabel.displayName(for: summary.kindIdentifier)
-        let time = Self.dateFormatter.localizedString(for: summary.updatedAt, relativeTo: Date())
-        if let subtitle = summary.subtitle, !subtitle.isEmpty {
-            return "\(kind) · \(subtitle) · \(time)"
-        }
-        return "\(kind) · \(time)"
+        return "\(kind) · \(editedLabel)"
     }
 
-    private static let dateFormatter: RelativeDateTimeFormatter = {
+    private var editedLabel: String {
+        if Calendar.current.isDateInToday(summary.updatedAt) {
+            return "最后编辑：今天 \(Self.timeFormatter.string(from: summary.updatedAt))"
+        }
+        if Calendar.current.isDateInYesterday(summary.updatedAt) {
+            return "最后编辑：昨天 \(Self.timeFormatter.string(from: summary.updatedAt))"
+        }
+        return "最后编辑：\(Self.relativeFormatter.localizedString(for: summary.updatedAt, relativeTo: Date()))"
+    }
+
+    private static let timeFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .none
+        formatter.timeStyle = .short
+        return formatter
+    }()
+
+    private static let relativeFormatter: RelativeDateTimeFormatter = {
         let formatter = RelativeDateTimeFormatter()
         formatter.unitsStyle = .short
         return formatter

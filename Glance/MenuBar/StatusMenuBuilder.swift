@@ -33,6 +33,7 @@ enum StatusMenuBuilder {
             actionItem(
                 "快速记录…",
                 onQuickCapture,
+                symbol: "square.and.pencil",
                 keyEquivalent: ShortcutDisplayFormatter.keyEquivalent(quickCapture),
                 modifiers: MacShortcutAdapter.menuModifierMask(for: quickCapture)
             )
@@ -41,6 +42,7 @@ enum StatusMenuBuilder {
             actionItem(
                 "从剪贴板创建…",
                 onCaptureClipboard,
+                symbol: "doc.on.clipboard",
                 keyEquivalent: ShortcutDisplayFormatter.keyEquivalent(clipboardCapture),
                 modifiers: MacShortcutAdapter.menuModifierMask(for: clipboardCapture),
                 enabled: clipboardCaptureEnabled
@@ -53,29 +55,30 @@ enum StatusMenuBuilder {
             onCreate: onCreateWorkspace
         ))
         menu.addItem(.separator())
-        menu.addItem(actionItem("管理面板…", onManagePanels))
-        menu.addItem(.separator())
-        menu.addItem(actionItem("新建文字面板", onNewText))
-        menu.addItem(actionItem("新建 Markdown 面板", onNewMarkdown))
-        menu.addItem(actionItem("新建待办面板", onNewTodo))
-        menu.addItem(actionItem("新建图片面板", onNewImage))
-        menu.addItem(actionItem("新建 PDF 面板…", onNewPDF))
-        menu.addItem(.separator())
+        menu.addItem(actionItem("管理面板…", onManagePanels, symbol: "square.stack"))
+        menu.addItem(NSMenuItem.sectionHeader(title: "新建"))
+        menu.addItem(actionItem("新建文字面板", onNewText, symbol: PanelKindSymbol.name(for: PanelKind.text)))
+        menu.addItem(actionItem("新建 Markdown 面板", onNewMarkdown, symbol: PanelKindSymbol.name(for: PanelKind.markdown)))
+        menu.addItem(actionItem("新建待办面板", onNewTodo, symbol: PanelKindSymbol.name(for: PanelKind.todo)))
+        menu.addItem(actionItem("新建图片面板", onNewImage, symbol: PanelKindSymbol.name(for: PanelKind.image)))
+        menu.addItem(actionItem("新建 PDF 面板…", onNewPDF, symbol: PanelKindSymbol.name(for: PanelKind.pdf)))
+        menu.addItem(NSMenuItem.sectionHeader(title: "状态"))
         menu.addItem(
             actionItem(
                 allHidden ? "显示全部" : "隐藏全部",
                 onToggleVisibility,
+                symbol: allHidden ? "eye" : "eye.slash",
                 keyEquivalent: ShortcutDisplayFormatter.keyEquivalent(hideShow),
                 modifiers: MacShortcutAdapter.menuModifierMask(for: hideShow)
             )
         )
         if let diagnostic {
             menu.addItem(.separator())
-            menu.addItem(actionItem(diagnostic.menuTitle, onShowDiagnostic))
+            menu.addItem(actionItem(diagnostic.menuTitle, onShowDiagnostic, symbol: "exclamationmark.triangle"))
         }
         menu.addItem(.separator())
-        menu.addItem(actionItem("设置…", onSettings))
-        menu.addItem(actionItem("退出", onQuit))
+        menu.addItem(actionItem("设置…", onSettings, symbol: "gearshape"))
+        menu.addItem(actionItem("退出", onQuit, symbol: "power"))
     }
 
     static func workspaceMenu(
@@ -84,6 +87,7 @@ enum StatusMenuBuilder {
         onCreate: @escaping () -> Void
     ) -> NSMenuItem {
         let item = NSMenuItem(title: "工作区", action: nil, keyEquivalent: "")
+        item.image = GlanceTheme.menuSymbol("square.on.square")
         let submenu = NSMenu()
         for workspace in items {
             let entry = NSMenuItem(title: workspace.name, action: nil, keyEquivalent: "")
@@ -96,7 +100,7 @@ enum StatusMenuBuilder {
         if !items.isEmpty {
             submenu.addItem(.separator())
         }
-        submenu.addItem(actionItem("新建工作区…", onCreate))
+        submenu.addItem(actionItem("新建工作区…", onCreate, symbol: "plus"))
         item.submenu = submenu
         return item
     }
@@ -104,6 +108,7 @@ enum StatusMenuBuilder {
     private static func actionItem(
         _ title: String,
         _ handler: @escaping () -> Void,
+        symbol: String? = nil,
         keyEquivalent: String = "",
         modifiers: NSEvent.ModifierFlags = [],
         enabled: Bool = true
@@ -113,6 +118,9 @@ enum StatusMenuBuilder {
             item.keyEquivalentModifierMask = modifiers
         }
         item.isEnabled = enabled
+        if let symbol {
+            item.image = GlanceTheme.menuSymbol(symbol)
+        }
         item.representedObject = ClosureBox(handler)
         item.target = MenuActionRelay.shared
         item.action = #selector(MenuActionRelay.invoke(_:))

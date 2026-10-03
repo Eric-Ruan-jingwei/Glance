@@ -159,19 +159,21 @@ final class QuickCaptureWindowController: NSWindowController, NSTextViewDelegate
         guard let window else { return }
 
         let effect = NSVisualEffectView()
-        effect.material = .hudWindow
+        effect.material = GlanceTheme.Fill.floatingMaterial
         effect.blendingMode = .behindWindow
         effect.state = .active
         effect.wantsLayer = true
-        effect.layer?.cornerRadius = GlanceConstants.cornerRadius
+        effect.layer?.cornerRadius = GlanceTheme.Radius.panel
+        effect.layer?.cornerCurve = .continuous
         effect.layer?.masksToBounds = true
         effect.translatesAutoresizingMaskIntoConstraints = false
 
         let border = NSView()
         border.wantsLayer = true
-        border.layer?.cornerRadius = GlanceConstants.cornerRadius
-        border.layer?.borderWidth = 1
-        border.layer?.borderColor = NSColor.separatorColor.cgColor
+        border.layer?.cornerRadius = GlanceTheme.Radius.panel
+        border.layer?.cornerCurve = .continuous
+        border.layer?.borderWidth = GlanceTheme.Size.hairline
+        border.layer?.borderColor = GlanceTheme.Fill.panelBorder.cgColor
         border.translatesAutoresizingMaskIntoConstraints = false
         border.addSubview(effect)
 

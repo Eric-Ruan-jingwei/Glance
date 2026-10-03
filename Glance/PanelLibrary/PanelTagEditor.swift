@@ -135,7 +135,7 @@ private struct PanelTagEditorView: View {
     let onCancel: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: GlanceTheme.Space.md) {
             Text("为这个面板设置标签。标签用于搜索和筛选，不会改变工作区或显示状态。")
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -152,7 +152,7 @@ private struct PanelTagEditorView: View {
                 }
             }
 
-            HStack(spacing: 8) {
+            HStack(spacing: GlanceTheme.Space.sm) {
                 TextField("新增标签…", text: $session.input)
                     .textFieldStyle(.roundedBorder)
                     .onSubmit { session.addFromInput() }
@@ -193,7 +193,7 @@ private struct PanelTagEditorView: View {
                 .keyboardShortcut(.defaultAction)
             }
         }
-        .padding(16)
+        .padding(GlanceTheme.Space.lg)
         .frame(width: 440, height: 360)
     }
 }
@@ -274,27 +274,23 @@ struct PanelTagChip: View {
     }
 
     private var chipBody: some View {
-        HStack(spacing: 3) {
+        HStack(spacing: GlanceTheme.Space.xxs) {
             Text(text)
                 .lineLimit(1)
             if let onRemove {
                 Button(action: onRemove) {
                     Image(systemName: "xmark")
-                        .font(.system(size: 8, weight: .bold))
+                        .font(.system(size: 8, weight: .semibold))
                 }
                 .buttonStyle(.plain)
             }
         }
-        .font(.caption2)
-        .padding(.horizontal, 6)
-        .padding(.vertical, 3)
-        .background(Color.secondary.opacity(0.14))
-        .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
+        .glanceChipStyle()
     }
 }
 
 struct TagFlowLayout: Layout {
-    var spacing: CGFloat = 6
+    var spacing: CGFloat = GlanceTheme.Space.sm
 
     func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
         arrange(maxWidth: proposal.width ?? .infinity, subviews: subviews).size

@@ -64,6 +64,10 @@ final class PanelLibraryModel: ObservableObject {
         return "标签：全部"
     }
 
+    func panelCount(in workspaceID: String) -> Int {
+        summaries.filter { $0.workspaceID == workspaceID }.count
+    }
+
     var isCompletelyEmpty: Bool { workspaceSummaries.isEmpty }
     var hasNoMatches: Bool { !workspaceSummaries.isEmpty && visible.isEmpty }
 

@@ -50,10 +50,11 @@ final class PanelLibraryWindowController: NSWindowController, NSWindowDelegate {
         }
         let hosting = NSHostingController(rootView: PanelLibraryView(model: model))
         let window = NSWindow(contentViewController: hosting)
-        window.title = "管理面板"
+        window.title = "Glance"
         window.styleMask = [.titled, .closable, .miniaturizable, .resizable]
-        window.setContentSize(NSSize(width: 880, height: 540))
+        window.setContentSize(NSSize(width: 920, height: 580))
         window.minSize = NSSize(width: 720, height: 420)
+        window.backgroundColor = .windowBackgroundColor
         window.center()
         window.isReleasedWhenClosed = false
         self.init(existingWindow: window, model: model)

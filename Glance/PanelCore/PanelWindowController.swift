@@ -18,6 +18,7 @@ final class PanelWindowController: NSWindowController, NSWindowDelegate {
     private let payloadDirty = PayloadDirtyFlag()
     private var settingsModel: PanelSettingsModel?
     private var settingsWindowController: PanelSettingsWindowController?
+    private var collectionObserver: NSObjectProtocol?
 
     var panelWindow: PanelWindow {
         window as! PanelWindow
@@ -47,7 +48,22 @@ final class PanelWindowController: NSWindowController, NSWindowDelegate {
         chrome.onContextMenu = { [weak self] _ in
             self?.makeContextMenu() ?? NSMenu()
         }
+        chrome.onPinToggle = { [weak self] in
+            guard let self else { return }
+            self.setPinned(!self.isPinned)
+        }
+        chrome.isPinned = record.isPinned
         window.contentView = chrome
+        refreshChromeTitle()
+        collectionObserver = NotificationCenter.default.addObserver(
+            forName: .glancePanelCollectionDidChange,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in
+                self?.refreshChromeTitle()
+            }
+        }
 
         content.onPayloadChange = { [weak self] in
             self?.payloadDirty.markUserEdit()
@@ -69,6 +85,12 @@ final class PanelWindowController: NSWindowController, NSWindowDelegate {
 
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+
+    deinit {
+        if let collectionObserver {
+            NotificationCenter.default.removeObserver(collectionObserver)
+        }
     }
 
     func showFront() {
@@ -93,6 +115,7 @@ final class PanelWindowController: NSWindowController, NSWindowDelegate {
     func setPinned(_ pinned: Bool) {
         isPinned = pinned
         panelWindow.applyPinned(pinned)
+        chrome.isPinned = pinned
         mutateRecord { record in
             record.isPinned = pinned
         }
@@ -262,10 +285,12 @@ final class PanelWindowController: NSWindowController, NSWindowDelegate {
         chrome.allowsMove = policy.allowsMove
         chrome.allowsResize = policy.allowsResize
         chrome.showsLockBadge = isLocked
+        chrome.isPinned = isPinned
         chrome.showsTemporaryInteraction = isPassThrough
             && interactionState != .editing
             && ModifierKeyController.optionIsPressed
         chrome.isInteractable = true
+        refreshChromeTitle()
         panelWindow.isMovable = policy.allowsMove
         content.allowsMove = policy.allowsMove
         content.allowsContentMutation = policy.allowsContentMutation
@@ -588,6 +613,15 @@ final class PanelWindowController: NSWindowController, NSWindowDelegate {
         mutateRecord { record in
             record.frame = recovered.frame
             record.displayIdentifier = recovered.displayIdentifier
+        }
+    }
+
+    private func refreshChromeTitle() {
+        let custom = (try? environment.repository.record(id: recordID))?.customTitle
+        if let title = PanelTitle.normalize(custom) {
+            chrome.titleText = title
+        } else {
+            chrome.titleText = PanelSummaryKindLabel.displayName(for: kindIdentifier)
         }
     }
 

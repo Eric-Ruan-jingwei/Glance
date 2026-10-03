@@ -93,7 +93,7 @@ private struct BatchTagRemovalView: View {
     @ObservedObject var session: BatchTagRemovalSession
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: GlanceTheme.Space.md) {
             Text("选择要从所选面板移除的标签。没有该标签的面板不会改变。")
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -102,8 +102,8 @@ private struct BatchTagRemovalView: View {
                 ForEach(session.tags, id: \.self) { tag in
                     PanelTagChip(text: tag)
                         .overlay(
-                            RoundedRectangle(cornerRadius: 4, style: .continuous)
-                                .stroke(session.isSelected(tag) ? Color.accentColor : Color.clear, lineWidth: 2)
+                            RoundedRectangle(cornerRadius: GlanceTheme.Radius.chip, style: .continuous)
+                                .stroke(session.isSelected(tag) ? Color.accentColor.opacity(0.7) : Color.clear, lineWidth: 1)
                         )
                         .onTapGesture { session.toggle(tag) }
                 }
@@ -124,7 +124,7 @@ private struct BatchTagRemovalView: View {
                 .disabled(session.selected.isEmpty)
             }
         }
-        .padding(16)
+        .padding(GlanceTheme.Space.lg)
         .frame(width: 360, height: 280)
     }
 }

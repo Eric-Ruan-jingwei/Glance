@@ -5,6 +5,7 @@ final class PanelChromeView: NSView {
     var onCommitFrame: (() -> Void)?
     var onFinishMove: (() -> Void)?
     var onContextMenu: ((NSEvent) -> NSMenu)?
+    var onPinToggle: (() -> Void)?
     var isInteractable: Bool = true
     var allowsMove: Bool = true {
         didSet { applyHover() }
@@ -16,11 +17,20 @@ final class PanelChromeView: NSView {
     var showsTemporaryInteraction: Bool = false {
         didSet { applyHover() }
     }
+    var isPinned: Bool = false {
+        didSet { applyHover() }
+    }
+    var titleText: String = "" {
+        didSet { titleLabel.stringValue = titleText }
+    }
 
     private let effectView = NSVisualEffectView()
     let contentContainer = NSView()
+    private let titleLabel = NSTextField(labelWithString: "")
     private let lockBadge = NSImageView()
-    private let dragGrip = NSView()
+    private let pinButton = NSButton()
+    private let moreButton = NSButton()
+    private let accessoryStack = NSStackView()
 
     private var isHovered = false
     private var trackingArea: NSTrackingArea?
@@ -31,16 +41,13 @@ final class PanelChromeView: NSView {
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
         wantsLayer = true
-        layer?.cornerRadius = GlanceConstants.cornerRadius
         layer?.masksToBounds = false
-        layer?.borderWidth = 0
-        applyBorderColor()
+        applyShape()
 
-        effectView.material = .sidebar
+        effectView.material = GlanceTheme.Fill.panelMaterial
         effectView.blendingMode = .behindWindow
         effectView.state = .active
         effectView.wantsLayer = true
-        effectView.layer?.cornerRadius = GlanceConstants.cornerRadius
         effectView.layer?.masksToBounds = true
         effectView.translatesAutoresizingMaskIntoConstraints = false
 
@@ -48,20 +55,45 @@ final class PanelChromeView: NSView {
         addSubview(effectView)
         effectView.addSubview(contentContainer)
 
-        lockBadge.image = NSImage(systemSymbolName: "lock.fill", accessibilityDescription: "已锁定")
-        lockBadge.contentTintColor = NSColor.secondaryLabelColor
+        titleLabel.font = GlanceTheme.Typography.chromeTitle
+        titleLabel.textColor = GlanceTheme.Fill.chromeForeground
+        titleLabel.lineBreakMode = .byTruncatingTail
+        titleLabel.maximumNumberOfLines = 1
+        titleLabel.drawsBackground = false
+        titleLabel.isBezeled = false
+        titleLabel.isEditable = false
+        titleLabel.isSelectable = false
+        titleLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+        titleLabel.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(titleLabel)
+
+        configureIconButton(
+            pinButton,
+            action: #selector(pinClicked),
+            label: "置顶"
+        )
+        configureIconButton(
+            moreButton,
+            action: #selector(moreClicked),
+            label: "更多操作"
+        )
+        moreButton.image = GlanceTheme.chromeSymbol("ellipsis", accessibilityDescription: "更多操作")
+
+        lockBadge.image = GlanceTheme.chromeSymbol("lock.fill", accessibilityDescription: "已锁定")
+        lockBadge.contentTintColor = GlanceTheme.Fill.chromeForeground
         lockBadge.imageScaling = .scaleProportionallyDown
-        lockBadge.translatesAutoresizingMaskIntoConstraints = false
-        lockBadge.isHidden = true
-        addSubview(lockBadge)
+        lockBadge.setAccessibilityLabel("已锁定")
 
-        dragGrip.wantsLayer = true
-        dragGrip.layer?.cornerRadius = 1.5
-        dragGrip.translatesAutoresizingMaskIntoConstraints = false
-        dragGrip.isHidden = true
-        dragGrip.setAccessibilityElement(false)
-        addSubview(dragGrip)
+        accessoryStack.orientation = .horizontal
+        accessoryStack.alignment = .centerY
+        accessoryStack.spacing = 1
+        accessoryStack.translatesAutoresizingMaskIntoConstraints = false
+        accessoryStack.addArrangedSubview(lockBadge)
+        accessoryStack.addArrangedSubview(pinButton)
+        accessoryStack.addArrangedSubview(moreButton)
+        addSubview(accessoryStack)
 
+        let chrome = GlanceTheme.Size.panelChromeHeight
         NSLayoutConstraint.activate([
             effectView.leadingAnchor.constraint(equalTo: leadingAnchor),
             effectView.trailingAnchor.constraint(equalTo: trailingAnchor),
@@ -69,17 +101,28 @@ final class PanelChromeView: NSView {
             effectView.bottomAnchor.constraint(equalTo: bottomAnchor),
             contentContainer.leadingAnchor.constraint(equalTo: effectView.leadingAnchor),
             contentContainer.trailingAnchor.constraint(equalTo: effectView.trailingAnchor),
-            contentContainer.topAnchor.constraint(equalTo: effectView.topAnchor),
+            contentContainer.topAnchor.constraint(equalTo: effectView.topAnchor, constant: chrome),
             contentContainer.bottomAnchor.constraint(equalTo: effectView.bottomAnchor),
-            lockBadge.topAnchor.constraint(equalTo: topAnchor, constant: 6),
-            lockBadge.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -8),
-            lockBadge.widthAnchor.constraint(equalToConstant: 11),
-            lockBadge.heightAnchor.constraint(equalToConstant: 11),
-            dragGrip.centerXAnchor.constraint(equalTo: centerXAnchor),
-            dragGrip.topAnchor.constraint(equalTo: topAnchor, constant: 5),
-            dragGrip.widthAnchor.constraint(equalToConstant: 22),
-            dragGrip.heightAnchor.constraint(equalToConstant: 3)
+            titleLabel.leadingAnchor.constraint(equalTo: leadingAnchor, constant: GlanceTheme.Space.md),
+            titleLabel.centerYAnchor.constraint(
+                equalTo: topAnchor,
+                constant: chrome / 2
+            ),
+            titleLabel.trailingAnchor.constraint(
+                lessThanOrEqualTo: accessoryStack.leadingAnchor,
+                constant: -GlanceTheme.Space.sm
+            ),
+            accessoryStack.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -GlanceTheme.Space.sm),
+            accessoryStack.centerYAnchor.constraint(equalTo: titleLabel.centerYAnchor),
+            lockBadge.widthAnchor.constraint(equalToConstant: GlanceTheme.Size.chromeButton),
+            lockBadge.heightAnchor.constraint(equalToConstant: GlanceTheme.Size.chromeButton),
+            pinButton.widthAnchor.constraint(equalToConstant: GlanceTheme.Size.chromeButton),
+            pinButton.heightAnchor.constraint(equalToConstant: GlanceTheme.Size.chromeButton),
+            moreButton.widthAnchor.constraint(equalToConstant: GlanceTheme.Size.chromeButton),
+            moreButton.heightAnchor.constraint(equalToConstant: GlanceTheme.Size.chromeButton)
         ])
+
+        applyHover()
     }
 
     required init?(coder: NSCoder) {
@@ -143,6 +186,10 @@ final class PanelChromeView: NSView {
     }
 
     override func hitTest(_ point: NSPoint) -> NSView? {
+        if let accessory = accessoryStack.hitTest(convert(point, to: accessoryStack)),
+           accessory !== accessoryStack {
+            return accessory
+        }
         if isInteractable, allowsResize, !edges(at: point).isEmpty {
             return self
         }
@@ -220,35 +267,75 @@ final class PanelChromeView: NSView {
 
     private var dragStripRect: NSRect {
         let t = GlanceConstants.resizeEdge
-        let height = GlanceConstants.panelDragStrip
+        let height = GlanceTheme.Size.panelChromeHeight
+        let accessoryWidth = accessoryStack.bounds.width + GlanceTheme.Space.md
         return NSRect(
             x: t,
-            y: bounds.height - t - height,
-            width: max(0, bounds.width - 2 * t),
-            height: height
+            y: bounds.height - height,
+            width: max(0, bounds.width - 2 * t - accessoryWidth),
+            height: height - t
         )
     }
 
     private func applyHover() {
-        let showBorder = isHovered || showsTemporaryInteraction
-        layer?.borderWidth = showBorder ? 1 : 0
-        lockBadge.isHidden = !(showsLockBadge && isHovered)
-        dragGrip.isHidden = !(isHovered && allowsMove)
-        applyBorderColor()
+        let chromeActive = isHovered || showsTemporaryInteraction
+        layer?.borderWidth = GlanceTheme.Size.hairline
+        titleLabel.textColor = chromeActive
+            ? GlanceTheme.Fill.chromeForeground
+            : GlanceTheme.Fill.chromeForegroundQuiet
+        lockBadge.isHidden = !showsLockBadge
+        pinButton.isHidden = !(chromeActive || isPinned)
+        moreButton.isHidden = !chromeActive
+        pinButton.image = GlanceTheme.chromeSymbol(
+            isPinned ? "star.fill" : "star",
+            accessibilityDescription: isPinned ? "取消置顶" : "置顶"
+        )
+        pinButton.contentTintColor = isPinned
+            ? NSColor.controlAccentColor
+            : GlanceTheme.Fill.chromeForeground
+        moreButton.contentTintColor = GlanceTheme.Fill.chromeForeground
+        applyShape()
         window?.invalidateShadow()
         window?.resetCursorRects()
         resetCursorRects()
     }
 
-    private func applyBorderColor() {
-        layer?.borderColor = NSColor.labelColor.withAlphaComponent(0.16).cgColor
-        layer?.cornerRadius = GlanceConstants.cornerRadius
-        dragGrip.layer?.backgroundColor = NSColor.labelColor.withAlphaComponent(0.28).cgColor
+    private func applyShape() {
+        let radius = GlanceTheme.Radius.panel
+        layer?.cornerRadius = radius
+        layer?.cornerCurve = .continuous
+        layer?.borderColor = (isHovered || showsTemporaryInteraction)
+            ? GlanceTheme.Fill.panelBorderHover.cgColor
+            : GlanceTheme.Fill.panelBorder.cgColor
+        effectView.layer?.cornerRadius = radius
+        effectView.layer?.cornerCurve = .continuous
+    }
+
+    private func configureIconButton(_ button: NSButton, action: Selector, label: String) {
+        button.bezelStyle = .inline
+        button.isBordered = false
+        button.imagePosition = .imageOnly
+        button.setButtonType(.momentaryChange)
+        button.imageScaling = .scaleProportionallyDown
+        button.target = self
+        button.action = action
+        button.refusesFirstResponder = true
+        button.setAccessibilityLabel(label)
+        button.translatesAutoresizingMaskIntoConstraints = false
+    }
+
+    @objc private func pinClicked() {
+        onPinToggle?()
+    }
+
+    @objc private func moreClicked(_ sender: NSButton) {
+        guard let event = NSApp.currentEvent, let menu = onContextMenu?(event) else { return }
+        NSMenu.popUpContextMenu(menu, with: event, for: sender)
     }
 
     override func viewDidChangeEffectiveAppearance() {
         super.viewDidChangeEffectiveAppearance()
-        applyBorderColor()
+        applyShape()
     }
 }
 

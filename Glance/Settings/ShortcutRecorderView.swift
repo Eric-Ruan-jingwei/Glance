@@ -32,7 +32,8 @@ final class ShortcutRecorderNSView: NSView {
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
         wantsLayer = true
-        layer?.cornerRadius = 6
+        layer?.cornerRadius = GlanceTheme.Radius.control
+        layer?.cornerCurve = .continuous
         layer?.borderWidth = 1
 
         label.font = .monospacedSystemFont(ofSize: 13, weight: .regular)

@@ -30,6 +30,15 @@ There is no Windows client yet. Shared data contracts are documented so a future
 - No cloud
 - Open source
 
+## V0.17
+
+Visual foundation for floating panels, the status menu, and Panel Manager. No schema or feature change.
+
+- Shared spacing, radius, and tag chrome
+- Floating panel cards with a thinner hover chrome
+- Native status-menu sections and symbols
+- Panel Manager shell closer to Finder / Notes
+
 ## V0.16.1
 
 Improved VoiceOver actions for removable and suggested tags.
@@ -99,13 +108,13 @@ Status-item menu (defaults shown):
   新建工作区…
 ────────────
 管理面板…
-────────────
+新建
 新建文字面板
 新建 Markdown 面板
 新建待办面板
 新建图片面板
 新建 PDF 面板…
-────────────
+状态
 显示全部 / 隐藏全部    ⌥⌘G
 ────────────
 ⚠ 数据恢复提示…      (only after backup recovery, corrupt metadata, or unsupported schema)

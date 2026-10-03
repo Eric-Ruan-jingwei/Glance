@@ -62,11 +62,10 @@ final class PDFPanelView: NSView, PanelContentControlling {
         addSubview(pdfView)
         addSubview(errorLabel)
 
-        let topInset = GlanceConstants.panelDragStrip
         NSLayoutConstraint.activate([
             pdfView.leadingAnchor.constraint(equalTo: leadingAnchor),
             pdfView.trailingAnchor.constraint(equalTo: trailingAnchor),
-            pdfView.topAnchor.constraint(equalTo: topAnchor, constant: topInset),
+            pdfView.topAnchor.constraint(equalTo: topAnchor),
             pdfView.bottomAnchor.constraint(equalTo: bottomAnchor),
             errorLabel.centerXAnchor.constraint(equalTo: centerXAnchor),
             errorLabel.centerYAnchor.constraint(equalTo: centerYAnchor),
