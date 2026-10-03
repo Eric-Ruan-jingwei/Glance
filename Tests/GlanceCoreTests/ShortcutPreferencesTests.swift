@@ -160,6 +160,20 @@ final class ShortcutPreferencesTests: XCTestCase {
         XCTAssertEqual(fake.registered[GlanceHotKeyID.quickCapture.rawValue]?.keyCode, UInt32(kVK_ANSI_K))
     }
 
+    func testSuccessfulReplaceAfterSuspendDispatches() throws {
+        let fake = FakeHotKeyRegistrar()
+        let manager = ShortcutManager(registrar: fake, bindSystemHandler: false)
+        var captures = 0
+        manager.onQuickCapture = { captures += 1 }
+        XCTAssertTrue(manager.register(ShortcutDefaults.quickCapture, for: .quickCapture))
+        manager.suspend(.quickCapture)
+        try manager.replaceShortcut(for: .quickCapture, with: controlOptionK)
+        manager.finishSuspension(.quickCapture)
+        XCTAssertFalse(manager.isSuspended(.quickCapture))
+        manager.handleHotKeyForTesting(.quickCapture)
+        XCTAssertEqual(captures, 1)
+    }
+
     func testRestoreFailureIsReported() {
         let fake = FakeHotKeyRegistrar()
         let manager = ShortcutManager(registrar: fake, bindSystemHandler: false)
@@ -315,6 +329,166 @@ final class ShortcutCoordinatorTests: XCTestCase {
         coordinator.start()
         XCTAssertEqual(store.shortcut(for: .quickCapture), controlOptionK)
         XCTAssertEqual(manager.registeredShortcut(for: .quickCapture), ShortcutDefaults.quickCapture)
+        XCTAssertEqual(coordinator.shortcut(for: .quickCapture), ShortcutDefaults.quickCapture)
+        XCTAssertEqual(
+            coordinator.errorMessage,
+            "“快速记录”的自定义快捷键无法注册，本次运行暂时使用默认快捷键。"
+        )
+        XCTAssertEqual(quickCaptureMenuItem(shortcuts: coordinator.shortcuts)?.keyEquivalent, "j")
+    }
+
+    func testSuccessfulRecordingActivatesNewShortcutAndClearsSuspension() {
+        let harness = makeHarness()
+        defer { harness.defaults.removePersistentDomain(forName: harness.name) }
+        var captures = 0
+        harness.manager.onQuickCapture = { captures += 1 }
+        harness.coordinator.start()
+        harness.coordinator.beginRecording(.quickCapture)
+        XCTAssertTrue(harness.manager.isSuspended(.quickCapture))
+        harness.manager.handleHotKeyForTesting(.quickCapture)
+        XCTAssertEqual(captures, 0)
+
+        harness.coordinator.commitRecording(controlOptionK, for: .quickCapture)
+
+        XCTAssertFalse(harness.manager.isSuspended(.quickCapture))
+        XCTAssertEqual(harness.manager.registeredShortcut(for: .quickCapture), controlOptionK)
+        XCTAssertEqual(harness.store.shortcut(for: .quickCapture), controlOptionK)
+        XCTAssertEqual(harness.coordinator.shortcut(for: .quickCapture), controlOptionK)
+        XCTAssertEqual(harness.fake.registered[GlanceHotKeyID.quickCapture.rawValue]?.keyCode, UInt32(kVK_ANSI_K))
+        harness.manager.handleHotKeyForTesting(.quickCapture)
+        XCTAssertEqual(captures, 1)
+        XCTAssertEqual(quickCaptureMenuItem(shortcuts: harness.coordinator.shortcuts)?.keyEquivalent, "k")
+        XCTAssertEqual(
+            quickCaptureMenuItem(shortcuts: harness.coordinator.shortcuts)?.keyEquivalentModifierMask,
+            [.control, .option]
+        )
+    }
+
+    func testCancelRecordingRestoresOldShortcutAndDispatch() {
+        let harness = makeHarness()
+        defer { harness.defaults.removePersistentDomain(forName: harness.name) }
+        var captures = 0
+        harness.manager.onQuickCapture = { captures += 1 }
+        harness.coordinator.start()
+        harness.coordinator.beginRecording(.quickCapture)
+        harness.coordinator.cancelRecording(.quickCapture)
+        XCTAssertFalse(harness.manager.isSuspended(.quickCapture))
+        XCTAssertEqual(harness.manager.registeredShortcut(for: .quickCapture), ShortcutDefaults.quickCapture)
+        harness.manager.handleHotKeyForTesting(.quickCapture)
+        XCTAssertEqual(captures, 1)
+        XCTAssertEqual(quickCaptureMenuItem(shortcuts: harness.coordinator.shortcuts)?.keyEquivalent, "j")
+    }
+
+    func testFailedRecordingRestoresOldShortcutDispatchAndPreference() {
+        let harness = makeHarness()
+        defer { harness.defaults.removePersistentDomain(forName: harness.name) }
+        var captures = 0
+        harness.manager.onQuickCapture = { captures += 1 }
+        harness.coordinator.start()
+        harness.coordinator.beginRecording(.quickCapture)
+        harness.fake.failNextRegister = true
+        harness.coordinator.commitRecording(controlOptionK, for: .quickCapture)
+        XCTAssertFalse(harness.manager.isSuspended(.quickCapture))
+        XCTAssertEqual(harness.manager.registeredShortcut(for: .quickCapture), ShortcutDefaults.quickCapture)
+        XCTAssertEqual(harness.store.shortcut(for: .quickCapture), ShortcutDefaults.quickCapture)
+        XCTAssertEqual(harness.coordinator.shortcut(for: .quickCapture), ShortcutDefaults.quickCapture)
+        XCTAssertNotNil(harness.coordinator.errorMessage)
+        harness.manager.handleHotKeyForTesting(.quickCapture)
+        XCTAssertEqual(captures, 1)
+        XCTAssertEqual(quickCaptureMenuItem(shortcuts: harness.coordinator.shortcuts)?.keyEquivalent, "j")
+    }
+
+    func testRejectLeavesSuspensionUntilCancel() {
+        let harness = makeHarness()
+        defer { harness.defaults.removePersistentDomain(forName: harness.name) }
+        var captures = 0
+        harness.manager.onQuickCapture = { captures += 1 }
+        harness.coordinator.start()
+        harness.coordinator.beginRecording(.quickCapture)
+        XCTAssertTrue(harness.manager.isSuspended(.quickCapture))
+        harness.coordinator.cancelRecording(.quickCapture)
+        XCTAssertFalse(harness.manager.isSuspended(.quickCapture))
+        harness.manager.handleHotKeyForTesting(.quickCapture)
+        XCTAssertEqual(captures, 1)
+    }
+
+    func testRecordingOneActionThenAnotherDoesNotLeaveStaleSuspension() {
+        let harness = makeHarness()
+        defer { harness.defaults.removePersistentDomain(forName: harness.name) }
+        var captures = 0
+        var clipboards = 0
+        harness.manager.onQuickCapture = { captures += 1 }
+        harness.manager.onCaptureClipboard = { clipboards += 1 }
+        harness.coordinator.start()
+        harness.coordinator.beginRecording(.quickCapture)
+        harness.coordinator.beginRecording(.clipboardCapture)
+        XCTAssertFalse(harness.manager.isSuspended(.quickCapture))
+        XCTAssertTrue(harness.manager.isSuspended(.clipboardCapture))
+        harness.manager.handleHotKeyForTesting(.quickCapture)
+        XCTAssertEqual(captures, 1)
+        harness.manager.handleHotKeyForTesting(.clipboardCapture)
+        XCTAssertEqual(clipboards, 0)
+        harness.coordinator.cancelRecording(.clipboardCapture)
+        XCTAssertFalse(harness.manager.isSuspended(.clipboardCapture))
+        harness.manager.handleHotKeyForTesting(.clipboardCapture)
+        XCTAssertEqual(clipboards, 1)
+    }
+
+    func testFinishAndResumeAreIdempotent() throws {
+        let harness = makeHarness()
+        defer { harness.defaults.removePersistentDomain(forName: harness.name) }
+        harness.coordinator.start()
+        let registers = harness.fake.registerCount
+        harness.manager.finishSuspension(.quickCapture)
+        harness.manager.finishSuspension(.quickCapture)
+        try harness.manager.resume(.quickCapture)
+        XCTAssertEqual(harness.fake.registerCount, registers)
+        XCTAssertFalse(harness.manager.isSuspended(.quickCapture))
+    }
+
+    func testStartupPreferredSuccessAlignsStoreManagerCoordinatorAndMenu() {
+        let harness = makeHarness()
+        defer { harness.defaults.removePersistentDomain(forName: harness.name) }
+        harness.store.setShortcut(controlOptionK, for: .quickCapture)
+        harness.coordinator.start()
+        XCTAssertEqual(harness.store.shortcut(for: .quickCapture), controlOptionK)
+        XCTAssertEqual(harness.manager.registeredShortcut(for: .quickCapture), controlOptionK)
+        XCTAssertEqual(harness.coordinator.shortcut(for: .quickCapture), controlOptionK)
+        XCTAssertNil(harness.coordinator.errorMessage)
+        let item = quickCaptureMenuItem(shortcuts: harness.coordinator.shortcuts)
+        XCTAssertEqual(item?.keyEquivalent, "k")
+        XCTAssertEqual(item?.keyEquivalentModifierMask, [.control, .option])
+    }
+
+    func testStartupPreferredAndDefaultBothFailIsNonFatal() {
+        let harness = makeHarness()
+        defer { harness.defaults.removePersistentDomain(forName: harness.name) }
+        harness.store.setShortcut(controlOptionK, for: .quickCapture)
+        harness.fake.failingIDs = [GlanceHotKeyID.quickCapture.rawValue]
+        harness.coordinator.start()
+        XCTAssertEqual(harness.store.shortcut(for: .quickCapture), controlOptionK)
+        XCTAssertNil(harness.manager.registeredShortcut(for: .quickCapture))
+        XCTAssertEqual(harness.coordinator.shortcut(for: .quickCapture), controlOptionK)
+        XCTAssertEqual(harness.coordinator.errorMessage, "“快速记录”的快捷键当前未能注册。")
+        let item = quickCaptureMenuItem(shortcuts: harness.coordinator.shortcuts)
+        XCTAssertEqual(item?.title, "快速记录…")
+        XCTAssertEqual(item?.isEnabled, true)
+        XCTAssertEqual(item?.keyEquivalent, "k")
+    }
+
+    private func makeHarness() -> (
+        store: ShortcutStore,
+        defaults: UserDefaults,
+        name: String,
+        fake: FakeHotKeyRegistrar,
+        manager: ShortcutManager,
+        coordinator: ShortcutCoordinator
+    ) {
+        let (store, defaults, name) = isolatedStore()
+        let fake = FakeHotKeyRegistrar()
+        let manager = ShortcutManager(registrar: fake, bindSystemHandler: false)
+        let coordinator = ShortcutCoordinator(store: store, manager: manager)
+        return (store, defaults, name, fake, manager, coordinator)
     }
 
     private func isolatedStore() -> (ShortcutStore, UserDefaults, String) {
@@ -322,5 +496,24 @@ final class ShortcutCoordinatorTests: XCTestCase {
         let defaults = UserDefaults(suiteName: name)!
         defaults.removePersistentDomain(forName: name)
         return (ShortcutStore(defaults: defaults), defaults, name)
+    }
+
+    private func quickCaptureMenuItem(shortcuts: [ShortcutAction: GlanceShortcut]) -> NSMenuItem? {
+        let menu = NSMenu()
+        StatusMenuBuilder.populate(
+            menu,
+            allHidden: false,
+            onQuickCapture: {},
+            onManagePanels: {},
+            onNewText: {},
+            onNewMarkdown: {},
+            onNewTodo: {},
+            onNewImage: {},
+            onToggleVisibility: {},
+            onSettings: {},
+            onQuit: {},
+            shortcuts: shortcuts
+        )
+        return menu.items.first { $0.title == "快速记录…" }
     }
 }
