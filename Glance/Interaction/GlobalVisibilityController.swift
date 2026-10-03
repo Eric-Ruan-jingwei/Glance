@@ -1,21 +1,14 @@
-import AppKit
+import Foundation
 
 @MainActor
 final class GlobalVisibilityController {
     private(set) var isConcealed = false
 
-    func toggle(windows: [NSWindow]) {
+    func toggle() {
         isConcealed.toggle()
-        apply(windows: windows)
     }
 
-    func apply(windows: [NSWindow]) {
-        for window in windows {
-            if isConcealed {
-                window.orderOut(nil)
-            } else {
-                window.orderFrontRegardless()
-            }
-        }
+    func setConcealed(_ concealed: Bool) {
+        isConcealed = concealed
     }
 }
