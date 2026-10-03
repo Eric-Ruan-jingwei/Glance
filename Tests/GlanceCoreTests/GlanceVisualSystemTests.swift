@@ -94,6 +94,26 @@ final class GlanceVisualSystemTests: XCTestCase {
         XCTAssertEqual(model.emptyKind, .loading)
     }
 
+    func testShowsBatchToolbarFollowsSelectionAndEmptyKind() {
+        let model = PanelLibraryModel()
+        XCTAssertFalse(model.showsBatchToolbar)
+
+        let summary = dummySummary(workspaceID: WorkspaceRecord.defaultID)
+        model.summaries = [summary]
+        XCTAssertFalse(model.showsBatchToolbar)
+
+        model.selectedPanelIDs = [summary.id]
+        XCTAssertTrue(model.showsBatchToolbar)
+
+        model.selectedPanelIDs = []
+        XCTAssertFalse(model.showsBatchToolbar)
+
+        model.selectedPanelIDs = [summary.id]
+        model.summaries = []
+        XCTAssertEqual(model.emptyKind, .emptyWorkspace)
+        XCTAssertFalse(model.showsBatchToolbar)
+    }
+
     func testMarkdownPreviewUsesHeadingHierarchy() {
         let rich = MarkdownPreviewAppearance.nsAttributedString(
             from: "# Title\n\n## Subtitle\n\nbody text\n\n> quoted\n\n`code`"
