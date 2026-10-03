@@ -39,6 +39,27 @@ final class PanelTagEditorSession: ObservableObject {
         errorMessage = nil
     }
 
+    /// Parses draft plus pending input into the tags that Save should persist.
+    /// Does not mutate `draft` or `input`.
+    func tagsForCommit() throws -> [String] {
+        var tags = draft
+        if !input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            tags.append(contentsOf: PanelTags.parseInput(input))
+        }
+        return try PanelTags.validated(tags)
+    }
+
+    func attemptCommit() -> Result<[String], Error> {
+        do {
+            let tags = try tagsForCommit()
+            errorMessage = nil
+            return .success(tags)
+        } catch {
+            errorMessage = (error as? LocalizedError)?.errorDescription ?? "无法保存标签。"
+            return .failure(error)
+        }
+    }
+
     private func add(_ tags: [String]) {
         errorMessage = nil
         guard !tags.isEmpty else { return }
@@ -53,7 +74,19 @@ final class PanelTagEditorSession: ObservableObject {
 enum PanelTagEditorPrompt {
     static func runModal(currentTags: [String], catalog: [String]) -> PanelTagEditorPromptResult {
         let session = PanelTagEditorSession(tags: currentTags, catalog: catalog)
-        let hosting = NSHostingController(rootView: PanelTagEditorView(session: session))
+        var committedTags: [String]?
+        let hosting = NSHostingController(
+            rootView: PanelTagEditorView(
+                session: session,
+                onSave: { tags in
+                    committedTags = tags
+                    NSApp.stopModal(withCode: .OK)
+                },
+                onCancel: {
+                    NSApp.stopModal(withCode: .cancel)
+                }
+            )
+        )
         hosting.view.frame = NSRect(x: 0, y: 0, width: 440, height: 360)
         let window = NSWindow(contentViewController: hosting)
         window.title = "编辑标签"
@@ -67,8 +100,8 @@ enum PanelTagEditorPrompt {
         window.delegate = nil
         window.close()
         _ = delegate
-        if response == .OK {
-            return .submitted(session.draft)
+        if response == .OK, let tags = committedTags {
+            return .submitted(tags)
         }
         return .cancelled
     }
@@ -98,6 +131,8 @@ private final class CloseCancelsModalDelegate: NSObject, NSWindowDelegate {
 
 private struct PanelTagEditorView: View {
     @ObservedObject var session: PanelTagEditorSession
+    let onSave: ([String]) -> Void
+    let onCancel: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -148,11 +183,13 @@ private struct PanelTagEditorView: View {
             HStack {
                 Spacer()
                 Button("取消") {
-                    NSApp.stopModal(withCode: .cancel)
+                    onCancel()
                 }
                 .keyboardShortcut(.cancelAction)
                 Button("保存") {
-                    NSApp.stopModal(withCode: .OK)
+                    if case .success(let tags) = session.attemptCommit() {
+                        onSave(tags)
+                    }
                 }
                 .keyboardShortcut(.defaultAction)
             }
