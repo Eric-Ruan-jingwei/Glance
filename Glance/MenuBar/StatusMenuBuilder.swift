@@ -25,26 +25,26 @@ enum StatusMenuBuilder {
         onSettings: @escaping () -> Void,
         onOpenGuide: @escaping () -> Void = {},
         onQuit: @escaping () -> Void,
-        shortcuts: [ShortcutAction: GlanceShortcut] = ShortcutDefaults.all,
+        shortcuts: [ShortcutAction: GlanceShortcut] = [:],
         diagnostic: PersistenceDiagnostic? = nil,
         onShowDiagnostic: @escaping () -> Void = {}
     ) {
         menu.removeAllItems()
 
-        let quickCapture = shortcuts[.quickCapture] ?? ShortcutDefaults.quickCapture
-        let globalSearch = shortcuts[.globalSearch] ?? ShortcutDefaults.globalSearch
-        let clipboardHistory = shortcuts[.clipboardHistory] ?? ShortcutDefaults.clipboardHistory
-        let fileShelf = shortcuts[.fileShelf] ?? ShortcutDefaults.fileShelf
-        let snippets = shortcuts[.snippets] ?? ShortcutDefaults.snippets
-        let links = shortcuts[.links] ?? ShortcutDefaults.links
+        let quickCapture = menuKey(shortcuts[.quickCapture])
+        let globalSearch = menuKey(shortcuts[.globalSearch])
+        let clipboardHistory = menuKey(shortcuts[.clipboardHistory])
+        let fileShelf = menuKey(shortcuts[.fileShelf])
+        let snippets = menuKey(shortcuts[.snippets])
+        let links = menuKey(shortcuts[.links])
 
         menu.addItem(
             actionItem(
                 "快速记录…",
                 onQuickCapture,
                 symbol: "square.and.pencil",
-                keyEquivalent: ShortcutDisplayFormatter.keyEquivalent(quickCapture),
-                modifiers: MacShortcutAdapter.menuModifierMask(for: quickCapture)
+                keyEquivalent: quickCapture.keyEquivalent,
+                modifiers: quickCapture.modifiers
             )
         )
         menu.addItem(
@@ -52,8 +52,8 @@ enum StatusMenuBuilder {
                 "搜索 Glance…",
                 onShowGlobalSearch,
                 symbol: "magnifyingglass",
-                keyEquivalent: ShortcutDisplayFormatter.keyEquivalent(globalSearch),
-                modifiers: MacShortcutAdapter.menuModifierMask(for: globalSearch)
+                keyEquivalent: globalSearch.keyEquivalent,
+                modifiers: globalSearch.modifiers
             )
         )
         menu.addItem(.separator())
@@ -62,8 +62,8 @@ enum StatusMenuBuilder {
                 "剪贴板…",
                 onShowClipboardHistory,
                 symbol: "list.clipboard",
-                keyEquivalent: ShortcutDisplayFormatter.keyEquivalent(clipboardHistory),
-                modifiers: MacShortcutAdapter.menuModifierMask(for: clipboardHistory)
+                keyEquivalent: clipboardHistory.keyEquivalent,
+                modifiers: clipboardHistory.modifiers
             )
         )
         menu.addItem(
@@ -71,8 +71,8 @@ enum StatusMenuBuilder {
                 "文件架…",
                 onShowFileShelf,
                 symbol: "tray",
-                keyEquivalent: ShortcutDisplayFormatter.keyEquivalent(fileShelf),
-                modifiers: MacShortcutAdapter.menuModifierMask(for: fileShelf)
+                keyEquivalent: fileShelf.keyEquivalent,
+                modifiers: fileShelf.modifiers
             )
         )
         menu.addItem(
@@ -80,8 +80,8 @@ enum StatusMenuBuilder {
                 "片段库…",
                 onShowSnippets,
                 symbol: "text.quote",
-                keyEquivalent: ShortcutDisplayFormatter.keyEquivalent(snippets),
-                modifiers: MacShortcutAdapter.menuModifierMask(for: snippets)
+                keyEquivalent: snippets.keyEquivalent,
+                modifiers: snippets.modifiers
             )
         )
         menu.addItem(
@@ -89,8 +89,8 @@ enum StatusMenuBuilder {
                 "链接库…",
                 onShowLinks,
                 symbol: "link",
-                keyEquivalent: ShortcutDisplayFormatter.keyEquivalent(links),
-                modifiers: MacShortcutAdapter.menuModifierMask(for: links)
+                keyEquivalent: links.keyEquivalent,
+                modifiers: links.modifiers
             )
         )
         menu.addItem(
@@ -137,8 +137,8 @@ enum StatusMenuBuilder {
         onNewPDF: @escaping () -> Void,
         onToggleVisibility: @escaping () -> Void
     ) -> NSMenuItem {
-        let clipboardCapture = shortcuts[.clipboardCapture] ?? ShortcutDefaults.clipboardCapture
-        let hideShow = shortcuts[.hideShow] ?? ShortcutDefaults.hideShow
+        let clipboardCapture = menuKey(shortcuts[.clipboardCapture])
+        let hideShow = menuKey(shortcuts[.hideShow])
 
         let item = NSMenuItem(title: "面板", action: nil, keyEquivalent: "")
         item.image = GlanceTheme.menuSymbol("pin")
@@ -156,8 +156,8 @@ enum StatusMenuBuilder {
                 "从当前剪贴板创建…",
                 onCaptureClipboard,
                 symbol: "doc.on.clipboard",
-                keyEquivalent: ShortcutDisplayFormatter.keyEquivalent(clipboardCapture),
-                modifiers: MacShortcutAdapter.menuModifierMask(for: clipboardCapture),
+                keyEquivalent: clipboardCapture.keyEquivalent,
+                modifiers: clipboardCapture.modifiers,
                 enabled: clipboardCaptureEnabled
             )
         )
@@ -173,8 +173,8 @@ enum StatusMenuBuilder {
                 allHidden ? "显示全部" : "隐藏全部",
                 onToggleVisibility,
                 symbol: allHidden ? "eye" : "eye.slash",
-                keyEquivalent: ShortcutDisplayFormatter.keyEquivalent(hideShow),
-                modifiers: MacShortcutAdapter.menuModifierMask(for: hideShow)
+                keyEquivalent: hideShow.keyEquivalent,
+                modifiers: hideShow.modifiers
             )
         )
         item.submenu = submenu
@@ -222,6 +222,14 @@ enum StatusMenuBuilder {
         submenu.addItem(actionItem("PDF…", onNewPDF, symbol: PanelKindSymbol.name(for: PanelKind.pdf)))
         item.submenu = submenu
         return item
+    }
+
+    private static func menuKey(_ shortcut: GlanceShortcut?) -> (keyEquivalent: String, modifiers: NSEvent.ModifierFlags) {
+        guard let shortcut else { return ("", []) }
+        return (
+            ShortcutDisplayFormatter.keyEquivalent(shortcut),
+            MacShortcutAdapter.menuModifierMask(for: shortcut)
+        )
     }
 
     private static func actionItem(

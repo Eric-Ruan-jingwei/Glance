@@ -70,7 +70,8 @@ final class GlanceGlobalShortcutTests: XCTestCase {
             onNewImage: {},
             onToggleVisibility: {},
             onSettings: {},
-            onQuit: {}
+            onQuit: {},
+            shortcuts: ShortcutDefaults.all
         )
     }
 }

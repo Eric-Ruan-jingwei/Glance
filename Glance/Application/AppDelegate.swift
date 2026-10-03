@@ -46,7 +46,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 onShowLinks: { [weak self] in self?.toggleLinks() },
                 onShowGlobalSearch: { [weak self] in self?.toggleGlobalSearch() },
                 shortcutSnapshot: { [weak environment] in
-                    environment?.shortcutCoordinator.shortcuts ?? ShortcutDefaults.all
+                    environment?.shortcutCoordinator.shortcuts ?? [:]
                 }
             )
             statusBar.install()

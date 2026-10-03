@@ -122,7 +122,8 @@ final class ClipboardCaptureTests: XCTestCase {
             onNewImage: {},
             onToggleVisibility: {},
             onSettings: {},
-            onQuit: {}
+            onQuit: {},
+            shortcuts: ShortcutDefaults.all
         )
         let item = GlanceMenuQuery.item(titled: "从当前剪贴板创建…", in: menu)
         XCTAssertNil(menu.items.first { $0.title == "从当前剪贴板创建…" })

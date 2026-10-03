@@ -461,7 +461,8 @@ final class ClipboardHistoryStoreAndServiceTests: XCTestCase {
             onNewImage: {},
             onToggleVisibility: {},
             onSettings: {},
-            onQuit: {}
+            onQuit: {},
+            shortcuts: ShortcutDefaults.all
         )
         XCTAssertEqual(menu.items[0].title, "快速记录…")
         XCTAssertEqual(menu.items.first { $0.title == "剪贴板…" }?.title, "剪贴板…")
