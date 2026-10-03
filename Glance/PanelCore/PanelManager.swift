@@ -73,20 +73,32 @@ final class PanelManager {
         let screen = DisplayManager.screenContainingMouse()
         NSApp.activate(ignoringOtherApps: true)
         guard let url = MacPDFImporter.chooseFile() else { return }
-        do {
-            try importPDF(from: url, preferredScreen: screen)
-        } catch {
-            presentPDFImportAlert(error)
-        }
+        Task { await importPDFResponding(from: url, preferredScreen: screen) }
     }
 
     func importPDF(from sourceURL: URL, preferredScreen: NSScreen? = nil) throws {
-        let metadata = try MacPDFImporter.inspect(sourceURL)
+        let metadata = try PDFDocumentInspector.inspect(sourceURL)
         try materializePanel(
             kindIdentifier: PanelKind.pdf,
             preferredScreen: preferredScreen
         ) { directory in
             try PDFPayloadFile.importDocument(from: sourceURL, metadata: metadata, to: directory)
+        }
+    }
+
+    func importPDFResponding(from sourceURL: URL, preferredScreen: NSScreen? = nil) async {
+        do {
+            let metadata = try await Task.detached(priority: .userInitiated) {
+                try PDFDocumentInspector.inspect(sourceURL)
+            }.value
+            try await materializePDFPanel(
+                from: sourceURL,
+                metadata: metadata,
+                preferredScreen: preferredScreen
+            )
+        } catch {
+            NSLog("Glance PDF: import failed: %@", error.localizedDescription)
+            presentPDFImportAlert(error)
         }
     }
 
@@ -316,6 +328,43 @@ final class PanelManager {
         notifyPanelsDidChange()
     }
 
+    private func materializePDFPanel(
+        from sourceURL: URL,
+        metadata: PDFDocumentMetadata,
+        preferredScreen: NSScreen?
+    ) async throws {
+        let id = UUID()
+        let size = PanelProviderRegistry.defaultSize(for: PanelKind.pdf)
+        let screen = preferredScreen ?? DisplayManager.screenContainingMouse()
+        let nsFrame = placement.frameForNewPanel(
+            size: size,
+            existingFrames: framesForPlacement(),
+            on: screen
+        )
+        let payloadPath = environment.payloadStore.relativePath(for: id)
+        let record = PanelRecord(
+            id: id,
+            kindIdentifier: PanelKind.pdf,
+            frame: PanelFrame(nsFrame),
+            displayIdentifier: DisplayManager.identifier(for: screen),
+            payloadPath: payloadPath,
+            payloadVersion: PanelProviderRegistry.payloadVersion(for: PanelKind.pdf),
+            workspaceID: workspaceIDForNewPanel()
+        )
+        let directory = try environment.payloadStore.directory(for: id)
+        do {
+            try await Task.detached(priority: .userInitiated) {
+                try PDFPayloadFile.importDocument(from: sourceURL, metadata: metadata, to: directory)
+            }.value
+            try environment.repository.insert(record)
+        } catch {
+            environment.payloadStore.delete(id: id)
+            throw error
+        }
+        present(record: record)
+        notifyPanelsDidChange()
+    }
+
     @discardableResult
     func hidePanel(id: UUID) -> Bool {
         setPanelHidden(true, id: id)
@@ -418,13 +467,23 @@ final class PanelManager {
         }
     }
 
-    func panelSummaries() -> [PanelSummary] {
+    func summaryInputs() -> [PanelSummaryInput] {
         let records = (try? environment.repository.all()) ?? []
         return records.map { record in
-            let directory = environment.payloadStore.panelsRoot
-                .appendingPathComponent(record.id.uuidString, isDirectory: true)
-            return PanelSummaryBuilder.summarize(record: record, payloadDirectory: directory)
+            PanelSummaryInput(
+                record: record,
+                payloadDirectory: environment.payloadStore.panelsRoot
+                    .appendingPathComponent(record.id.uuidString, isDirectory: true)
+            )
         }
+    }
+
+    func panelSummaries() -> [PanelSummary] {
+        summaryInputs().map { PanelSummaryBuilder.summarize(input: $0) }
+    }
+
+    func persistenceDiagnostic() -> PersistenceDiagnostic? {
+        PersistenceDiagnostic.from(outcome: environment.repository.lastLoadOutcome)
     }
 
     func revealPanel(id: UUID) {

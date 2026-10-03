@@ -6,7 +6,8 @@ final class PanelLibraryWindowController: NSWindowController, NSWindowDelegate {
 
     convenience init(panelManager: PanelManager) {
         let model = PanelLibraryModel()
-        model.loadSummaries = { panelManager.panelSummaries() }
+        model.loadSummaryInputs = { panelManager.summaryInputs() }
+        model.summaryLoader = PanelSummaryLoader()
         model.loadWorkspaces = { panelManager.workspaces() }
         model.loadActiveWorkspaceID = { panelManager.activeWorkspaceID }
         model.switchWorkspace = { id in
@@ -82,5 +83,9 @@ final class PanelLibraryWindowController: NSWindowController, NSWindowDelegate {
 
     func windowDidBecomeKey(_ notification: Notification) {
         model.reload()
+    }
+
+    func windowWillClose(_ notification: Notification) {
+        model.cancelSummaryLoading()
     }
 }

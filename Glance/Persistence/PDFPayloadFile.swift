@@ -55,10 +55,14 @@ enum PDFPayloadFile {
         }
     }
 
-    static func copyDocument(from source: URL, to directory: URL) throws {
+    static func copyDocument(
+        from source: URL,
+        to directory: URL,
+        copyItem: (URL, URL) throws -> Void = { try FileManager.default.copyItem(at: $0, to: $1) }
+    ) throws {
         let destination = documentURL(in: directory)
         do {
-            try FileManager.default.copyItem(at: source, to: destination)
+            try copyItem(source, destination)
         } catch {
             throw PDFImportError.copyFailed
         }
@@ -67,9 +71,10 @@ enum PDFPayloadFile {
     static func importDocument(
         from source: URL,
         metadata: PDFDocumentMetadata,
-        to directory: URL
+        to directory: URL,
+        copyItem: (URL, URL) throws -> Void = { try FileManager.default.copyItem(at: $0, to: $1) }
     ) throws {
-        try copyDocument(from: source, to: directory)
+        try copyDocument(from: source, to: directory, copyItem: copyItem)
         try writeMetadata(metadata, to: directory)
     }
 }

@@ -59,7 +59,20 @@ final class StatusBarController: NSObject, NSMenuDelegate {
             onQuit: {
                 NSApp.terminate(nil)
             },
-            shortcuts: shortcutSnapshot()
+            shortcuts: shortcutSnapshot(),
+            diagnostic: manager.persistenceDiagnostic(),
+            onShowDiagnostic: { [weak self] in self?.presentPersistenceDiagnostic() }
         )
+    }
+
+    private func presentPersistenceDiagnostic() {
+        guard let diagnostic = manager.persistenceDiagnostic() else { return }
+        let alert = NSAlert()
+        alert.alertStyle = .informational
+        alert.messageText = diagnostic.alertMessage
+        alert.informativeText = diagnostic.alertInformative
+        alert.addButton(withTitle: "好")
+        NSApp.activate(ignoringOtherApps: true)
+        alert.runModal()
     }
 }

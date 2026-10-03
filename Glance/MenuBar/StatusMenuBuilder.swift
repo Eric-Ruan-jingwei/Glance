@@ -19,7 +19,9 @@ enum StatusMenuBuilder {
         onToggleVisibility: @escaping () -> Void,
         onSettings: @escaping () -> Void,
         onQuit: @escaping () -> Void,
-        shortcuts: [ShortcutAction: GlanceShortcut] = ShortcutDefaults.all
+        shortcuts: [ShortcutAction: GlanceShortcut] = ShortcutDefaults.all,
+        diagnostic: PersistenceDiagnostic? = nil,
+        onShowDiagnostic: @escaping () -> Void = {}
     ) {
         menu.removeAllItems()
 
@@ -67,6 +69,10 @@ enum StatusMenuBuilder {
                 modifiers: MacShortcutAdapter.menuModifierMask(for: hideShow)
             )
         )
+        if let diagnostic {
+            menu.addItem(.separator())
+            menu.addItem(actionItem(diagnostic.menuTitle, onShowDiagnostic))
+        }
         menu.addItem(.separator())
         menu.addItem(actionItem("设置…", onSettings))
         menu.addItem(actionItem("退出", onQuit))
