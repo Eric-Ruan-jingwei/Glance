@@ -4,7 +4,7 @@
 
 A lightweight, local-first personal workspace for **macOS**.
 
-Glance keeps two kinds of work nearby: floating panels for things you need to keep seeing, and a local clipboard shelf for things you keep copying. Both stay on this machine.
+Glance keeps three kinds of work nearby: floating panels for things you need to keep seeing, a local clipboard shelf for things you keep copying, and a file shelf for files you will need again soon. File Shelf stores references, not copies. Removing a shelf item does not delete the original file. Everything stays on this machine.
 
 There is no Windows client yet. Shared data contracts are documented so a future Windows app can reuse them.
 
@@ -16,6 +16,7 @@ There is no Windows client yet. Shared data contracts are documented so a future
 - Text, Markdown, Todo, images, and PDF
 - Quick Capture from any app
 - Clipboard Shelf
+- File Shelf
 - Clipboard Capture
 - Customizable global shortcuts
 - First-run onboarding
@@ -33,6 +34,10 @@ There is no Windows client yet. Shared data contracts are documented so a future
 - No account
 - No cloud
 - Open source
+
+## V0.20.0
+
+File Shelf: drag files in, search recent and favorite references, open, reveal in Finder, Quick Look, copy, and drag out. Glance stores bookmarks, not copies of the files. Panel and Clipboard schemas are unchanged.
 
 ## V0.19.1
 
@@ -164,11 +169,14 @@ Clipboard Capture still creates a panel from whatever is on the system clipboard
 
 Clipboard Shelf is separate: after you turn on local recording, Glance keeps recent text and images, lets you favorite them, and writes a chosen item back to the system clipboard. It does not auto-paste.
 
+File Shelf is the file counterpart. Drag a file in, or add it with `+`. Glance stores a reference and a macOS bookmark, not a copy. You can search recent and favorite files, open them, reveal them in Finder, Quick Look them, copy them, or drag them back out. Removing a shelf item does not delete the original file.
+
 Default shortcuts:
 
 ```text
 Quick Capture                 ⌥⌘J
 Clipboard                     ⌥⌘V
+File Shelf                    ⌥⌘F
 Create from current clipboard ⌥⌘B
 Hide / Show                   ⌥⌘G
 ```
@@ -181,6 +189,7 @@ Status-item menu (defaults shown):
 快速记录…                  ⌥⌘J
 ────────────
 剪贴板…                    ⌥⌘V
+文件架…                    ⌥⌘F
 面板
   新建面板
     文字
@@ -348,13 +357,17 @@ Everything lives on disk. See [docs/architecture/data-format.md](docs/architectu
 │       ├── image.png
 │       ├── document.pdf
 │       └── pdf.json
-└── Clipboard/
-    ├── history.json         schemaVersion 1 clipboard shelf
-    └── Assets/
-        └── {item-id}.png
+├── Clipboard/
+│   ├── history.json         schemaVersion 1 clipboard shelf
+│   └── Assets/
+│       └── {item-id}.png
+└── FileShelf/
+    ├── shelf.json           schemaVersion 1 file references
+    └── Bookmarks/
+        └── {item-id}.bookmark
 ```
 
-Images and PDFs are copied into this directory. Deleting the original file does not blank the panel.
+Panel images and PDFs are copied into this directory. File Shelf stores only references and bookmarks; the original files stay where they are. Removing a File Shelf item does not delete the original file.
 
 There is no save button. Moves, resizes, and text edits are debounced and flushed on quit.
 

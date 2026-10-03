@@ -207,6 +207,19 @@ Clipboard/Assets/<uuid>.png
 
 The envelope is `{ "schemaVersion": 1, "items": [ ... ] }`. This schema is independent of `PanelDatabase.currentSchemaVersion`, which remains **5**. Future clipboard schemas are rejected without rewriting the file. Recording is off by default (`com.glance.clipboardHistory.enabled`).
 
+## File Shelf
+
+File Shelf is a separate data domain. It stores references to user files, not copies.
+
+```text
+FileShelf/shelf.json
+FileShelf/Bookmarks/<uuid>.bookmark
+```
+
+The envelope is `{ "schemaVersion": 1, "items": [ ... ] }`. This schema is independent of both Panel schema **5** and Clipboard schema **1**. Future File Shelf schemas are rejected without rewriting the file. Bookmark bytes stay in sidecar files, not in JSON. Removing a record deletes only the metadata and bookmark sidecar.
+
+Each item stores `id`, `originalPath`, `displayName`, `fileSize`, `contentTypeIdentifier`, `createdAt`, `lastUsedAt`, `isFavorite`, and `favoritedAt`. It does not store bookmark data, custom titles, tags, or workspace membership.
+
 ## Future clients
 
 Any future Windows (or other) client should read and write this JSON + RTF + Markdown + Todo JSON + PNG + PDF layout. Windowing, shortcuts, and tray code are platform-specific; the files are not.
