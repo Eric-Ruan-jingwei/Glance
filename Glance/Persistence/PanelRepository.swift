@@ -19,6 +19,7 @@ final class PanelRepository {
     typealias PrimaryMetadataWriter = (Data, URL) throws -> Void
 
     private var records: [UUID: PanelRecord] = [:]
+    private var workspaces: [String: WorkspaceRecord] = [:]
     private let fileURL: URL
     private let fileManager: FileManager
     private let writePrimaryMetadata: PrimaryMetadataWriter
@@ -51,6 +52,18 @@ final class PanelRepository {
         records[id]
     }
 
+    func allWorkspaces() throws -> [WorkspaceRecord] {
+        WorkspaceCatalog.sorted(Array(workspaces.values))
+    }
+
+    func workspace(id: String) throws -> WorkspaceRecord? {
+        workspaces[id]
+    }
+
+    func availableWorkspaceIDs() -> Set<String> {
+        Set(workspaces.keys)
+    }
+
     func insert(_ record: PanelRecord) throws {
         try assertMetadataWritable()
         let previous = records[record.id]
@@ -75,6 +88,105 @@ final class PanelRepository {
         }
     }
 
+    func createWorkspace(name: String) throws -> WorkspaceRecord {
+        try assertMetadataWritable()
+        let trimmed = try WorkspaceName.validate(name)
+        let existing = try allWorkspaces()
+        if WorkspaceName.isDuplicate(trimmed, among: existing) {
+            throw WorkspaceError.duplicateName
+        }
+        let now = Date()
+        let record = WorkspaceRecord(
+            id: UUID().uuidString,
+            name: trimmed,
+            createdAt: now,
+            updatedAt: now
+        )
+        workspaces[record.id] = record
+        do {
+            try save()
+            return record
+        } catch {
+            workspaces.removeValue(forKey: record.id)
+            throw error
+        }
+    }
+
+    func renameWorkspace(id: String, name: String) throws {
+        try assertMetadataWritable()
+        guard id != WorkspaceRecord.defaultID else {
+            throw WorkspaceError.cannotRenameDefault
+        }
+        guard var existing = workspaces[id] else {
+            throw WorkspaceError.workspaceNotFound
+        }
+        let trimmed = try WorkspaceName.validate(name)
+        if WorkspaceName.isDuplicate(trimmed, among: try allWorkspaces(), excluding: id) {
+            throw WorkspaceError.duplicateName
+        }
+        let previous = existing
+        existing.name = trimmed
+        existing.updatedAt = Date()
+        workspaces[id] = existing
+        do {
+            try save()
+        } catch {
+            workspaces[id] = previous
+            throw error
+        }
+    }
+
+    func deleteWorkspace(id: String) throws {
+        try assertMetadataWritable()
+        guard id != WorkspaceRecord.defaultID else {
+            throw WorkspaceError.cannotDeleteDefault
+        }
+        guard let existing = workspaces[id] else {
+            throw WorkspaceError.workspaceNotFound
+        }
+        let moved = records.values.filter { $0.workspaceID == id }
+        let snapshots = moved.map { panel in
+            PanelMembershipSnapshot(panel: panel, workspaceID: panel.workspaceID, updatedAt: panel.updatedAt)
+        }
+        for panel in moved {
+            panel.workspaceID = WorkspaceRecord.defaultID
+            touch(panel)
+        }
+        workspaces.removeValue(forKey: id)
+        do {
+            try save()
+        } catch {
+            workspaces[id] = existing
+            for snapshot in snapshots {
+                snapshot.panel.workspaceID = snapshot.workspaceID
+                snapshot.panel.updatedAt = snapshot.updatedAt
+            }
+            throw error
+        }
+    }
+
+    func movePanel(id: UUID, toWorkspaceID: String) throws {
+        try assertMetadataWritable()
+        guard let panel = records[id] else {
+            throw WorkspaceError.panelNotFound
+        }
+        guard workspaces[toWorkspaceID] != nil else {
+            throw WorkspaceError.workspaceNotFound
+        }
+        guard panel.workspaceID != toWorkspaceID else { return }
+        let previousWorkspaceID = panel.workspaceID
+        let previousUpdatedAt = panel.updatedAt
+        panel.workspaceID = toWorkspaceID
+        touch(panel)
+        do {
+            try save()
+        } catch {
+            panel.workspaceID = previousWorkspaceID
+            panel.updatedAt = previousUpdatedAt
+            throw error
+        }
+    }
+
     func save() throws {
         if case .unsupportedFutureSchema(let version) = lastLoadOutcome {
             NSLog(
@@ -84,8 +196,10 @@ final class PanelRepository {
             )
             return
         }
+        ensureDefaultWorkspace()
         let database = PanelDatabase(
             schemaVersion: PanelDatabase.currentSchemaVersion,
+            workspaces: try allWorkspaces(),
             panels: records.values.sorted { $0.createdAt < $1.createdAt }
         )
         let data = try PanelDatabaseCodec.encode(database)
@@ -137,6 +251,8 @@ final class PanelRepository {
         }
 
         records = [:]
+        workspaces = [:]
+        ensureDefaultWorkspace()
         lastLoadOutcome = primaryExisted ? .quarantinedCorruptAndEmpty : .missing
         if lastLoadOutcome == .quarantinedCorruptAndEmpty {
             NSLog("Glance persistence: starting with empty database after corrupt metadata")
@@ -155,7 +271,8 @@ final class PanelRepository {
         do {
             let data = try Data(contentsOf: url)
             let decoded = try PanelDatabaseCodec.decode(from: data)
-            let deduped = PanelDatabaseCodec.deduplicate(decoded.database.panels)
+            let normalized = PanelDatabaseNormalizer.normalize(decoded.database)
+            let deduped = PanelDatabaseCodec.deduplicate(normalized.panels)
             if deduped.duplicateCount > 0 {
                 NSLog(
                     "Glance persistence: dropped %d duplicate panel UUID(s), keeping newest updatedAt",
@@ -163,10 +280,16 @@ final class PanelRepository {
                 )
             }
             records = Dictionary(uniqueKeysWithValues: deduped.panels.map { ($0.id, $0) })
+            workspaces = Dictionary(
+                normalized.workspaces.map { ($0.id, $0) },
+                uniquingKeysWith: { first, _ in first }
+            )
+            ensureDefaultWorkspace()
             lastLoadOutcome = .loaded(migratedFromLegacy: decoded.migratedFromLegacy)
             return .ok(migratedFromLegacy: decoded.migratedFromLegacy)
         } catch PanelDatabaseError.unsupportedFutureSchema(let version) {
             records = [:]
+            workspaces = [:]
             lastLoadOutcome = .unsupportedFutureSchema(version)
             NSLog(
                 "Glance persistence: %@ uses schema %d; this app supports schema %d. Leaving the file untouched and skipping write-back.",
@@ -186,6 +309,12 @@ final class PanelRepository {
             records[id] = previous
         } else {
             records.removeValue(forKey: id)
+        }
+    }
+
+    private func ensureDefaultWorkspace(at date: Date = Date()) {
+        if workspaces[WorkspaceRecord.defaultID] == nil {
+            workspaces[WorkspaceRecord.defaultID] = WorkspaceRecord.makeDefault(at: date)
         }
     }
 
@@ -218,4 +347,10 @@ final class PanelRepository {
             }
         }
     }
+}
+
+private struct PanelMembershipSnapshot {
+    let panel: PanelRecord
+    let workspaceID: String
+    let updatedAt: Date
 }
