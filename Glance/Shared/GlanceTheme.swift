@@ -175,10 +175,23 @@ extension View {
     }
 }
 
-struct GlanceEmptyState: View {
+struct GlanceEmptyState<Footer: View>: View {
     var symbol: String
     var title: String
     var detail: String
+    var footer: Footer
+
+    init(
+        symbol: String,
+        title: String,
+        detail: String,
+        @ViewBuilder footer: () -> Footer
+    ) {
+        self.symbol = symbol
+        self.title = title
+        self.detail = detail
+        self.footer = footer()
+    }
 
     var body: some View {
         VStack(spacing: GlanceTheme.Space.sm) {
@@ -192,10 +205,19 @@ struct GlanceEmptyState: View {
                 .font(.callout)
                 .foregroundStyle(.tertiary)
                 .multilineTextAlignment(.center)
+            footer
         }
         .frame(maxWidth: 280)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .padding(GlanceTheme.Space.xl)
+    }
+}
+
+extension GlanceEmptyState where Footer == EmptyView {
+    init(symbol: String, title: String, detail: String) {
+        self.init(symbol: symbol, title: title, detail: detail) {
+            EmptyView()
+        }
     }
 }
 

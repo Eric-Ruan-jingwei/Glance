@@ -71,7 +71,18 @@ struct PanelLibraryView: View {
                             symbol: "square.stack",
                             title: GlanceEmptyCopy.workspaceTitle,
                             detail: GlanceEmptyCopy.workspaceDetail
-                        )
+                        ) {
+                            if PanelLibraryCreatePresentation.showsCreateCTA(for: .emptyWorkspace) {
+                                Menu {
+                                    panelCreationMenuItems
+                                } label: {
+                                    Text(GlanceRowActionCopy.createPanel)
+                                }
+                                .help(GlanceRowActionCopy.createPanel)
+                                .accessibilityLabel(GlanceRowActionCopy.createPanel)
+                                .padding(.top, GlanceTheme.Space.sm)
+                            }
+                        }
                     case .noSearchResults:
                         GlanceEmptyState(
                             symbol: "magnifyingglass",
@@ -96,7 +107,13 @@ struct PanelLibraryView: View {
                                         onHide: { model.hidePanel(summary.id) },
                                         onRename: { model.promptRename(summary) },
                                         onEditTags: { model.promptEditTags(summary) },
-                                        onDelete: { model.confirmDelete(summary.id) },
+                                        onDelete: {
+                                            PanelLibraryRowQuickAction.requestDelete(
+                                                summary.id,
+                                                confirmDelete: { model.confirmDelete($0) },
+                                                delete: { _ = model.delete($0) }
+                                            )
+                                        },
                                         onOpenFolder: { model.openPayloadFolder(summary.id) },
                                         onMove: { model.movePanelToWorkspace(summary.id, workspaceID: $0) }
                                     )
@@ -148,6 +165,15 @@ struct PanelLibraryView: View {
                         .pickerStyle(.segmented)
                         .controlSize(.small)
                         .frame(maxWidth: 340)
+                    }
+                    ToolbarItem {
+                        Menu {
+                            panelCreationMenuItems
+                        } label: {
+                            Label(GlanceRowActionCopy.createPanel, systemImage: "plus")
+                        }
+                        .help(GlanceRowActionCopy.createPanel)
+                        .accessibilityLabel(GlanceRowActionCopy.createPanel)
                     }
                     ToolbarItem {
                         Menu {
@@ -228,6 +254,17 @@ struct PanelLibraryView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: .glanceWorkspaceDidChange)) { _ in
             model.reload()
+        }
+    }
+
+    @ViewBuilder
+    private var panelCreationMenuItems: some View {
+        ForEach(PanelCreationKind.allCases, id: \.self) { kind in
+            Button {
+                model.createPanel(kind)
+            } label: {
+                Label(kind.title, systemImage: kind.symbolName)
+            }
         }
     }
 
@@ -386,47 +423,30 @@ private struct PanelLibraryRow: View {
             .layoutPriority(0)
 
             Spacer(minLength: GlanceTheme.Space.sm)
-
-            HStack(spacing: GlanceTheme.Space.xs) {
-                Button(PanelVisibilityMenu.libraryActionTitle(isHidden: summary.isHidden), action: primaryAction)
-                    .controlSize(.small)
-                    .opacity(showsSecondaryActions ? 1 : 0)
-                    .allowsHitTesting(showsSecondaryActions)
-                Menu {
-                    Button(PanelVisibilityMenu.libraryActionTitle(isHidden: summary.isHidden), action: primaryAction)
-                    Button("重命名…", action: onRename)
-                    Button("编辑标签…", action: onEditTags)
-                    Menu(PanelVisibilityMenu.moveToWorkspace) {
-                        ForEach(workspaces) { workspace in
-                            Button {
-                                onMove(workspace.id)
-                            } label: {
-                                if workspace.id == summary.workspaceID {
-                                    Label(workspace.name, systemImage: "checkmark")
-                                } else {
-                                    Text(workspace.name)
-                                }
-                            }
-                        }
+        }
+        .overlay(alignment: .trailing) {
+            GlanceRowQuickActionOverlay(
+                showsPersistent: false,
+                showsSecondary: showsSecondaryActions
+            ) {
+                EmptyView()
+            } secondary: {
+                HStack(spacing: 0) {
+                    GlanceRowIconButton(
+                        systemName: PanelLibraryQuickAction.visibilitySymbol(isHidden: summary.isHidden),
+                        help: PanelLibraryQuickAction.visibilityHelp(isHidden: summary.isHidden),
+                        action: primaryAction
+                    )
+                    GlanceRowIconButton(
+                        systemName: PanelLibraryQuickAction.deleteSymbol,
+                        help: GlanceRowActionCopy.delete,
+                        action: onDelete
+                    )
+                    GlanceRowMoreButton(visible: true) {
+                        moreMenuItems
                     }
-                    Divider()
-                    Button("打开数据文件夹", action: onOpenFolder)
-                    Divider()
-                    Button("删除", role: .destructive, action: onDelete)
-                } label: {
-                    Image(systemName: "ellipsis")
-                        .foregroundStyle(.secondary)
-                        .frame(width: 22, height: 22)
                 }
-                .accessibilityLabel("更多操作")
-                .menuIndicator(.hidden)
-                .fixedSize()
-                .buttonStyle(.borderless)
-                .opacity(showsSecondaryActions ? 1 : 0)
-                .allowsHitTesting(showsSecondaryActions)
             }
-            .layoutPriority(1)
-            .fixedSize(horizontal: true, vertical: false)
         }
         .padding(.vertical, GlanceTheme.Space.xxs)
         .onHover { isHovered = $0 }
@@ -434,10 +454,37 @@ private struct PanelLibraryRow: View {
             reduceMotion ? nil : .easeInOut(duration: GlanceMotion.duration),
             value: showsSecondaryActions
         )
+        .contextMenu {
+            moreMenuItems
+        }
     }
 
     private var showsSecondaryActions: Bool {
-        isHovered || isSelected
+        GlanceRowQuickActionVisibility.showsSecondary(isHovered: isHovered, isSelected: isSelected)
+    }
+
+    @ViewBuilder
+    private var moreMenuItems: some View {
+        Button(PanelVisibilityMenu.libraryActionTitle(isHidden: summary.isHidden), action: primaryAction)
+        Button("重命名…", action: onRename)
+        Button("编辑标签…", action: onEditTags)
+        Menu(PanelVisibilityMenu.moveToWorkspace) {
+            ForEach(workspaces) { workspace in
+                Button {
+                    onMove(workspace.id)
+                } label: {
+                    if workspace.id == summary.workspaceID {
+                        Label(workspace.name, systemImage: "checkmark")
+                    } else {
+                        Text(workspace.name)
+                    }
+                }
+            }
+        }
+        Divider()
+        Button("打开数据文件夹", action: onOpenFolder)
+        Divider()
+        Button("删除", role: .destructive, action: onDelete)
     }
 
     private var tagPreview: (shown: [String], overflow: Int) {
@@ -445,11 +492,12 @@ private struct PanelLibraryRow: View {
     }
 
     private func primaryAction() {
-        if summary.isHidden {
-            onReveal()
-        } else {
-            onHide()
-        }
+        PanelLibraryRowQuickAction.toggleVisibility(
+            isHidden: summary.isHidden,
+            id: summary.id,
+            hide: { _ in onHide() },
+            reveal: { _ in onReveal() }
+        )
     }
 
     private var kindAccessibilityLabel: String {

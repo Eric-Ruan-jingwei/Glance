@@ -44,6 +44,18 @@ final class PanelLibraryWindowController: NSWindowController, NSWindowDelegate {
         model.reveal = { panelManager.revealPanel(id: $0) }
         model.hide = { _ = panelManager.hidePanel(id: $0) }
         model.delete = { panelManager.deletePanel(id: $0) }
+        model.createPanel = { kind in
+            PanelLibraryCreateRouting.perform(
+                kind,
+                into: PanelLibraryCreateHooks(
+                    createText: { panelManager.createTextPanel() },
+                    createMarkdown: { panelManager.createMarkdownPanel() },
+                    createTodo: { panelManager.createTodoPanel() },
+                    createImage: { panelManager.createImagePanel() },
+                    createPDF: { panelManager.createPDFPanel() }
+                )
+            )
+        }
         model.openFolder = { panelManager.openPayloadFolder(id: $0) }
         model.rename = { id, title in
             try panelManager.setCustomTitle(id: id, title: title)

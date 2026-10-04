@@ -359,8 +359,12 @@ struct LinkLibraryView: View {
             List(model.displayed, selection: $model.selection) { record in
                 LinkRow(
                     record: record,
+                    isSelected: model.selection == record.id,
                     relativeNow: relativeNow,
-                    onTogglePin: { onTogglePin(record.id) }
+                    onOpen: { LinkRowQuickAction.open(record.id, using: onOpen) },
+                    onTogglePin: { LinkRowQuickAction.togglePin(record.id, using: onTogglePin) },
+                    onDelete: { LinkRowQuickAction.delete(record.id, using: onDelete) },
+                    moreMenu: { linkMenus(for: record) }
                 )
                 .id(record.id)
                 .contentShape(Rectangle())
@@ -375,21 +379,7 @@ struct LinkLibraryView: View {
                     model.selection = record.id
                 }
                 .contextMenu {
-                    Button(LinkCopy.openLabel) { onOpen(record.id) }
-                    Button(LinkCopy.copyLabel) { onCopy(record.id) }
-                    Button(LinkCopy.editLabel) { onEdit(record.id) }
-                    ForEach(GlanceItemActionPolicy.actions(for: .link(record)), id: \.identifier) { action in
-                        Button(action.title) {
-                            onPerformItemAction(action, record.id)
-                        }
-                        .accessibilityIdentifier(action.identifier)
-                    }
-                    Button(record.isPinned ? LinkCopy.unpinLabel : LinkCopy.pinLabel) {
-                        onTogglePin(record.id)
-                    }
-                    Button(LinkCopy.deleteLabel, role: .destructive) {
-                        onDelete(record.id)
-                    }
+                    linkMenus(for: record)
                 }
                 .listRowInsets(EdgeInsets(
                     top: GlanceTheme.Space.sm,
@@ -409,6 +399,25 @@ struct LinkLibraryView: View {
                     proxy.scrollTo(id, anchor: .center)
                 }
             }
+        }
+    }
+
+    @ViewBuilder
+    private func linkMenus(for record: LinkRecord) -> some View {
+        Button(LinkCopy.openLabel) { onOpen(record.id) }
+        Button(LinkCopy.copyLabel) { onCopy(record.id) }
+        Button(LinkCopy.editLabel) { onEdit(record.id) }
+        ForEach(GlanceItemActionPolicy.actions(for: .link(record)), id: \.identifier) { action in
+            Button(action.title) {
+                onPerformItemAction(action, record.id)
+            }
+            .accessibilityIdentifier(action.identifier)
+        }
+        Button(record.isPinned ? LinkCopy.unpinLabel : LinkCopy.pinLabel) {
+            onTogglePin(record.id)
+        }
+        Button(LinkCopy.deleteLabel, role: .destructive) {
+            onDelete(record.id)
         }
     }
 
@@ -465,15 +474,23 @@ private struct LinkDragOutModifier: ViewModifier {
     }
 }
 
-struct LinkRow: View {
+struct LinkRow<MoreMenu: View>: View {
     var record: LinkRecord
+    var isSelected: Bool
     var relativeNow: Date
+    var onOpen: () -> Void
     var onTogglePin: () -> Void
+    var onDelete: () -> Void
+    @ViewBuilder var moreMenu: () -> MoreMenu
+
+    @State private var isHovered = false
 
     var body: some View {
         HStack(alignment: .center, spacing: GlanceTheme.Space.md) {
             Image(systemName: "link")
+                .font(.system(size: 14, weight: .medium))
                 .foregroundStyle(.secondary)
+                .frame(width: 28, height: 28)
                 .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 2) {
                 Text(record.title)
@@ -489,15 +506,58 @@ struct LinkRow: View {
             Text(LinkRelativeDate.string(from: record.lastOpenedAt, now: relativeNow))
                 .font(.caption)
                 .foregroundStyle(.tertiary)
-            Button(action: onTogglePin) {
-                Image(systemName: record.isPinned ? "pin.fill" : "pin")
-                    .foregroundStyle(record.isPinned ? Color.accentColor : Color.secondary)
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(record.isPinned ? LinkCopy.unpinLabel : LinkCopy.pinLabel)
+                .padding(
+                    .trailing,
+                    GlanceRowQuickActionVisibility.dateTrailingPadding(
+                        isActive: record.isPinned,
+                        showsSecondary: showsSecondary
+                    )
+                )
+                .opacity(showsSecondary ? 0 : 1)
+                .allowsHitTesting(false)
         }
-        .accessibilityElement(children: .combine)
+        .overlay(alignment: .trailing) {
+            GlanceRowQuickActionOverlay(
+                showsPersistent: record.isPinned,
+                showsSecondary: showsSecondary
+            ) {
+                GlanceRowIconButton(
+                    systemName: "pin.fill",
+                    help: LinkCopy.unpinLabel,
+                    isActive: true,
+                    action: onTogglePin
+                )
+            } secondary: {
+                HStack(spacing: 0) {
+                    GlanceRowIconButton(
+                        systemName: "arrow.up.right.square",
+                        help: LinkCopy.openLabel,
+                        action: onOpen
+                    )
+                    GlanceRowIconButton(
+                        systemName: record.isPinned ? "pin.fill" : "pin",
+                        help: record.isPinned ? LinkCopy.unpinLabel : LinkCopy.pinLabel,
+                        isActive: record.isPinned,
+                        action: onTogglePin
+                    )
+                    GlanceRowIconButton(
+                        systemName: "trash",
+                        help: GlanceRowActionCopy.delete,
+                        action: onDelete
+                    )
+                    GlanceRowMoreButton(visible: true, menu: moreMenu)
+                }
+            }
+        }
+        .onHover { isHovered = $0 }
+        .animation(GlanceMotion.animation, value: showsSecondary)
+        .animation(GlanceMotion.animation, value: record.isPinned)
+        .accessibilityElement(children: .contain)
         .accessibilityLabel(accessibilitySummary)
+    }
+
+    private var showsSecondary: Bool {
+        GlanceRowQuickActionVisibility.showsSecondary(isHovered: isHovered, isSelected: isSelected)
     }
 
     private var accessibilitySummary: String {

@@ -53,6 +53,15 @@ final class PanelWindowController: NSWindowController, NSWindowDelegate {
             self.setPinned(!self.isPinned)
         }
         chrome.isPinned = record.isPinned
+        chrome.kindIdentifier = record.kindIdentifier
+        chrome.onHide = { [weak self] in
+            guard let self else { return }
+            PanelChromeCloseRouting.close(
+                id: self.recordID,
+                hide: { id in _ = self.environment.panelManager?.hidePanel(id: id) },
+                delete: { _ in }
+            )
+        }
         window.contentView = chrome
         collectionObserver = NotificationCenter.default.addObserver(
             forName: .glancePanelCollectionDidChange,

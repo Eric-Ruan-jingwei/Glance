@@ -243,10 +243,23 @@ struct FileShelfView: View {
                 let resolved = model.service.resolve(record.id)
                 FileShelfRow(
                     record: record,
+                    isSelected: model.selection == record.id,
                     missing: resolved.isMissing,
                     icon: model.icons.icon(for: record, path: resolved.urlPath ?? record.originalPath, missing: resolved.isMissing),
                     relativeNow: relativeNow,
-                    onToggleFavorite: { onToggleFavorite(record.id) }
+                    onPrimary: {
+                        FileShelfRowQuickAction.performPrimary(
+                            missing: resolved.isMissing,
+                            id: record.id,
+                            onOpen: onOpen,
+                            onRelink: onRelink
+                        )
+                    },
+                    onToggleFavorite: { onToggleFavorite(record.id) },
+                    onRemove: {
+                        FileShelfRowQuickAction.remove(record.id, using: onRemove)
+                    },
+                    moreMenu: { contextMenu(for: record, missing: resolved.isMissing, resolution: resolved) }
                 )
                 .id(record.id)
                 .contentShape(Rectangle())
@@ -396,12 +409,18 @@ private struct FileShelfDragModifier: ViewModifier {
     }
 }
 
-struct FileShelfRow: View {
+struct FileShelfRow<MoreMenu: View>: View {
     var record: FileShelfRecord
+    var isSelected: Bool
     var missing: Bool
     var icon: NSImage
     var relativeNow: Date
+    var onPrimary: () -> Void
     var onToggleFavorite: () -> Void
+    var onRemove: () -> Void
+    @ViewBuilder var moreMenu: () -> MoreMenu
+
+    @State private var isHovered = false
 
     var body: some View {
         HStack(alignment: .center, spacing: GlanceTheme.Space.md) {
@@ -421,15 +440,49 @@ struct FileShelfRow: View {
                     .lineLimit(1)
             }
             Spacer(minLength: GlanceTheme.Space.sm)
-            Button(action: onToggleFavorite) {
-                Image(systemName: record.isFavorite ? "star.fill" : "star")
-                    .foregroundStyle(record.isFavorite ? Color.accentColor : Color.secondary)
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(record.isFavorite ? FileShelfCopy.unfavoriteLabel : FileShelfCopy.favoriteLabel)
         }
-        .accessibilityElement(children: .combine)
+        .overlay(alignment: .trailing) {
+            GlanceRowQuickActionOverlay(
+                showsPersistent: record.isFavorite,
+                showsSecondary: showsSecondary
+            ) {
+                GlanceRowIconButton(
+                    systemName: "star.fill",
+                    help: FileShelfCopy.unfavoriteLabel,
+                    isActive: true,
+                    action: onToggleFavorite
+                )
+            } secondary: {
+                HStack(spacing: 0) {
+                    GlanceRowIconButton(
+                        systemName: FileShelfQuickAction.primarySymbol(missing: missing),
+                        help: FileShelfQuickAction.primaryHelp(missing: missing),
+                        action: onPrimary
+                    )
+                    GlanceRowIconButton(
+                        systemName: record.isFavorite ? "star.fill" : "star",
+                        help: record.isFavorite ? FileShelfCopy.unfavoriteLabel : FileShelfCopy.favoriteLabel,
+                        isActive: record.isFavorite,
+                        action: onToggleFavorite
+                    )
+                    GlanceRowIconButton(
+                        systemName: FileShelfQuickAction.removeSymbol,
+                        help: FileShelfCopy.removeLabel,
+                        action: onRemove
+                    )
+                    GlanceRowMoreButton(visible: true, menu: moreMenu)
+                }
+            }
+        }
+        .onHover { isHovered = $0 }
+        .animation(GlanceMotion.animation, value: showsSecondary)
+        .animation(GlanceMotion.animation, value: record.isFavorite)
+        .accessibilityElement(children: .contain)
         .accessibilityLabel(accessibilitySummary)
+    }
+
+    private var showsSecondary: Bool {
+        GlanceRowQuickActionVisibility.showsSecondary(isHovered: isHovered, isSelected: isSelected)
     }
 
     private var subtitle: String {

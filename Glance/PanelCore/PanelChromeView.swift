@@ -6,6 +6,7 @@ final class PanelChromeView: NSView {
     var onFinishMove: (() -> Void)?
     var onContextMenu: ((NSEvent) -> NSMenu)?
     var onPinToggle: (() -> Void)?
+    var onHide: (() -> Void)?
     var isInteractable: Bool = true
     var allowsMove: Bool = true {
         didSet { applyHover() }
@@ -23,12 +24,17 @@ final class PanelChromeView: NSView {
     var titleText: String = "" {
         didSet { titleLabel.stringValue = titleText }
     }
+    var kindIdentifier: String = PanelKind.text {
+        didSet { applyKindIcon() }
+    }
 
     private let effectView = NSVisualEffectView()
     let contentContainer = NSView()
     private let titleLabel = NSTextField(labelWithString: "")
+    private let kindIcon = NSImageView()
     private let lockBadge = NSImageView()
     private let pinButton = NSButton()
+    private let hideButton = NSButton()
     private let moreButton = NSButton()
     private let accessoryStack = NSStackView()
 
@@ -67,11 +73,24 @@ final class PanelChromeView: NSView {
         titleLabel.translatesAutoresizingMaskIntoConstraints = false
         addSubview(titleLabel)
 
+        kindIcon.imageScaling = .scaleProportionallyDown
+        kindIcon.contentTintColor = GlanceTheme.Fill.chromeForegroundQuiet
+        kindIcon.setAccessibilityLabel(PanelSummaryKindLabel.displayName(for: PanelKind.text))
+        kindIcon.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(kindIcon)
+        applyKindIcon()
+
         configureIconButton(
             pinButton,
             action: #selector(pinClicked),
             label: "置顶"
         )
+        configureIconButton(
+            hideButton,
+            action: #selector(hideClicked),
+            label: GlanceRowActionCopy.hidePanel
+        )
+        hideButton.image = GlanceTheme.chromeSymbol("xmark", accessibilityDescription: GlanceRowActionCopy.hidePanel)
         configureIconButton(
             moreButton,
             action: #selector(moreClicked),
@@ -90,6 +109,7 @@ final class PanelChromeView: NSView {
         accessoryStack.translatesAutoresizingMaskIntoConstraints = false
         accessoryStack.addArrangedSubview(lockBadge)
         accessoryStack.addArrangedSubview(pinButton)
+        accessoryStack.addArrangedSubview(hideButton)
         accessoryStack.addArrangedSubview(moreButton)
         addSubview(accessoryStack)
 
@@ -103,11 +123,15 @@ final class PanelChromeView: NSView {
             contentContainer.trailingAnchor.constraint(equalTo: effectView.trailingAnchor),
             contentContainer.topAnchor.constraint(equalTo: effectView.topAnchor, constant: chrome),
             contentContainer.bottomAnchor.constraint(equalTo: effectView.bottomAnchor),
-            titleLabel.leadingAnchor.constraint(equalTo: leadingAnchor, constant: GlanceTheme.Space.md),
+            titleLabel.leadingAnchor.constraint(equalTo: kindIcon.trailingAnchor, constant: GlanceTheme.Space.xs),
             titleLabel.centerYAnchor.constraint(
                 equalTo: topAnchor,
                 constant: chrome / 2
             ),
+            kindIcon.leadingAnchor.constraint(equalTo: leadingAnchor, constant: GlanceTheme.Space.sm),
+            kindIcon.centerYAnchor.constraint(equalTo: titleLabel.centerYAnchor),
+            kindIcon.widthAnchor.constraint(equalToConstant: 14),
+            kindIcon.heightAnchor.constraint(equalToConstant: 14),
             titleLabel.trailingAnchor.constraint(
                 lessThanOrEqualTo: accessoryStack.leadingAnchor,
                 constant: -GlanceTheme.Space.sm
@@ -118,6 +142,8 @@ final class PanelChromeView: NSView {
             lockBadge.heightAnchor.constraint(equalToConstant: GlanceTheme.Size.chromeButton),
             pinButton.widthAnchor.constraint(equalToConstant: GlanceTheme.Size.chromeButton),
             pinButton.heightAnchor.constraint(equalToConstant: GlanceTheme.Size.chromeButton),
+            hideButton.widthAnchor.constraint(equalToConstant: GlanceTheme.Size.chromeButton),
+            hideButton.heightAnchor.constraint(equalToConstant: GlanceTheme.Size.chromeButton),
             moreButton.widthAnchor.constraint(equalToConstant: GlanceTheme.Size.chromeButton),
             moreButton.heightAnchor.constraint(equalToConstant: GlanceTheme.Size.chromeButton)
         ])
@@ -287,13 +313,21 @@ final class PanelChromeView: NSView {
         lockBadge.alphaValue = showsLockBadge ? 1 : 0
         lockBadge.setAccessibilityElement(showsLockBadge)
         pinButton.isHidden = false
+        hideButton.isHidden = false
         moreButton.isHidden = false
         GlanceMotion.setAlpha(pinButton, (chromeActive || isPinned) ? 1 : 0)
+        GlanceMotion.setAlpha(hideButton, chromeActive ? 1 : 0)
         GlanceMotion.setAlpha(moreButton, chromeActive ? 1 : 0)
         pinButton.isEnabled = chromeActive || isPinned
+        hideButton.isEnabled = chromeActive
         moreButton.isEnabled = chromeActive
         pinButton.setAccessibilityElement(chromeActive || isPinned)
+        hideButton.setAccessibilityElement(chromeActive)
         moreButton.setAccessibilityElement(chromeActive)
+        kindIcon.alphaValue = chromeActive ? 1 : 0.72
+        kindIcon.contentTintColor = chromeActive
+            ? GlanceTheme.Fill.chromeForeground
+            : GlanceTheme.Fill.chromeForegroundQuiet
         pinButton.image = GlanceTheme.chromeSymbol(
             isPinned ? "star.fill" : "star",
             accessibilityDescription: isPinned ? "取消置顶" : "置顶"
@@ -302,6 +336,7 @@ final class PanelChromeView: NSView {
             ? NSColor.controlAccentColor
             : GlanceTheme.Fill.chromeForeground
         moreButton.contentTintColor = GlanceTheme.Fill.chromeForeground
+        hideButton.contentTintColor = GlanceTheme.Fill.chromeForeground
         applyShape()
         window?.invalidateShadow()
         window?.resetCursorRects()
@@ -329,6 +364,7 @@ final class PanelChromeView: NSView {
         button.action = action
         button.refusesFirstResponder = true
         button.setAccessibilityLabel(label)
+        button.toolTip = label
         button.translatesAutoresizingMaskIntoConstraints = false
     }
 
@@ -336,9 +372,20 @@ final class PanelChromeView: NSView {
         onPinToggle?()
     }
 
+    @objc private func hideClicked() {
+        onHide?()
+    }
+
     @objc private func moreClicked(_ sender: NSButton) {
         guard let event = NSApp.currentEvent, let menu = onContextMenu?(event) else { return }
         NSMenu.popUpContextMenu(menu, with: event, for: sender)
+    }
+
+    private func applyKindIcon() {
+        let symbol = PanelChromeCloseRouting.kindSymbolName(for: kindIdentifier)
+        let label = PanelSummaryKindLabel.displayName(for: kindIdentifier)
+        kindIcon.image = GlanceTheme.chromeSymbol(symbol, accessibilityDescription: label)
+        kindIcon.setAccessibilityLabel(label)
     }
 
     override func viewDidChangeEffectiveAppearance() {

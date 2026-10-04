@@ -27,6 +27,7 @@ final class PanelLibraryModel: ObservableObject {
     var reveal: (UUID) -> Void = { _ in }
     var hide: (UUID) -> Void = { _ in }
     var delete: (UUID) -> Bool = { _ in false }
+    var createPanel: (PanelCreationKind) -> Void = { _ in }
     var openFolder: (UUID) -> Void = { _ in }
     var rename: (UUID, String?) throws -> Void = { _, _ in }
     var setTags: (UUID, [String]) throws -> Void = { _, _ in }

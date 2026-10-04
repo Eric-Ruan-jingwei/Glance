@@ -2,7 +2,7 @@ import AppKit
 
 enum GlanceEmptyCopy {
     static let workspaceTitle = "这个工作区还是空的"
-    static let workspaceDetail = "从菜单栏新建面板，或用快速记录。"
+    static let workspaceDetail = "新建一个面板，开始使用这个工作区。"
     static let searchTitle = "没有找到面板"
     static let searchDetail = "试试别的关键词。"
     static let filterTitle = "没有符合筛选的面板"

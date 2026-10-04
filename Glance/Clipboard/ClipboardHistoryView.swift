@@ -204,8 +204,13 @@ struct ClipboardHistoryView: View {
                     isSelected: model.selection == record.id,
                     thumbnail: model.thumbnails.thumbnail(for: record, store: model.service.store),
                     relativeNow: relativeNow,
-                    onToggleFavorite: { onToggleFavorite(record.id) },
-                    onDelete: { onDelete(record.id) }
+                    onToggleFavorite: {
+                        ClipboardRowQuickAction.toggleFavorite(record.id, using: onToggleFavorite)
+                    },
+                    onDelete: {
+                        ClipboardRowQuickAction.delete(record.id, using: onDelete)
+                    },
+                    moreMenu: { clipboardMenus(for: record) }
                 )
                 .id(record.id)
                 .contentShape(Rectangle())
@@ -220,18 +225,7 @@ struct ClipboardHistoryView: View {
                     model.selection = record.id
                 }
                 .contextMenu {
-                    ForEach(GlanceItemActionPolicy.secondaryActions(for: .clipboard(record)), id: \.identifier) { action in
-                        Button(action.title) {
-                            onPerformItemAction(action, record.id)
-                        }
-                        .accessibilityIdentifier(action.identifier)
-                    }
-                    Button(record.isFavorite ? ClipboardHistoryCopy.unfavoriteLabel : ClipboardHistoryCopy.favoriteLabel) {
-                        onToggleFavorite(record.id)
-                    }
-                    Button(ClipboardHistoryCopy.deleteLabel, role: .destructive) {
-                        onDelete(record.id)
-                    }
+                    clipboardMenus(for: record)
                 }
                 .listRowInsets(EdgeInsets(
                     top: GlanceTheme.Space.sm,
@@ -280,6 +274,22 @@ struct ClipboardHistoryView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
+    @ViewBuilder
+    private func clipboardMenus(for record: ClipboardHistoryRecord) -> some View {
+        ForEach(GlanceItemActionPolicy.secondaryActions(for: .clipboard(record)), id: \.identifier) { action in
+            Button(action.title) {
+                onPerformItemAction(action, record.id)
+            }
+            .accessibilityIdentifier(action.identifier)
+        }
+        Button(record.isFavorite ? ClipboardHistoryCopy.unfavoriteLabel : ClipboardHistoryCopy.favoriteLabel) {
+            onToggleFavorite(record.id)
+        }
+        Button(ClipboardHistoryCopy.deleteLabel, role: .destructive) {
+            onDelete(record.id)
+        }
+    }
+
     private var footer: some View {
         HStack(spacing: GlanceTheme.Space.lg) {
             footerHint(ClipboardHistoryCopy.reuseHint)
@@ -298,13 +308,16 @@ struct ClipboardHistoryView: View {
     }
 }
 
-struct ClipboardHistoryRow: View {
+struct ClipboardHistoryRow<MoreMenu: View>: View {
     var record: ClipboardHistoryRecord
     var isSelected: Bool
     var thumbnail: NSImage?
     var relativeNow: Date
     var onToggleFavorite: () -> Void
     var onDelete: () -> Void
+    @ViewBuilder var moreMenu: () -> MoreMenu
+
+    @State private var isHovered = false
 
     var body: some View {
         HStack(alignment: .center, spacing: GlanceTheme.Space.md) {
@@ -324,23 +337,54 @@ struct ClipboardHistoryRow: View {
             Text(relativeDate)
                 .font(.caption)
                 .foregroundStyle(.tertiary)
-            Button(action: onToggleFavorite) {
-                Image(systemName: record.isFavorite ? "star.fill" : "star")
-                    .foregroundStyle(record.isFavorite ? Color.accentColor : Color.secondary)
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(record.isFavorite ? ClipboardHistoryCopy.unfavoriteLabel : ClipboardHistoryCopy.favoriteLabel)
-            Button(action: onDelete) {
-                Image(systemName: "trash")
-                    .foregroundStyle(.secondary)
-            }
-            .buttonStyle(.plain)
-            .opacity(isSelected ? 1 : 0.35)
-            .accessibilityLabel(ClipboardHistoryCopy.deleteLabel)
+                .padding(
+                    .trailing,
+                    GlanceRowQuickActionVisibility.dateTrailingPadding(
+                        isActive: record.isFavorite,
+                        showsSecondary: showsSecondary
+                    )
+                )
+                .opacity(showsSecondary ? 0 : 1)
+                .allowsHitTesting(false)
         }
-        .accessibilityElement(children: .combine)
+        .overlay(alignment: .trailing) {
+            GlanceRowQuickActionOverlay(
+                showsPersistent: record.isFavorite,
+                showsSecondary: showsSecondary
+            ) {
+                GlanceRowIconButton(
+                    systemName: "star.fill",
+                    help: ClipboardHistoryCopy.unfavoriteLabel,
+                    isActive: true,
+                    action: onToggleFavorite
+                )
+            } secondary: {
+                HStack(spacing: 0) {
+                    GlanceRowIconButton(
+                        systemName: record.isFavorite ? "star.fill" : "star",
+                        help: record.isFavorite ? ClipboardHistoryCopy.unfavoriteLabel : ClipboardHistoryCopy.favoriteLabel,
+                        isActive: record.isFavorite,
+                        action: onToggleFavorite
+                    )
+                    GlanceRowIconButton(
+                        systemName: "trash",
+                        help: ClipboardHistoryCopy.deleteLabel,
+                        action: onDelete
+                    )
+                    GlanceRowMoreButton(visible: true, menu: moreMenu)
+                }
+            }
+        }
+        .onHover { isHovered = $0 }
+        .animation(GlanceMotion.animation, value: showsSecondary)
+        .animation(GlanceMotion.animation, value: record.isFavorite)
+        .accessibilityElement(children: .contain)
         .accessibilityLabel(accessibilitySummary)
         .accessibilityAddTraits(isSelected ? .isSelected : [])
+    }
+
+    private var showsSecondary: Bool {
+        GlanceRowQuickActionVisibility.showsSecondary(isHovered: isHovered, isSelected: isSelected)
     }
 
     private var title: String {
