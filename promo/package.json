@@ -1,0 +1,17 @@
+{
+  "name": "glance-promo",
+  "version": "1.0.0",
+  "description": "Glance 产品宣传片（HTML + GSAP，逐帧渲染为 MP4）",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "preview": "open film.html",
+    "render": "node render.mjs",
+    "stills": "node render.mjs --stills=4.5,9.3,20.9,29.4,41.6,49.6"
+  },
+  "type": "module",
+  "dependencies": {
+    "gsap": "^3.15.0",
+    "playwright": "^1.63.0"
+  },
+  "private": "true"
+}
