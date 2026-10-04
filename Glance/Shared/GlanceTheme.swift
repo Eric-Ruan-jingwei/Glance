@@ -186,7 +186,7 @@ struct GlanceEmptyState<Footer: View>: View {
     init(
         symbol: String,
         title: String,
-        detail: String,
+        detail: String = "",
         @ViewBuilder footer: () -> Footer
     ) {
         self.symbol = symbol
@@ -203,10 +203,12 @@ struct GlanceEmptyState<Footer: View>: View {
             Text(title)
                 .font(.body.weight(.semibold))
                 .foregroundStyle(.secondary)
-            Text(detail)
-                .font(.callout)
-                .foregroundStyle(.tertiary)
-                .multilineTextAlignment(.center)
+            if !detail.isEmpty {
+                Text(detail)
+                    .font(.callout)
+                    .foregroundStyle(.tertiary)
+                    .multilineTextAlignment(.center)
+            }
             footer
         }
         .frame(maxWidth: 280)
@@ -216,10 +218,31 @@ struct GlanceEmptyState<Footer: View>: View {
 }
 
 extension GlanceEmptyState where Footer == EmptyView {
-    init(symbol: String, title: String, detail: String) {
+    init(symbol: String, title: String, detail: String = "") {
         self.init(symbol: symbol, title: title, detail: detail) {
             EmptyView()
         }
+    }
+}
+
+struct GlanceEmptyCTA: View {
+    var title: String
+    var accessibilityText: String? = nil
+    var systemImage: String? = "plus"
+    var action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            if let systemImage {
+                Label(title, systemImage: systemImage)
+            } else {
+                Text(title)
+            }
+        }
+        .controlSize(.small)
+        .buttonStyle(.borderless)
+        .padding(.top, GlanceTheme.Space.xs)
+        .accessibilityLabel(accessibilityText ?? title)
     }
 }
 

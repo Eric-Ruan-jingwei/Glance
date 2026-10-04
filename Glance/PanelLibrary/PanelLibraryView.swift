@@ -11,31 +11,16 @@ struct PanelLibraryView: View {
             List(selection: $model.selectedWorkspaceID) {
                 Section("工作区") {
                     ForEach(model.workspaces) { workspace in
-                        Label {
-                            HStack(spacing: GlanceTheme.Space.xs) {
-                                Text(workspace.name)
-                                    .lineLimit(1)
-                                Spacer(minLength: GlanceTheme.Space.xs)
-                                Text("\(model.panelCount(in: workspace.id))")
-                                    .font(.caption2)
-                                    .foregroundStyle(.tertiary)
-                                    .monospacedDigit()
-                            }
-                        } icon: {
-                            Image(systemName: workspace.id == WorkspaceRecord.defaultID
-                                  ? "square.stack"
-                                  : "square.on.square")
-                        }
+                        WorkspaceSidebarRow(
+                            workspace: workspace,
+                            count: model.panelCount(in: workspace.id),
+                            isSelected: model.selectedWorkspaceID == workspace.id,
+                            onRename: { model.promptRenameWorkspace(workspace.id) },
+                            onDelete: { model.confirmDeleteWorkspace(workspace.id) }
+                        )
                         .tag(workspace.id)
                         .contextMenu {
-                            if workspace.id != WorkspaceRecord.defaultID {
-                                Button("重命名") {
-                                    model.promptRenameWorkspace(workspace.id)
-                                }
-                                Button("删除工作区", role: .destructive) {
-                                    model.confirmDeleteWorkspace(workspace.id)
-                                }
-                            }
+                            workspaceMenu(workspace)
                         }
                     }
                 }
@@ -76,11 +61,13 @@ struct PanelLibraryView: View {
                                 Menu {
                                     panelCreationMenuItems
                                 } label: {
-                                    Text(GlanceRowActionCopy.createPanel)
+                                    Label(GlanceRowActionCopy.createPanel, systemImage: "plus")
                                 }
+                                .menuIndicator(.hidden)
+                                .controlSize(.small)
+                                .buttonStyle(.borderless)
                                 .help(GlanceRowActionCopy.createPanel)
                                 .accessibilityLabel(GlanceRowActionCopy.createPanel)
-                                .padding(.top, GlanceTheme.Space.sm)
                             }
                         }
                     case .noSearchResults:
@@ -264,6 +251,32 @@ struct PanelLibraryView: View {
                 model.createPanel(kind)
             } label: {
                 Label(kind.title, systemImage: kind.symbolName)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func workspaceMenu(_ workspace: WorkspaceRecord) -> some View {
+        ForEach(WorkspaceRowMenu.actions(for: workspace.id), id: \.self) { action in
+            switch action {
+            case .rename:
+                Button(WorkspaceRowQuickAction.renameLabel) {
+                    WorkspaceRowMenu.perform(
+                        action,
+                        id: workspace.id,
+                        rename: { model.promptRenameWorkspace($0) },
+                        delete: { model.confirmDeleteWorkspace($0) }
+                    )
+                }
+            case .delete:
+                Button(WorkspaceRowQuickAction.deleteLabel, role: .destructive) {
+                    WorkspaceRowMenu.perform(
+                        action,
+                        id: workspace.id,
+                        rename: { model.promptRenameWorkspace($0) },
+                        delete: { model.confirmDeleteWorkspace($0) }
+                    )
+                }
             }
         }
     }
@@ -530,4 +543,170 @@ private struct PanelLibraryRow: View {
         formatter.unitsStyle = .short
         return formatter
     }()
+}
+
+private struct WorkspaceSidebarRow: View {
+    var workspace: WorkspaceRecord
+    var count: Int
+    var isSelected: Bool
+    var onRename: () -> Void
+    var onDelete: () -> Void
+
+    @State private var isHovered = false
+
+    var body: some View {
+        HStack(spacing: GlanceTheme.Space.xs) {
+            Image(systemName: workspace.id == WorkspaceRecord.defaultID
+                  ? "square.stack"
+                  : "square.on.square")
+                .foregroundStyle(.secondary)
+                .frame(width: 16)
+                .accessibilityHidden(true)
+            Text(workspace.name)
+                .lineLimit(1)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            Text("\(count)")
+                .font(.caption2)
+                .foregroundStyle(.tertiary)
+                .monospacedDigit()
+            GlanceRowTrailingAccessory(
+                width: GlanceRowQuickActionLayout.slotWidth(for: .workspace),
+                showsActions: showsEllipsis
+            ) {
+                Color.clear
+            } actions: {
+                WorkspaceMoreButton(
+                    help: WorkspaceRowQuickAction.moreHelp(name: workspace.name),
+                    workspaceID: workspace.id,
+                    onRename: onRename,
+                    onDelete: onDelete
+                )
+                .frame(
+                    width: GlanceRowQuickActionLayout.buttonSide,
+                    height: GlanceRowQuickActionLayout.buttonSide
+                )
+            }
+        }
+        .onHover { isHovered = $0 }
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(workspace.name)
+    }
+
+    private var showsEllipsis: Bool {
+        WorkspaceRowQuickAction.showsEllipsis(
+            workspaceID: workspace.id,
+            isHovered: isHovered,
+            isSelected: isSelected
+        )
+    }
+}
+
+private struct WorkspaceMoreButton: NSViewRepresentable {
+    var help: String
+    var workspaceID: String
+    var onRename: () -> Void
+    var onDelete: () -> Void
+
+    func makeNSView(context: Context) -> WorkspaceMoreNSButton {
+        let button = WorkspaceMoreNSButton()
+        button.isBordered = false
+        button.imagePosition = .imageOnly
+        button.bezelStyle = .inline
+        button.focusRingType = .none
+        applyChrome(button)
+        return button
+    }
+
+    func updateNSView(_ nsView: WorkspaceMoreNSButton, context: Context) {
+        context.coordinator.workspaceID = workspaceID
+        context.coordinator.onRename = onRename
+        context.coordinator.onDelete = onDelete
+        nsView.makeMenu = { [weak coordinator = context.coordinator] in
+            coordinator?.makeMenu() ?? NSMenu()
+        }
+        applyChrome(nsView)
+    }
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator()
+    }
+
+    private func applyChrome(_ button: WorkspaceMoreNSButton) {
+        let image = NSImage(systemSymbolName: "ellipsis", accessibilityDescription: help)
+        image?.isTemplate = true
+        button.image = image?.withSymbolConfiguration(
+            NSImage.SymbolConfiguration(pointSize: 12, weight: .medium)
+        )
+        button.contentTintColor = .secondaryLabelColor
+        button.toolTip = help
+        button.setAccessibilityLabel(help)
+        button.setAccessibilityRole(.button)
+        button.setAccessibilityHelp(WorkspaceRowQuickAction.more)
+    }
+
+    final class Coordinator: NSObject {
+        var workspaceID = ""
+        var onRename: () -> Void = {}
+        var onDelete: () -> Void = {}
+
+        func makeMenu() -> NSMenu {
+            let menu = NSMenu()
+            for action in WorkspaceRowMenu.actions(for: workspaceID) {
+                switch action {
+                case .rename:
+                    let item = NSMenuItem(
+                        title: WorkspaceRowQuickAction.renameLabel,
+                        action: #selector(rename),
+                        keyEquivalent: ""
+                    )
+                    item.target = self
+                    menu.addItem(item)
+                case .delete:
+                    let item = NSMenuItem(
+                        title: WorkspaceRowQuickAction.deleteLabel,
+                        action: #selector(deleteWorkspace),
+                        keyEquivalent: ""
+                    )
+                    item.target = self
+                    menu.addItem(item)
+                }
+            }
+            return menu
+        }
+
+        @objc func rename() {
+            WorkspaceRowMenu.perform(
+                .rename,
+                id: workspaceID,
+                rename: { _ in onRename() },
+                delete: { _ in onDelete() }
+            )
+        }
+
+        @objc func deleteWorkspace() {
+            WorkspaceRowMenu.perform(
+                .delete,
+                id: workspaceID,
+                rename: { _ in onRename() },
+                delete: { _ in onDelete() }
+            )
+        }
+    }
+}
+
+final class WorkspaceMoreNSButton: NSButton {
+    var makeMenu: () -> NSMenu = { NSMenu() }
+
+    override var intrinsicContentSize: NSSize {
+        NSSize(
+            width: GlanceRowQuickActionLayout.buttonSide,
+            height: GlanceRowQuickActionLayout.buttonSide
+        )
+    }
+
+    override func mouseDown(with event: NSEvent) {
+        let menu = makeMenu()
+        guard menu.numberOfItems > 0 else { return }
+        menu.popUp(positioning: nil, at: NSPoint(x: 0, y: bounds.height + 2), in: self)
+    }
 }

@@ -152,17 +152,33 @@ struct ClipboardHistoryView: View {
     @ViewBuilder
     private var content: some View {
         if !model.service.canPersist, case .unsupportedFutureSchema = model.service.loadOutcome {
-            emptyState(title: ClipboardHistoryCopy.futureSchema, detail: nil, action: nil)
+            emptyState(
+                symbol: ClipboardEmptyPresentation.unavailableSymbol,
+                title: ClipboardHistoryCopy.futureSchema,
+                detail: nil,
+                action: nil
+            )
         } else if !model.service.canPersist {
-            emptyState(title: ClipboardHistoryCopy.unreadable, detail: nil, action: nil)
+            emptyState(
+                symbol: ClipboardEmptyPresentation.unavailableSymbol,
+                title: ClipboardHistoryCopy.unreadable,
+                detail: nil,
+                action: nil
+            )
         } else if !model.service.preferences.isRecordingEnabled && model.service.records.isEmpty {
             emptyState(
+                symbol: ClipboardEmptyPresentation.symbol,
                 title: ClipboardHistoryCopy.enableTitle,
                 detail: ClipboardHistoryCopy.enableBody,
                 action: (ClipboardHistoryCopy.enableAction, onEnableRecording)
             )
         } else if displayedEmpty {
-            emptyState(title: emptyTitle, detail: emptyDetail, action: nil)
+            emptyState(
+                symbol: emptySymbol,
+                title: emptyTitle,
+                detail: emptyDetail,
+                action: nil
+            )
         } else {
             list
         }
@@ -186,7 +202,7 @@ struct ClipboardHistoryView: View {
 
     private var emptyDetail: String? {
         if !model.query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            return nil
+            return ClipboardHistoryCopy.emptySearchDetail
         }
         switch model.tab {
         case .recent:
@@ -194,6 +210,13 @@ struct ClipboardHistoryView: View {
         case .favorites:
             return ClipboardHistoryCopy.emptyFavoritesDetail
         }
+    }
+
+    private var emptySymbol: String {
+        if !model.query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return ClipboardEmptyPresentation.searchSymbol
+        }
+        return ClipboardEmptyPresentation.symbol
     }
 
     private var list: some View {
@@ -249,29 +272,20 @@ struct ClipboardHistoryView: View {
     }
 
     private func emptyState(
+        symbol: String,
         title: String,
         detail: String?,
         action: (String, () -> Void)?
     ) -> some View {
-        VStack(spacing: GlanceTheme.Space.md) {
-            Spacer(minLength: GlanceTheme.Space.lg)
-            Text(title)
-                .font(.headline)
-            if let detail {
-                Text(detail)
-                    .font(.body)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
+        GlanceEmptyState(
+            symbol: symbol,
+            title: title,
+            detail: detail ?? ""
+        ) {
             if let action {
-                Button(action.0, action: action.1)
-                    .keyboardShortcut(.defaultAction)
+                GlanceEmptyCTA(title: action.0, systemImage: nil, action: action.1)
             }
-            Spacer(minLength: GlanceTheme.Space.lg)
         }
-        .padding(.horizontal, GlanceTheme.Space.xl)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     @ViewBuilder

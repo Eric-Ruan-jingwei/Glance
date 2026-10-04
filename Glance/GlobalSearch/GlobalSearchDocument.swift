@@ -99,8 +99,10 @@ enum GlobalSearchCopy {
     static let searchPrompt = "搜索 Glance…"
     static let recentSection = "最近使用"
     static let resultsSection = "搜索结果"
-    static let emptySearch = "没有找到匹配的内容"
+    static let emptySearch = "没有找到结果"
+    static let emptySearchDetail = "试试更短或不同的关键词。"
     static let emptyRecent = "还没有可搜索的内容"
+    static let emptyRecentDetail = "还没有可显示的最近项目。"
     static let loadingPanels = "正在载入面板…"
     static let partialUnavailable = "部分 Glance 内容暂不可搜索"
     static let selectHint = "↑↓ 选择"
@@ -118,6 +120,28 @@ enum GlobalSearchCopy {
     static let staleItem = GlanceNoticeCopy.staleItem
     static let clipboardImageTitle = "剪贴板图片"
     static let clipboardImageAlias = "图片"
+}
+
+enum GlobalSearchEmptyPresentation {
+    static let recentSymbol = "clock.arrow.circlepath"
+    static let searchSymbol = "magnifyingglass"
+    static let showsCreateCTA = false
+
+    static func isQueryEmpty(_ query: String) -> Bool {
+        query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    static func symbol(query: String) -> String {
+        isQueryEmpty(query) ? recentSymbol : searchSymbol
+    }
+
+    static func title(query: String) -> String {
+        isQueryEmpty(query) ? GlobalSearchCopy.recentSection : GlobalSearchCopy.emptySearch
+    }
+
+    static func detail(query: String) -> String {
+        isQueryEmpty(query) ? GlobalSearchCopy.emptyRecentDetail : GlobalSearchCopy.emptySearchDetail
+    }
 }
 
 enum GlobalSearchPreview {

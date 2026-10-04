@@ -8,6 +8,7 @@ enum GlanceRowQuickActionLayout {
         case link
         case panelLibrary
         case globalSearch
+        case workspace
 
         var buttonCount: Int {
             switch self {
@@ -17,6 +18,7 @@ enum GlanceRowQuickActionLayout {
             case .link: return GlanceRowQuickActionLayout.linkButtons
             case .panelLibrary: return GlanceRowQuickActionLayout.panelLibraryButtons
             case .globalSearch: return GlanceRowQuickActionLayout.globalSearchButtons
+            case .workspace: return GlanceRowQuickActionLayout.workspaceButtons
             }
         }
 
@@ -32,6 +34,7 @@ enum GlanceRowQuickActionLayout {
     static let linkButtons = 4
     static let panelLibraryButtons = 3
     static let globalSearchButtons = 1
+    static let workspaceButtons = 1
 
     static func width(for buttons: Int) -> CGFloat {
         CGFloat(buttons) * buttonSide
@@ -322,6 +325,61 @@ enum LinkRowQuickAction {
 
     static func delete(_ id: UUID, using onDelete: (UUID) -> Void) {
         onDelete(id)
+    }
+}
+
+enum WorkspaceRowQuickAction {
+    static let actionCount = GlanceRowQuickActionLayout.workspaceButtons
+    static let renameLabel = "重命名…"
+    static let deleteLabel = "删除工作区"
+    static let more = "更多工作区操作"
+
+    static func allowsManagement(_ workspaceID: String) -> Bool {
+        workspaceID != WorkspaceRecord.defaultID
+    }
+
+    static func showsEllipsis(
+        workspaceID: String,
+        isHovered: Bool,
+        isSelected: Bool
+    ) -> Bool {
+        allowsManagement(workspaceID)
+            && GlanceRowQuickActionVisibility.showsSecondary(
+                isHovered: isHovered,
+                isSelected: isSelected
+            )
+    }
+
+    static func moreHelp(name: String) -> String {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return more }
+        return "\(trimmed)的更多操作"
+    }
+}
+
+enum WorkspaceRowMenuAction: String, Equatable, CaseIterable {
+    case rename
+    case delete
+}
+
+enum WorkspaceRowMenu {
+    static func actions(for workspaceID: String) -> [WorkspaceRowMenuAction] {
+        guard WorkspaceRowQuickAction.allowsManagement(workspaceID) else { return [] }
+        return [.rename, .delete]
+    }
+
+    static func perform(
+        _ action: WorkspaceRowMenuAction,
+        id: String,
+        rename: (String) -> Void,
+        delete: (String) -> Void
+    ) {
+        switch action {
+        case .rename:
+            rename(id)
+        case .delete:
+            delete(id)
+        }
     }
 }
 

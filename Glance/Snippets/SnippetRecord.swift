@@ -173,9 +173,11 @@ enum SnippetCopy {
     static let windowTitle = "片段库"
     static let searchPrompt = "搜索片段…"
     static let addLabel = "新建片段"
+    static let emptyCTA = "新建片段…"
     static let emptyTitle = "还没有片段"
-    static let emptyDetail = "把经常重复使用的文字保存到这里，以后可以快速搜索并复制。"
+    static let emptyDetail = "保存常用文字，之后可以快速复制或创建面板。"
     static let emptySearch = "没有找到匹配的片段"
+    static let emptySearchDetail = "试试其他关键词。"
     static let futureSchema = "此版本无法读取片段库数据"
     static let unreadable = "片段库数据无法读取，已保留原文件"
     static let copyHint = "↩ 复制"
@@ -202,6 +204,19 @@ enum SnippetCopy {
     }
 
     static let deleteBody = "此操作无法撤销。"
+}
+
+enum SnippetEmptyPresentation {
+    static let symbol = "text.quote"
+    static let searchSymbol = "magnifyingglass"
+
+    static func showsCreateCTA(query: String, canMutate: Bool) -> Bool {
+        canMutate && query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    static func create(using onCreate: () -> Void) {
+        onCreate()
+    }
 }
 
 enum SnippetLoadOutcome: Equatable {

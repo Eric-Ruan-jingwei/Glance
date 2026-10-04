@@ -297,9 +297,12 @@ enum LinkCopy {
     static let windowTitle = "链接库"
     static let searchPrompt = "搜索链接…"
     static let addLabel = "新建链接"
+    static let emptyCTA = "添加链接…"
+    static let emptyCTAAccessibility = "添加链接"
     static let emptyTitle = "还没有链接"
-    static let emptyDetail = "把经常访问的网页和在线资源保存到这里，以后可以快速搜索并打开。"
+    static let emptyDetail = "保存经常访问或稍后要看的链接。"
     static let emptySearch = "没有找到匹配的链接"
+    static let emptySearchDetail = "试试其他关键词。"
     static let futureSchema = "此版本无法读取链接库数据"
     static let unreadable = "链接库数据无法读取，已保留原文件"
     static let openHint = "↩ 打开"
@@ -329,6 +332,19 @@ enum LinkCopy {
     }
 
     static let deleteBody = "此操作无法撤销。"
+}
+
+enum LinkEmptyPresentation {
+    static let symbol = "link"
+    static let searchSymbol = "magnifyingglass"
+
+    static func showsCreateCTA(query: String, canMutate: Bool) -> Bool {
+        canMutate && query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    static func create(using onCreate: () -> Void) {
+        onCreate()
+    }
 }
 
 enum LinkLoadOutcome: Equatable {

@@ -142,11 +142,13 @@ enum FileShelfCopy {
     static let recentTab = "最近"
     static let favoriteTab = "收藏"
     static let addLabel = "添加文件"
-    static let emptyTitle = "还没有文件"
-    static let emptyDetail = "从 Finder 拖入文件，或点击右上角添加。文件仍留在原来的位置。"
+    static let emptyCTA = "添加文件…"
+    static let emptyTitle = "文件架是空的"
+    static let emptyDetail = "把临时要用的文件放在这里，也可直接拖入。"
     static let emptyFavoritesTitle = "还没有收藏"
     static let emptyFavoritesDetail = "把常用文件标记为 ★，之后可以随时打开或拖出。"
     static let emptySearch = "没有找到匹配的文件"
+    static let emptySearchDetail = "试试其他关键词。"
     static let futureSchema = "此版本无法读取文件架数据"
     static let unreadable = "文件架数据无法读取，已保留原文件"
     static let missing = "文件已移动或不存在"
@@ -168,6 +170,19 @@ enum FileShelfCopy {
     static let partialRejected = "部分项目未加入"
     static let removeFavoriteTitle = "从文件架移除？"
     static let removeFavoriteBody = "这只会移除文件架中的记录，不会删除原文件。"
+}
+
+enum FileShelfEmptyPresentation {
+    static let symbol = "tray"
+    static let searchSymbol = "magnifyingglass"
+
+    static func showsAddCTA(query: String, tab: FileShelfTab) -> Bool {
+        query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && tab == .recent
+    }
+
+    static func add(using onAdd: () -> Void) {
+        onAdd()
+    }
 }
 
 enum FileShelfLoadOutcome: Equatable {

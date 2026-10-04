@@ -320,11 +320,26 @@ struct LinkLibraryView: View {
     @ViewBuilder
     private var content: some View {
         if !model.service.canPersist, case .unsupportedFutureSchema = model.service.loadOutcome {
-            emptyState(title: LinkCopy.futureSchema, detail: nil, action: nil)
+            emptyState(
+                symbol: "exclamationmark.triangle",
+                title: LinkCopy.futureSchema,
+                detail: nil,
+                action: nil
+            )
         } else if !model.service.canPersist {
-            emptyState(title: LinkCopy.unreadable, detail: nil, action: nil)
+            emptyState(
+                symbol: "exclamationmark.triangle",
+                title: LinkCopy.unreadable,
+                detail: nil,
+                action: nil
+            )
         } else if displayedEmpty {
-            emptyState(title: emptyTitle, detail: emptyDetail, action: emptyAction)
+            emptyState(
+                symbol: emptySymbol,
+                title: emptyTitle,
+                detail: emptyDetail,
+                action: emptyAction
+            )
         } else {
             list
         }
@@ -343,15 +358,23 @@ struct LinkLibraryView: View {
     private var emptyDetail: String? {
         model.query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             ? LinkCopy.emptyDetail
-            : nil
+            : LinkCopy.emptySearchDetail
+    }
+
+    private var emptySymbol: String {
+        model.query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            ? LinkEmptyPresentation.symbol
+            : LinkEmptyPresentation.searchSymbol
     }
 
     private var emptyAction: (String, () -> Void)? {
-        guard model.service.canMutate,
-              model.query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+        guard LinkEmptyPresentation.showsCreateCTA(
+            query: model.query,
+            canMutate: model.service.canMutate
+        ) else {
             return nil
         }
-        return (LinkCopy.addLabel, onCreate)
+        return (LinkCopy.emptyCTA, { LinkEmptyPresentation.create(using: onCreate) })
     }
 
     private var list: some View {
@@ -422,29 +445,24 @@ struct LinkLibraryView: View {
     }
 
     private func emptyState(
+        symbol: String,
         title: String,
         detail: String?,
         action: (String, () -> Void)?
     ) -> some View {
-        VStack(spacing: GlanceTheme.Space.md) {
-            Spacer(minLength: GlanceTheme.Space.lg)
-            Text(title)
-                .font(.headline)
-            if let detail {
-                Text(detail)
-                    .font(.body)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
+        GlanceEmptyState(
+            symbol: symbol,
+            title: title,
+            detail: detail ?? ""
+        ) {
             if let action {
-                Button(action.0, action: action.1)
-                    .keyboardShortcut(.defaultAction)
+                GlanceEmptyCTA(
+                    title: action.0,
+                    accessibilityText: LinkCopy.emptyCTAAccessibility,
+                    action: action.1
+                )
             }
-            Spacer(minLength: GlanceTheme.Space.lg)
         }
-        .padding(.horizontal, GlanceTheme.Space.xl)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     private var footer: some View {

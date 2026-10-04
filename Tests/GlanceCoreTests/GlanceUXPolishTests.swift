@@ -68,7 +68,18 @@ final class GlanceUXPolishTests: XCTestCase {
         XCTAssertEqual(LinkRowQuickAction.actionCount, 4)
         XCTAssertEqual(PanelLibraryRowQuickAction.actionCount, 3)
         XCTAssertEqual(GlanceRowQuickActionLayout.globalSearchButtons, 1)
+        XCTAssertEqual(GlanceRowQuickActionLayout.workspaceButtons, 1)
+        XCTAssertEqual(WorkspaceRowQuickAction.actionCount, 1)
         XCTAssertEqual(GlobalSearchRowActionPresentation.trailingWidth, 26, accuracy: 0.1)
+        XCTAssertEqual(
+            GlanceRowQuickActionLayout.slotWidth(for: .workspace),
+            26,
+            accuracy: 0.1
+        )
+        XCTAssertEqual(
+            GlanceRowQuickActionLayout.slotWidth(for: .workspace, isHovered: true, isSelected: true),
+            GlanceRowQuickActionLayout.slotWidth(for: .workspace)
+        )
         XCTAssertEqual(
             GlanceRowQuickActionLayout.slotWidth(for: .globalSearch),
             26,
@@ -365,6 +376,10 @@ final class GlanceUXPolishTests: XCTestCase {
         XCTAssertFalse(PanelLibraryCreatePresentation.showsCreateCTA(for: .loading))
         XCTAssertFalse(PanelLibraryCreatePresentation.showsCreateCTA(for: .none))
         XCTAssertEqual(GlanceEmptyCopy.workspaceDetail, "新建一个面板，开始使用这个工作区。")
+        XCTAssertEqual(GlanceEmptyCopy.searchTitle, "没有找到匹配的面板")
+        XCTAssertEqual(GlanceEmptyCopy.searchDetail, "试试其他关键词。")
+        XCTAssertEqual(GlanceEmptyCopy.filterTitle, "没有符合筛选条件的面板")
+        XCTAssertEqual(GlanceEmptyCopy.filterDetail, "调整类型或标签筛选后再试。")
     }
 
     @MainActor
@@ -389,6 +404,12 @@ final class GlanceUXPolishTests: XCTestCase {
             XCTAssertEqual(idle78.slot, 78, accuracy: 0.5)
             XCTAssertEqual(selected78.slot, 78, accuracy: 0.5)
             XCTAssertEqual(idle78.title, selected78.title, accuracy: 0.5)
+
+            let idle26 = measureTrailingSlot(width: 26, showsActions: false, title: title, rowWidth: 320)
+            let hover26 = measureTrailingSlot(width: 26, showsActions: true, title: title, rowWidth: 320)
+            XCTAssertEqual(idle26.slot, 26, accuracy: 0.5)
+            XCTAssertEqual(hover26.slot, 26, accuracy: 0.5)
+            XCTAssertEqual(idle26.title, hover26.title, accuracy: 0.5)
         }
     }
 

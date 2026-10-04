@@ -276,11 +276,26 @@ struct SnippetLibraryView: View {
     @ViewBuilder
     private var content: some View {
         if !model.service.canPersist, case .unsupportedFutureSchema = model.service.loadOutcome {
-            emptyState(title: SnippetCopy.futureSchema, detail: nil, action: nil)
+            emptyState(
+                symbol: "exclamationmark.triangle",
+                title: SnippetCopy.futureSchema,
+                detail: nil,
+                action: nil
+            )
         } else if !model.service.canPersist {
-            emptyState(title: SnippetCopy.unreadable, detail: nil, action: nil)
+            emptyState(
+                symbol: "exclamationmark.triangle",
+                title: SnippetCopy.unreadable,
+                detail: nil,
+                action: nil
+            )
         } else if displayedEmpty {
-            emptyState(title: emptyTitle, detail: emptyDetail, action: emptyAction)
+            emptyState(
+                symbol: emptySymbol,
+                title: emptyTitle,
+                detail: emptyDetail,
+                action: emptyAction
+            )
         } else {
             list
         }
@@ -299,15 +314,23 @@ struct SnippetLibraryView: View {
     private var emptyDetail: String? {
         model.query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             ? SnippetCopy.emptyDetail
-            : nil
+            : SnippetCopy.emptySearchDetail
+    }
+
+    private var emptySymbol: String {
+        model.query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            ? SnippetEmptyPresentation.symbol
+            : SnippetEmptyPresentation.searchSymbol
     }
 
     private var emptyAction: (String, () -> Void)? {
-        guard model.service.canMutate,
-              model.query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+        guard SnippetEmptyPresentation.showsCreateCTA(
+            query: model.query,
+            canMutate: model.service.canMutate
+        ) else {
             return nil
         }
-        return (SnippetCopy.addLabel, onCreate)
+        return (SnippetCopy.emptyCTA, { SnippetEmptyPresentation.create(using: onCreate) })
     }
 
     private var list: some View {
@@ -377,29 +400,24 @@ struct SnippetLibraryView: View {
     }
 
     private func emptyState(
+        symbol: String,
         title: String,
         detail: String?,
         action: (String, () -> Void)?
     ) -> some View {
-        VStack(spacing: GlanceTheme.Space.md) {
-            Spacer(minLength: GlanceTheme.Space.lg)
-            Text(title)
-                .font(.headline)
-            if let detail {
-                Text(detail)
-                    .font(.body)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
+        GlanceEmptyState(
+            symbol: symbol,
+            title: title,
+            detail: detail ?? ""
+        ) {
             if let action {
-                Button(action.0, action: action.1)
-                    .keyboardShortcut(.defaultAction)
+                GlanceEmptyCTA(
+                    title: action.0,
+                    accessibilityText: SnippetCopy.addLabel,
+                    action: action.1
+                )
             }
-            Spacer(minLength: GlanceTheme.Space.lg)
         }
-        .padding(.horizontal, GlanceTheme.Space.xl)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     private var footer: some View {

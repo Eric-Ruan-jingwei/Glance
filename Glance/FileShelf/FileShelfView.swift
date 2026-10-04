@@ -199,11 +199,26 @@ struct FileShelfView: View {
     @ViewBuilder
     private var content: some View {
         if !model.service.canPersist, case .unsupportedFutureSchema = model.service.loadOutcome {
-            emptyState(title: FileShelfCopy.futureSchema, detail: nil)
+            emptyState(
+                symbol: "exclamationmark.triangle",
+                title: FileShelfCopy.futureSchema,
+                detail: nil,
+                action: nil
+            )
         } else if !model.service.canPersist {
-            emptyState(title: FileShelfCopy.unreadable, detail: nil)
+            emptyState(
+                symbol: "exclamationmark.triangle",
+                title: FileShelfCopy.unreadable,
+                detail: nil,
+                action: nil
+            )
         } else if displayedEmpty {
-            emptyState(title: emptyTitle, detail: emptyDetail)
+            emptyState(
+                symbol: emptySymbol,
+                title: emptyTitle,
+                detail: emptyDetail,
+                action: emptyAction
+            )
         } else {
             list
         }
@@ -227,7 +242,7 @@ struct FileShelfView: View {
 
     private var emptyDetail: String? {
         if !model.query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            return nil
+            return FileShelfCopy.emptySearchDetail
         }
         switch model.tab {
         case .recent:
@@ -235,6 +250,20 @@ struct FileShelfView: View {
         case .favorites:
             return FileShelfCopy.emptyFavoritesDetail
         }
+    }
+
+    private var emptySymbol: String {
+        if !model.query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return FileShelfEmptyPresentation.searchSymbol
+        }
+        return FileShelfEmptyPresentation.symbol
+    }
+
+    private var emptyAction: (String, () -> Void)? {
+        guard FileShelfEmptyPresentation.showsAddCTA(query: model.query, tab: model.tab) else {
+            return nil
+        }
+        return (FileShelfCopy.emptyCTA, { FileShelfEmptyPresentation.add(using: onAdd) })
     }
 
     private var list: some View {
@@ -336,22 +365,26 @@ struct FileShelfView: View {
         GlanceItemActionPolicy.actions(for: .fileShelf(record, resolution: resolution))
     }
 
-    private func emptyState(title: String, detail: String?) -> some View {
-        VStack(spacing: GlanceTheme.Space.md) {
-            Spacer(minLength: GlanceTheme.Space.lg)
-            Text(title)
-                .font(.headline)
-            if let detail {
-                Text(detail)
-                    .font(.body)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-                    .fixedSize(horizontal: false, vertical: true)
+    private func emptyState(
+        symbol: String,
+        title: String,
+        detail: String?,
+        action: (String, () -> Void)?
+    ) -> some View {
+        GlanceEmptyState(
+            symbol: symbol,
+            title: title,
+            detail: detail ?? ""
+        ) {
+            if let action {
+                GlanceEmptyCTA(
+                    title: action.0,
+                    accessibilityText: FileShelfCopy.addLabel,
+                    systemImage: "plus",
+                    action: action.1
+                )
             }
-            Spacer(minLength: GlanceTheme.Space.lg)
         }
-        .padding(.horizontal, GlanceTheme.Space.xl)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     private var footer: some View {

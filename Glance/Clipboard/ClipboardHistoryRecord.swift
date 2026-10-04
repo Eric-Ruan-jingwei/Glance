@@ -140,11 +140,12 @@ enum ClipboardHistoryCopy {
     static let enableTitle = "保存最近复制的内容"
     static let enableBody = "Glance 可以在本机记录你之后复制的文字和图片，方便搜索、收藏和再次使用。\n\n内容不会上传。"
     static let enableAction = "开始记录"
-    static let emptyRecentTitle = "还没有剪贴板记录"
-    static let emptyRecentDetail = "复制一些文字或图片后，它们会出现在这里。"
+    static let emptyRecentTitle = "暂无剪贴板记录"
+    static let emptyRecentDetail = "复制文字或图片后，会出现在这里。"
     static let emptyFavoritesTitle = "还没有收藏"
     static let emptyFavoritesDetail = "把常用内容标记为 ★，之后可以随时调用。"
     static let emptySearch = "没有找到匹配的内容"
+    static let emptySearchDetail = "试试其他关键词。"
     static let futureSchema = "此版本无法读取剪贴板历史"
     static let unreadable = "剪贴板数据无法读取，已保留原文件"
     static let reuseHint = "↩ 复制"
@@ -154,6 +155,13 @@ enum ClipboardHistoryCopy {
     static let unfavoriteLabel = "取消收藏"
     static let deleteLabel = "删除"
     static let saveAsSnippet = "保存为片段…"
+}
+
+enum ClipboardEmptyPresentation {
+    static let symbol = "doc.on.clipboard"
+    static let searchSymbol = "magnifyingglass"
+    static let unavailableSymbol = "exclamationmark.triangle"
+    static let showsCreateCTA = false
 }
 
 enum ClipboardHistoryLoadOutcome: Equatable {

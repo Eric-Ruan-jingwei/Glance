@@ -65,18 +65,11 @@ struct GlobalSearchView: View {
     }
 
     private var emptyState: some View {
-        VStack(spacing: GlanceTheme.Space.md) {
-            Spacer(minLength: GlanceTheme.Space.lg)
-            Text(
-                model.query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                    ? GlobalSearchCopy.emptyRecent
-                    : GlobalSearchCopy.emptySearch
-            )
-            .font(.headline)
-            .foregroundStyle(.secondary)
-            Spacer(minLength: GlanceTheme.Space.lg)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        GlanceEmptyState(
+            symbol: GlobalSearchEmptyPresentation.symbol(query: model.query),
+            title: GlobalSearchEmptyPresentation.title(query: model.query),
+            detail: GlobalSearchEmptyPresentation.detail(query: model.query)
+        )
     }
 
     private var list: some View {
