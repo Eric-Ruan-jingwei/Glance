@@ -336,25 +336,78 @@ struct FileShelfView: View {
         resolution: FileShelfResolvedReference
     ) -> some View {
         if missing {
-            Button(FileShelfCopy.relinkLabel) { onRelink(record.id) }
-        } else {
-            Button(FileShelfCopy.openLabel) { onOpen(record.id) }
-            Button(FileShelfCopy.revealLabel) { onReveal(record.id) }
-            Button(FileShelfCopy.previewLabel) { onPreview(record.id) }
-            Button(FileShelfCopy.copyFileLabel) { onCopyFile(record.id) }
-            Button(FileShelfCopy.copyPathLabel) { onCopyPath(record.id) }
-            ForEach(fileShelfActions(for: record, resolution: resolution), id: \.identifier) { action in
-                Button(action.title) {
-                    onPerformItemAction(action, record.id)
-                }
-                .accessibilityIdentifier(action.identifier)
+            GlanceMenuButton(
+                title: FileShelfCopy.relinkLabel,
+                systemImage: GlanceActionSymbol.relink
+            ) {
+                onRelink(record.id)
             }
+        } else {
+            GlanceMenuButton(
+                title: FileShelfCopy.openLabel,
+                systemImage: GlanceActionSymbol.openFile
+            ) {
+                onOpen(record.id)
+            }
+            GlanceMenuButton(
+                title: FileShelfCopy.revealLabel,
+                systemImage: GlanceActionSymbol.reveal
+            ) {
+                onReveal(record.id)
+            }
+            GlanceMenuButton(
+                title: FileShelfCopy.previewLabel,
+                systemImage: GlanceActionSymbol.preview
+            ) {
+                onPreview(record.id)
+            }
+            Divider()
+            GlanceMenuButton(
+                title: FileShelfCopy.copyFileLabel,
+                systemImage: GlanceActionSymbol.copy
+            ) {
+                onCopyFile(record.id)
+            }
+            GlanceMenuButton(
+                title: FileShelfCopy.copyPathLabel,
+                systemImage: GlanceActionSymbol.copy
+            ) {
+                onCopyPath(record.id)
+            }
+            fileShelfPanelMenu(for: record, resolution: resolution)
         }
-        Button(record.isFavorite ? FileShelfCopy.unfavoriteLabel : FileShelfCopy.favoriteLabel) {
+        Divider()
+        GlanceMenuButton(
+            title: record.isFavorite ? FileShelfCopy.unfavoriteLabel : FileShelfCopy.favoriteLabel,
+            systemImage: GlanceActionSymbol.favorite(isOn: record.isFavorite)
+        ) {
             onToggleFavorite(record.id)
         }
-        Button(FileShelfCopy.removeLabel, role: .destructive) {
+        GlanceMenuButton(
+            title: FileShelfCopy.removeLabel,
+            systemImage: GlanceActionSymbol.remove
+        ) {
             onRemove(record.id)
+        }
+    }
+
+    @ViewBuilder
+    private func fileShelfPanelMenu(
+        for record: FileShelfRecord,
+        resolution: FileShelfResolvedReference
+    ) -> some View {
+        let panelActions = fileShelfActions(for: record, resolution: resolution)
+        if !panelActions.isEmpty {
+            Divider()
+            ForEach(panelActions, id: \.identifier) { action in
+                GlanceMenuButton(
+                    title: action.title,
+                    systemImage: action.symbolName,
+                    identifier: action.identifier
+                ) {
+                    onPerformItemAction(action, record.id)
+                }
+            }
         }
     }
 
@@ -388,17 +441,14 @@ struct FileShelfView: View {
     }
 
     private var footer: some View {
-        HStack(spacing: GlanceTheme.Space.lg) {
-            Text(FileShelfCopy.openHint)
-            Text(FileShelfCopy.revealHint)
-            Text(FileShelfCopy.previewHint)
-            Text(FileShelfCopy.closeHint)
+        HStack(spacing: GlanceShortcutHintBar.spacing) {
+            ForEach(Array(GlanceShortcutFooter.fileShelf.enumerated()), id: \.offset) { _, hint in
+                GlanceShortcutHint(keys: hint.keys, label: hint.label)
+            }
             Spacer()
         }
         .padding(.horizontal, GlanceTheme.Space.lg)
         .padding(.vertical, GlanceTheme.Space.sm)
-        .foregroundStyle(.secondary)
-        .font(.caption)
     }
 
     private func collectDroppedPaths(_ providers: [NSItemProvider]) {
@@ -503,7 +553,11 @@ struct FileShelfRow<MoreMenu: View>: View {
                         help: FileShelfCopy.removeLabel,
                         action: onRemove
                     )
-                    GlanceRowMoreButton(visible: true, menu: moreMenu)
+                    GlanceRowMoreButton(
+                        visible: true,
+                        help: GlanceRowActionCopy.moreHelp(for: record.displayName),
+                        menu: moreMenu
+                    )
                 }
             }
         }

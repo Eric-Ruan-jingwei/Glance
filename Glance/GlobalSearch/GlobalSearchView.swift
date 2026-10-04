@@ -135,22 +135,23 @@ struct GlobalSearchView: View {
     }
 
     private var footer: some View {
-        HStack(spacing: GlanceTheme.Space.lg) {
-            Text(GlobalSearchCopy.selectHint)
-            Text(GlobalSearchCopy.actHint)
-            Text(GlobalSearchCopy.revealHint)
-            Text(GlobalSearchCopy.closeHint)
+        HStack(spacing: GlanceShortcutHintBar.spacing) {
+            ForEach(Array(GlanceShortcutFooter.globalSearch.enumerated()), id: \.offset) { _, hint in
+                GlanceShortcutHint(keys: hint.keys, label: hint.label)
+            }
             Spacer()
             if model.isLoadingPanels {
                 Text(GlobalSearchCopy.loadingPanels)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             } else if model.showsPartialUnavailable {
                 Text(GlobalSearchCopy.partialUnavailable)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
         }
         .padding(.horizontal, GlanceTheme.Space.lg)
         .padding(.vertical, GlanceTheme.Space.sm)
-        .foregroundStyle(.secondary)
-        .font(.caption)
     }
 }
 
@@ -259,14 +260,21 @@ struct GlobalSearchDeferredActionsMenu: View {
         ForEach(GlobalSearchResultMenu.items(itemActions: itemActions)) { item in
             switch item {
             case .reveal:
-                Button(GlobalSearchCopy.revealInSourceLabel, action: onReveal)
+                GlanceMenuButton(
+                    title: GlobalSearchCopy.revealInSourceLabel,
+                    systemImage: GlanceActionSymbol.revealInSource,
+                    action: onReveal
+                )
             case .divider:
                 Divider()
             case .action(let action):
-                Button(action.title) {
+                GlanceMenuButton(
+                    title: action.title,
+                    systemImage: action.symbolName,
+                    identifier: action.identifier
+                ) {
                     onAction(action)
                 }
-                .accessibilityIdentifier(action.identifier)
             }
         }
     }
@@ -280,10 +288,6 @@ struct GlanceLazyMoreButton: NSViewRepresentable {
 
     func makeNSView(context: Context) -> GlanceLazyMoreNSButton {
         let button = GlanceLazyMoreNSButton()
-        button.isBordered = false
-        button.imagePosition = .imageOnly
-        button.bezelStyle = .inline
-        button.focusRingType = .none
         applyChrome(button)
         return button
     }
@@ -327,25 +331,27 @@ struct GlanceLazyMoreButton: NSViewRepresentable {
             for item in GlobalSearchResultMenu.items(itemActions: itemActions) {
                 switch item {
                 case .reveal:
-                    let menuItem = NSMenuItem(
-                        title: GlobalSearchCopy.revealInSourceLabel,
-                        action: #selector(reveal),
-                        keyEquivalent: ""
+                    menu.addItem(
+                        GlanceNSMenuItem.make(
+                            title: GlobalSearchCopy.revealInSourceLabel,
+                            symbol: GlanceActionSymbol.revealInSource,
+                            action: #selector(reveal),
+                            target: self
+                        )
                     )
-                    menuItem.target = self
-                    menu.addItem(menuItem)
                 case .divider:
                     menu.addItem(.separator())
                 case .action(let action):
-                    let menuItem = NSMenuItem(
-                        title: action.title,
-                        action: #selector(performAction(_:)),
-                        keyEquivalent: ""
+                    menu.addItem(
+                        GlanceNSMenuItem.make(
+                            title: action.title,
+                            symbol: action.symbolName,
+                            action: #selector(performAction(_:)),
+                            target: self,
+                            representedObject: action.identifier,
+                            identifier: action.identifier
+                        )
                     )
-                    menuItem.target = self
-                    menuItem.representedObject = action.identifier
-                    menuItem.identifier = NSUserInterfaceItemIdentifier(action.identifier)
-                    menu.addItem(menuItem)
                 }
             }
             return menu
@@ -365,15 +371,8 @@ struct GlanceLazyMoreButton: NSViewRepresentable {
     }
 }
 
-final class GlanceLazyMoreNSButton: NSButton {
+final class GlanceLazyMoreNSButton: GlanceHoverIconButton {
     var makeMenu: () -> NSMenu = { NSMenu() }
-
-    override var intrinsicContentSize: NSSize {
-        NSSize(
-            width: GlanceRowQuickActionLayout.buttonSide,
-            height: GlanceRowQuickActionLayout.buttonSide
-        )
-    }
 
     override func mouseDown(with event: NSEvent) {
         let menu = makeMenu()

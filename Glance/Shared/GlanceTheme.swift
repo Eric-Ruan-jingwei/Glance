@@ -17,6 +17,7 @@ enum GlanceTheme {
         static let md: CGFloat = 12
         static let lg: CGFloat = 16
         static let xl: CGFloat = 20
+        static let shortcutHint: CGFloat = 12
     }
 
     enum Size {

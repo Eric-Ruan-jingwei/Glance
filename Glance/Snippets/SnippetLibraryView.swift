@@ -383,18 +383,33 @@ struct SnippetLibraryView: View {
 
     @ViewBuilder
     private func snippetMenus(for record: SnippetRecord) -> some View {
-        Button(SnippetCopy.copyLabel) { onCopy(record.id) }
-        Button(SnippetCopy.editLabel) { onEdit(record.id) }
+        GlanceMenuButton(title: SnippetCopy.copyLabel, systemImage: GlanceActionSymbol.copy) {
+            onCopy(record.id)
+        }
+        GlanceMenuButton(title: SnippetCopy.editLabel, systemImage: GlanceActionSymbol.edit) {
+            onEdit(record.id)
+        }
         ForEach(GlanceItemActionPolicy.actions(for: .snippet(record)), id: \.identifier) { action in
-            Button(action.title) {
+            GlanceMenuButton(
+                title: action.title,
+                systemImage: action.symbolName,
+                identifier: action.identifier
+            ) {
                 onPerformItemAction(action, record.id)
             }
-            .accessibilityIdentifier(action.identifier)
         }
-        Button(record.isPinned ? SnippetCopy.unpinLabel : SnippetCopy.pinLabel) {
+        Divider()
+        GlanceMenuButton(
+            title: record.isPinned ? SnippetCopy.unpinLabel : SnippetCopy.pinLabel,
+            systemImage: GlanceActionSymbol.pin(isOn: record.isPinned)
+        ) {
             onTogglePin(record.id)
         }
-        Button(SnippetCopy.deleteLabel, role: .destructive) {
+        GlanceMenuButton(
+            title: SnippetCopy.deleteLabel,
+            systemImage: GlanceActionSymbol.delete,
+            role: .destructive
+        ) {
             onDelete(record.id)
         }
     }
@@ -421,17 +436,14 @@ struct SnippetLibraryView: View {
     }
 
     private var footer: some View {
-        HStack(spacing: GlanceTheme.Space.lg) {
-            Text(SnippetCopy.copyHint)
-            Text(SnippetCopy.editHint)
-            Text(SnippetCopy.createHint)
-            Text(SnippetCopy.closeHint)
+        HStack(spacing: GlanceShortcutHintBar.spacing) {
+            ForEach(Array(GlanceShortcutFooter.snippet.enumerated()), id: \.offset) { _, hint in
+                GlanceShortcutHint(keys: hint.keys, label: hint.label)
+            }
             Spacer()
         }
         .padding(.horizontal, GlanceTheme.Space.lg)
         .padding(.vertical, GlanceTheme.Space.sm)
-        .foregroundStyle(.secondary)
-        .font(.caption)
     }
 }
 
@@ -500,7 +512,11 @@ struct SnippetRow<MoreMenu: View>: View {
                         help: GlanceRowActionCopy.delete,
                         action: onDelete
                     )
-                    GlanceRowMoreButton(visible: true, menu: moreMenu)
+                    GlanceRowMoreButton(
+                        visible: true,
+                        help: GlanceRowActionCopy.moreHelp(for: record.title),
+                        menu: moreMenu
+                    )
                 }
             }
         }

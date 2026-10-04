@@ -64,6 +64,17 @@ enum GlobalSearchResultMenu {
                 return "action.\(action.identifier)"
             }
         }
+
+        var symbolName: String? {
+            switch self {
+            case .reveal:
+                return GlanceActionSymbol.revealInSource
+            case .divider:
+                return nil
+            case .action(let action):
+                return action.symbolName
+            }
+        }
     }
 
     static func items(itemActions: () -> [GlanceItemAction]) -> [Item] {
@@ -90,10 +101,6 @@ enum GlobalSearchRowActionPresentation {
     }
 
     static func moreHelp(title: String) -> String {
-        let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else {
-            return GlanceRowActionCopy.more
-        }
-        return "\(trimmed)的更多操作"
+        GlanceRowActionCopy.moreHelp(for: title)
     }
 }

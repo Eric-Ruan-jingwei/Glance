@@ -45,8 +45,8 @@ enum QuickCaptureAction: Equatable, CaseIterable {
 }
 
 enum QuickCaptureActionPresentation {
-    static let saveSnippetSymbol = "text.quote"
-    static let saveLinkSymbol = "link"
+    static let saveSnippetSymbol = GlanceActionSymbol.snippet
+    static let saveLinkSymbol = GlanceActionSymbol.link
     static let addToFileShelfSymbol = "tray"
     static let genericFilePanelSymbol = "square.stack"
 
@@ -56,9 +56,9 @@ enum QuickCaptureActionPresentation {
     ) -> String {
         switch action {
         case .saveSnippet:
-            return saveSnippetSymbol
+            return GlanceActionSymbol.snippet
         case .saveLink:
-            return saveLinkSymbol
+            return GlanceActionSymbol.link
         case .addToFileShelf:
             return addToFileShelfSymbol
         case .createTextPanel:

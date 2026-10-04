@@ -338,6 +338,7 @@ final class PanelWindowController: NSWindowController, NSWindowDelegate {
         if let title = content.primaryEditMenuTitle() {
             let edit = NSMenuItem(title: title, action: #selector(editClicked), keyEquivalent: "")
             edit.target = self
+            edit.image = GlanceTheme.menuSymbol(GlanceActionSymbol.edit)
             edit.isEnabled = currentPolicy().allowsEdit
             menu.addItem(edit)
             menu.addItem(.separator())
@@ -345,6 +346,7 @@ final class PanelWindowController: NSWindowController, NSWindowDelegate {
 
         let pin = NSMenuItem(title: "置顶", action: #selector(pinClicked), keyEquivalent: "")
         pin.target = self
+        pin.image = GlanceTheme.menuSymbol(GlanceActionSymbol.pin)
         pin.state = isPinned ? .on : .off
         menu.addItem(pin)
 
@@ -376,9 +378,11 @@ final class PanelWindowController: NSWindowController, NSWindowDelegate {
         menu.addItem(.separator())
         let rename = NSMenuItem(title: "重命名…", action: #selector(renameClicked), keyEquivalent: "")
         rename.target = self
+        rename.image = GlanceTheme.menuSymbol(GlanceActionSymbol.edit)
         menu.addItem(rename)
         let editTags = NSMenuItem(title: "编辑标签…", action: #selector(editTagsClicked), keyEquivalent: "")
         editTags.target = self
+        editTags.image = GlanceTheme.menuSymbol(GlanceActionSymbol.tags)
         menu.addItem(editTags)
         menu.addItem(makeMoveToWorkspaceItem())
 
@@ -388,6 +392,7 @@ final class PanelWindowController: NSWindowController, NSWindowDelegate {
             keyEquivalent: ""
         )
         hide.target = self
+        hide.image = GlanceTheme.menuSymbol(GlanceActionSymbol.hide)
         menu.addItem(hide)
 
         menu.addItem(.separator())
@@ -398,6 +403,8 @@ final class PanelWindowController: NSWindowController, NSWindowDelegate {
         menu.addItem(.separator())
         let delete = NSMenuItem(title: "删除面板", action: #selector(deleteClicked), keyEquivalent: "")
         delete.target = self
+        delete.image = GlanceTheme.menuSymbol(GlanceActionSymbol.delete)
+        GlanceNSMenuItem.applySystemDestructive(delete, true)
         menu.addItem(delete)
         return menu
     }
@@ -432,6 +439,7 @@ final class PanelWindowController: NSWindowController, NSWindowDelegate {
 
     private func makeMoveToWorkspaceItem() -> NSMenuItem {
         let item = NSMenuItem(title: PanelVisibilityMenu.moveToWorkspace, action: nil, keyEquivalent: "")
+        item.image = GlanceTheme.menuSymbol(GlanceActionSymbol.move)
         let submenu = NSMenu()
         let workspaces = environment.panelManager?.workspaces() ?? [WorkspaceRecord.makeDefault()]
         let currentID = (try? environment.repository.record(id: recordID))?.workspaceID ?? WorkspaceRecord.defaultID

@@ -258,25 +258,17 @@ struct PanelLibraryView: View {
     @ViewBuilder
     private func workspaceMenu(_ workspace: WorkspaceRecord) -> some View {
         ForEach(WorkspaceRowMenu.actions(for: workspace.id), id: \.self) { action in
-            switch action {
-            case .rename:
-                Button(WorkspaceRowQuickAction.renameLabel) {
-                    WorkspaceRowMenu.perform(
-                        action,
-                        id: workspace.id,
-                        rename: { model.promptRenameWorkspace($0) },
-                        delete: { model.confirmDeleteWorkspace($0) }
-                    )
-                }
-            case .delete:
-                Button(WorkspaceRowQuickAction.deleteLabel, role: .destructive) {
-                    WorkspaceRowMenu.perform(
-                        action,
-                        id: workspace.id,
-                        rename: { model.promptRenameWorkspace($0) },
-                        delete: { model.confirmDeleteWorkspace($0) }
-                    )
-                }
+            GlanceMenuButton(
+                title: action.title,
+                systemImage: action.symbolName,
+                role: action.isDestructive ? .destructive : nil
+            ) {
+                WorkspaceRowMenu.perform(
+                    action,
+                    id: workspace.id,
+                    rename: { model.promptRenameWorkspace($0) },
+                    delete: { model.confirmDeleteWorkspace($0) }
+                )
             }
         }
     }
@@ -453,7 +445,7 @@ private struct PanelLibraryRow: View {
                         help: GlanceRowActionCopy.delete,
                         action: onDelete
                     )
-                    GlanceRowMoreButton(visible: true) {
+                    GlanceRowMoreButton(visible: true, help: GlanceRowActionCopy.moreHelp(for: summary.title)) {
                         moreMenuItems
                     }
                 }
@@ -476,10 +468,14 @@ private struct PanelLibraryRow: View {
 
     @ViewBuilder
     private var moreMenuItems: some View {
-        Button(PanelVisibilityMenu.libraryActionTitle(isHidden: summary.isHidden), action: primaryAction)
-        Button("重命名…", action: onRename)
-        Button("编辑标签…", action: onEditTags)
-        Menu(PanelVisibilityMenu.moveToWorkspace) {
+        GlanceMenuButton(
+            title: PanelVisibilityMenu.libraryActionTitle(isHidden: summary.isHidden),
+            systemImage: GlanceActionSymbol.visibility(isHidden: summary.isHidden),
+            action: primaryAction
+        )
+        GlanceMenuButton(title: "重命名…", systemImage: GlanceActionSymbol.edit, action: onRename)
+        GlanceMenuButton(title: "编辑标签…", systemImage: GlanceActionSymbol.tags, action: onEditTags)
+        Menu {
             ForEach(workspaces) { workspace in
                 Button {
                     onMove(workspace.id)
@@ -491,11 +487,22 @@ private struct PanelLibraryRow: View {
                     }
                 }
             }
+        } label: {
+            Label(PanelVisibilityMenu.moveToWorkspace, systemImage: GlanceActionSymbol.move)
         }
         Divider()
-        Button("打开数据文件夹", action: onOpenFolder)
+        GlanceMenuButton(
+            title: "打开数据文件夹",
+            systemImage: GlanceActionSymbol.folder,
+            action: onOpenFolder
+        )
         Divider()
-        Button("删除", role: .destructive, action: onDelete)
+        GlanceMenuButton(
+            title: "删除",
+            systemImage: GlanceActionSymbol.delete,
+            role: .destructive,
+            action: onDelete
+        )
     }
 
     private var tagPreview: (shown: [String], overflow: Int) {
@@ -609,10 +616,6 @@ private struct WorkspaceMoreButton: NSViewRepresentable {
 
     func makeNSView(context: Context) -> WorkspaceMoreNSButton {
         let button = WorkspaceMoreNSButton()
-        button.isBordered = false
-        button.imagePosition = .imageOnly
-        button.bezelStyle = .inline
-        button.focusRingType = .none
         applyChrome(button)
         return button
     }
@@ -652,24 +655,15 @@ private struct WorkspaceMoreButton: NSViewRepresentable {
         func makeMenu() -> NSMenu {
             let menu = NSMenu()
             for action in WorkspaceRowMenu.actions(for: workspaceID) {
-                switch action {
-                case .rename:
-                    let item = NSMenuItem(
-                        title: WorkspaceRowQuickAction.renameLabel,
-                        action: #selector(rename),
-                        keyEquivalent: ""
+                menu.addItem(
+                    GlanceNSMenuItem.make(
+                        title: action.title,
+                        symbol: action.symbolName,
+                        action: action == .rename ? #selector(rename) : #selector(deleteWorkspace),
+                        target: self,
+                        destructive: action.isDestructive
                     )
-                    item.target = self
-                    menu.addItem(item)
-                case .delete:
-                    let item = NSMenuItem(
-                        title: WorkspaceRowQuickAction.deleteLabel,
-                        action: #selector(deleteWorkspace),
-                        keyEquivalent: ""
-                    )
-                    item.target = self
-                    menu.addItem(item)
-                }
+                )
             }
             return menu
         }
@@ -694,15 +688,8 @@ private struct WorkspaceMoreButton: NSViewRepresentable {
     }
 }
 
-final class WorkspaceMoreNSButton: NSButton {
+final class WorkspaceMoreNSButton: GlanceHoverIconButton {
     var makeMenu: () -> NSMenu = { NSMenu() }
-
-    override var intrinsicContentSize: NSSize {
-        NSSize(
-            width: GlanceRowQuickActionLayout.buttonSide,
-            height: GlanceRowQuickActionLayout.buttonSide
-        )
-    }
 
     override func mouseDown(with event: NSEvent) {
         let menu = makeMenu()

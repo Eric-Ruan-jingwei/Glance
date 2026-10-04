@@ -427,19 +427,36 @@ struct LinkLibraryView: View {
 
     @ViewBuilder
     private func linkMenus(for record: LinkRecord) -> some View {
-        Button(LinkCopy.openLabel) { onOpen(record.id) }
-        Button(LinkCopy.copyLabel) { onCopy(record.id) }
-        Button(LinkCopy.editLabel) { onEdit(record.id) }
+        GlanceMenuButton(title: LinkCopy.openLabel, systemImage: GlanceActionSymbol.open) {
+            onOpen(record.id)
+        }
+        GlanceMenuButton(title: LinkCopy.copyLabel, systemImage: GlanceActionSymbol.copy) {
+            onCopy(record.id)
+        }
+        GlanceMenuButton(title: LinkCopy.editLabel, systemImage: GlanceActionSymbol.edit) {
+            onEdit(record.id)
+        }
         ForEach(GlanceItemActionPolicy.actions(for: .link(record)), id: \.identifier) { action in
-            Button(action.title) {
+            GlanceMenuButton(
+                title: action.title,
+                systemImage: action.symbolName,
+                identifier: action.identifier
+            ) {
                 onPerformItemAction(action, record.id)
             }
-            .accessibilityIdentifier(action.identifier)
         }
-        Button(record.isPinned ? LinkCopy.unpinLabel : LinkCopy.pinLabel) {
+        Divider()
+        GlanceMenuButton(
+            title: record.isPinned ? LinkCopy.unpinLabel : LinkCopy.pinLabel,
+            systemImage: GlanceActionSymbol.pin(isOn: record.isPinned)
+        ) {
             onTogglePin(record.id)
         }
-        Button(LinkCopy.deleteLabel, role: .destructive) {
+        GlanceMenuButton(
+            title: LinkCopy.deleteLabel,
+            systemImage: GlanceActionSymbol.delete,
+            role: .destructive
+        ) {
             onDelete(record.id)
         }
     }
@@ -466,17 +483,14 @@ struct LinkLibraryView: View {
     }
 
     private var footer: some View {
-        HStack(spacing: GlanceTheme.Space.lg) {
-            Text(LinkCopy.openHint)
-            Text(LinkCopy.editHint)
-            Text(LinkCopy.createHint)
-            Text(LinkCopy.closeHint)
+        HStack(spacing: GlanceShortcutHintBar.spacing) {
+            ForEach(Array(GlanceShortcutFooter.link.enumerated()), id: \.offset) { _, hint in
+                GlanceShortcutHint(keys: hint.keys, label: hint.label)
+            }
             Spacer()
         }
         .padding(.horizontal, GlanceTheme.Space.lg)
         .padding(.vertical, GlanceTheme.Space.sm)
-        .foregroundStyle(.secondary)
-        .font(.caption)
     }
 }
 
@@ -558,7 +572,11 @@ struct LinkRow<MoreMenu: View>: View {
                         help: GlanceRowActionCopy.delete,
                         action: onDelete
                     )
-                    GlanceRowMoreButton(visible: true, menu: moreMenu)
+                    GlanceRowMoreButton(
+                        visible: true,
+                        help: GlanceRowActionCopy.moreHelp(for: record.title),
+                        menu: moreMenu
+                    )
                 }
             }
         }

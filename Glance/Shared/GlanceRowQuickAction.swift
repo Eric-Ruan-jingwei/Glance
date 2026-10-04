@@ -72,6 +72,12 @@ enum GlanceRowActionCopy {
     static let showPanel = "显示面板"
     static let createPanel = "新建面板…"
     static let leadingSnippet = "片段"
+
+    static func moreHelp(for name: String) -> String {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return more }
+        return "“\(trimmed)”的更多操作"
+    }
 }
 
 struct GlanceRowIconButton: View {
@@ -134,6 +140,8 @@ struct GlanceRowMoreButton<Content: View>: View {
     var help: String = GlanceRowActionCopy.more
     @ViewBuilder var menu: () -> Content
 
+    @State private var isHovered = false
+
     var body: some View {
         Menu(content: menu) {
             Image(systemName: "ellipsis")
@@ -144,6 +152,10 @@ struct GlanceRowMoreButton<Content: View>: View {
                     height: GlanceRowQuickActionLayout.buttonSide
                 )
                 .contentShape(Rectangle())
+                .background(
+                    RoundedRectangle(cornerRadius: GlanceTheme.Radius.control, style: .continuous)
+                        .fill(isHovered ? Color.glanceHoverFill : Color.clear)
+                )
         }
         .menuIndicator(.hidden)
         .buttonStyle(.borderless)
@@ -151,6 +163,7 @@ struct GlanceRowMoreButton<Content: View>: View {
         .accessibilityLabel(help)
         .opacity(visible ? 1 : 0)
         .allowsHitTesting(visible)
+        .onHover { isHovered = $0 }
     }
 }
 
@@ -238,7 +251,7 @@ enum PanelLibraryCreatePresentation {
 
 enum PanelLibraryQuickAction {
     static let deleteUsesConfirmation = true
-    static let deleteSymbol = "trash"
+    static let deleteSymbol = GlanceActionSymbol.delete
 
     static func visibilitySymbol(isHidden: Bool) -> String {
         isHidden ? "eye" : "eye.slash"
@@ -295,7 +308,7 @@ enum FileShelfRowQuickAction {
 
 enum SnippetRowQuickAction {
     static let doubleClickPerformsEdit = true
-    static let leadingSymbol = "text.quote"
+    static let leadingSymbol = GlanceActionSymbol.snippet
     static let actionCount = GlanceRowQuickActionLayout.snippetButtons
 
     static func copy(_ id: UUID, using onCopy: (UUID) -> Void) {
@@ -351,15 +364,31 @@ enum WorkspaceRowQuickAction {
     }
 
     static func moreHelp(name: String) -> String {
-        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return more }
-        return "\(trimmed)的更多操作"
+        GlanceRowActionCopy.moreHelp(for: name)
     }
 }
 
 enum WorkspaceRowMenuAction: String, Equatable, CaseIterable {
     case rename
     case delete
+
+    var title: String {
+        switch self {
+        case .rename: return WorkspaceRowQuickAction.renameLabel
+        case .delete: return WorkspaceRowQuickAction.deleteLabel
+        }
+    }
+
+    var symbolName: String {
+        switch self {
+        case .rename: return GlanceActionSymbol.edit
+        case .delete: return GlanceActionSymbol.delete
+        }
+    }
+
+    var isDestructive: Bool {
+        self == .delete
+    }
 }
 
 enum WorkspaceRowMenu {

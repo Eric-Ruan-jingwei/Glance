@@ -450,7 +450,7 @@ final class GlobalSearchDirectActionTests: XCTestCase {
     func testMoreHelpUsesTitleContext() {
         XCTAssertEqual(
             GlobalSearchRowActionPresentation.moreHelp(title: "项目计划"),
-            "项目计划的更多操作"
+            "“项目计划”的更多操作"
         )
         XCTAssertEqual(
             GlobalSearchRowActionPresentation.moreHelp(title: "  "),

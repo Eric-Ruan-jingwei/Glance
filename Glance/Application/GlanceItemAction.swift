@@ -40,6 +40,23 @@ enum GlanceItemAction: Equatable, CaseIterable {
         }
     }
 
+    var symbolName: String {
+        switch self {
+        case .createTextPanel:
+            return PanelKindSymbol.name(for: PanelKind.text)
+        case .createTodoPanel:
+            return PanelKindSymbol.name(for: PanelKind.todo)
+        case .createImagePanel:
+            return PanelKindSymbol.name(for: PanelKind.image)
+        case .createPDFPanel:
+            return PanelKindSymbol.name(for: PanelKind.pdf)
+        case .saveAsSnippet:
+            return GlanceActionSymbol.snippet
+        case .saveAsLink:
+            return GlanceActionSymbol.link
+        }
+    }
+
     init?(identifier: String) {
         guard let match = Self.allCases.first(where: { $0.identifier == identifier }) else {
             return nil

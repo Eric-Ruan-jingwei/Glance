@@ -290,35 +290,40 @@ struct ClipboardHistoryView: View {
 
     @ViewBuilder
     private func clipboardMenus(for record: ClipboardHistoryRecord) -> some View {
-        ForEach(GlanceItemActionPolicy.secondaryActions(for: .clipboard(record)), id: \.identifier) { action in
-            Button(action.title) {
+        ForEach(GlanceItemActionPolicy.actions(for: .clipboard(record)), id: \.identifier) { action in
+            GlanceMenuButton(
+                title: action.title,
+                systemImage: action.symbolName,
+                identifier: action.identifier
+            ) {
                 onPerformItemAction(action, record.id)
             }
-            .accessibilityIdentifier(action.identifier)
         }
-        Button(record.isFavorite ? ClipboardHistoryCopy.unfavoriteLabel : ClipboardHistoryCopy.favoriteLabel) {
+        Divider()
+        GlanceMenuButton(
+            title: record.isFavorite ? ClipboardHistoryCopy.unfavoriteLabel : ClipboardHistoryCopy.favoriteLabel,
+            systemImage: GlanceActionSymbol.favorite(isOn: record.isFavorite)
+        ) {
             onToggleFavorite(record.id)
         }
-        Button(ClipboardHistoryCopy.deleteLabel, role: .destructive) {
+        GlanceMenuButton(
+            title: ClipboardHistoryCopy.deleteLabel,
+            systemImage: GlanceActionSymbol.delete,
+            role: .destructive
+        ) {
             onDelete(record.id)
         }
     }
 
     private var footer: some View {
-        HStack(spacing: GlanceTheme.Space.lg) {
-            footerHint(ClipboardHistoryCopy.reuseHint)
-            footerHint(ClipboardHistoryCopy.panelHint)
-            footerHint(ClipboardHistoryCopy.closeHint)
+        HStack(spacing: GlanceShortcutHintBar.spacing) {
+            ForEach(Array(GlanceShortcutFooter.clipboard.enumerated()), id: \.offset) { _, hint in
+                GlanceShortcutHint(keys: hint.keys, label: hint.label)
+            }
             Spacer()
         }
         .padding(.horizontal, GlanceTheme.Space.lg)
         .padding(.vertical, GlanceTheme.Space.sm)
-        .foregroundStyle(.secondary)
-        .font(.caption)
-    }
-
-    private func footerHint(_ text: String) -> some View {
-        Text(text)
     }
 }
 
@@ -380,7 +385,11 @@ struct ClipboardHistoryRow<MoreMenu: View>: View {
                         help: ClipboardHistoryCopy.deleteLabel,
                         action: onDelete
                     )
-                    GlanceRowMoreButton(visible: true, menu: moreMenu)
+                    GlanceRowMoreButton(
+                        visible: true,
+                        help: GlanceRowActionCopy.moreHelp(for: title),
+                        menu: moreMenu
+                    )
                 }
             }
         }

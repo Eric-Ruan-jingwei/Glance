@@ -82,7 +82,7 @@ final class WorkspaceRowQuickActionTests: XCTestCase {
         XCTAssertEqual(WorkspaceRowQuickAction.deleteLabel, "删除工作区")
         XCTAssertEqual(
             WorkspaceRowQuickAction.moreHelp(name: "项目 Alpha"),
-            "项目 Alpha的更多操作"
+            "“项目 Alpha”的更多操作"
         )
     }
 }
