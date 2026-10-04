@@ -64,3 +64,54 @@ jobs:
             echo "Built Glance.app build version: $app_build"
             exit 1
           fi
+          prohibited="$(/usr/libexec/PlistBuddy -c 'Print :LSMultipleInstancesProhibited' dist/Glance.app/Contents/Info.plist)"
+          if [[ "$prohibited" != "true" ]]; then
+            echo "LSMultipleInstancesProhibited must be true in packaged Glance.app"
+            exit 1
+          fi
+
+      - name: Distribution package smoke
+        run: |
+          ./scripts/build-distribution.sh
+          marketing="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' Glance/Info.plist)"
+          zip="dist/Glance-${marketing}.zip"
+          dmg="dist/Glance-${marketing}.dmg"
+          test -f "$zip"
+          test -f "$dmg"
+          test -f dist/SHA256SUMS
+          (cd dist && shasum -a 256 -c SHA256SUMS)
+          extract="$(mktemp -d)"
+          mount="$(mktemp -d)"
+          cleanup() {
+            hdiutil detach "$mount" >/dev/null 2>&1 || true
+            rm -rf "$extract" "$mount"
+          }
+          trap cleanup EXIT
+          ditto -x -k "$zip" "$extract"
+          test -d "$extract/Glance.app"
+          test -x "$extract/Glance.app/Contents/MacOS/Glance"
+          test -f "$extract/Glance.app/Contents/Info.plist"
+          test -f "$extract/Glance.app/Contents/Resources/AppIcon.icns"
+          zip_marketing="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$extract/Glance.app/Contents/Info.plist")"
+          zip_build="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$extract/Glance.app/Contents/Info.plist")"
+          zip_prohibited="$(/usr/libexec/PlistBuddy -c 'Print :LSMultipleInstancesProhibited' "$extract/Glance.app/Contents/Info.plist")"
+          if [[ "$zip_marketing" != "$marketing" || "$zip_build" != "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' Glance/Info.plist)" || "$zip_prohibited" != "true" ]]; then
+            echo "ZIP app metadata mismatch"
+            exit 1
+          fi
+          hdiutil attach -nobrowse -readonly -mountpoint "$mount" "$dmg"
+          test -d "$mount/Glance.app"
+          test -L "$mount/Applications"
+          test "$(readlink "$mount/Applications")" = "/Applications"
+          dmg_marketing="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$mount/Glance.app/Contents/Info.plist")"
+          dmg_build="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$mount/Glance.app/Contents/Info.plist")"
+          dmg_prohibited="$(/usr/libexec/PlistBuddy -c 'Print :LSMultipleInstancesProhibited' "$mount/Glance.app/Contents/Info.plist")"
+          hdiutil detach "$mount"
+          mount=""
+          if [[ "$dmg_marketing" != "$marketing" || "$dmg_build" != "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' Glance/Info.plist)" || "$dmg_prohibited" != "true" ]]; then
+            echo "DMG app metadata mismatch"
+            exit 1
+          fi
+          echo "NOTE: This beta artifact is ad-hoc signed and is not notarized."
+          echo "Gatekeeper rejection is expected for external distribution."
+          spctl --assess --verbose dist/Glance.app || true

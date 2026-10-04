@@ -58,6 +58,10 @@ Source records are not deleted or rewritten when you create a derived Panel. Fil
 - No cloud
 - Open source
 
+## V0.27.0
+
+Release candidate. Cross-tool workflow integration (Quick Capture, Global Search actions, Drag & Drop, Menu Bar Home), UX polish, and RC hardening. App version is 0.27.0; database schemas are unchanged (Panel 5, Clipboard / File Shelf / Snippet / Link 1).
+
 ## V0.25.0
 
 Real-use polish and pre-release hardening. No seventh top-level tool, no schema changes, and no Release Engineering.
@@ -404,9 +408,21 @@ Each panel can be pinned, locked, made click-through, and faded independently. T
 
 Glance settings include launch at login (`SMAppService.mainApp`), customizable global shortcuts (defaults `⌥⌘J`, `⌥⌘V`, `⌥⌘F`, `⌥⌘S`, `⌥⌘L`, `⌥⌘B`, and `⌥⌘G`), clipboard history recording, the local data folder, and the version from the app bundle.
 
-## Download
+## Install
 
-Prebuilt releases are planned. Until then, build from source.
+Download the latest Glance DMG from GitHub Releases.
+
+1. Open the DMG
+2. Drag Glance to Applications
+3. Launch Glance
+
+Glance is a menu bar app (`LSUIElement`): look for the pin icon in the menu bar, not in the Dock.
+
+### Beta distribution
+
+Current GitHub beta builds are not Apple Developer ID notarized. On some macOS versions, the first launch may show a developer verification prompt. Use **System Settings → Privacy & Security → Open Anyway**.
+
+Do not disable Gatekeeper or run `xattr` / `spctl --master-disable` workarounds.
 
 ## Build from source
 

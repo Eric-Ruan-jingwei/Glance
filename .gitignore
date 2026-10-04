@@ -3,6 +3,7 @@
 .swiftpm/
 dist/
 build/
+.cursor/
 *.xcuserstate
 xcuserdata/
 .idea/
