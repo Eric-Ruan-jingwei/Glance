@@ -7,7 +7,10 @@ final class QuickCaptureWindowController: NSWindowController, NSTextViewDelegate
 
     let model = QuickCaptureModel()
     private let textView: QuickCaptureTextView
+    private let detectedRow = NSStackView()
+    private let detectedIcon = NSImageView()
     private let detectedLabel = NSTextField(labelWithString: "")
+    private let chromeStack = NSStackView()
     private let actionStack = NSStackView()
     private let errorLabel = NSTextField(labelWithString: "")
     private var localMouseMonitor: Any?
@@ -141,8 +144,17 @@ final class QuickCaptureWindowController: NSWindowController, NSTextViewDelegate
 
     private func refreshChrome() {
         let content = model.content
-        detectedLabel.stringValue = QuickCaptureCopy.detectedTitle(for: content)
-        detectedLabel.isHidden = detectedLabel.stringValue.isEmpty
+        let detectedTitle = QuickCaptureCopy.detectedTitle(for: content)
+        detectedLabel.stringValue = detectedTitle
+        if let symbol = QuickCaptureDetectedPresentation.symbolName(for: content) {
+            detectedIcon.image = GlanceTheme.symbol(symbol, pointSize: 11)
+            detectedIcon.contentTintColor = .secondaryLabelColor
+            detectedIcon.isHidden = false
+        } else {
+            detectedIcon.image = nil
+            detectedIcon.isHidden = true
+        }
+        detectedRow.isHidden = detectedTitle.isEmpty
         errorLabel.stringValue = model.error ?? ""
         errorLabel.isHidden = model.error == nil
         rebuildActionButtons()
@@ -152,37 +164,25 @@ final class QuickCaptureWindowController: NSWindowController, NSTextViewDelegate
 
     private func rebuildActionButtons() {
         actionStack.arrangedSubviews.forEach { $0.removeFromSuperview() }
+        let content = model.content
         for action in model.actions {
-            let button = NSButton(title: action.title, target: self, action: #selector(actionClicked(_:)))
-            button.bezelStyle = .recessed
-            button.setButtonType(.momentaryPushIn)
-            button.isBordered = false
-            button.alignment = .left
-            button.font = GlanceTheme.Typography.body
-            button.identifier = NSUserInterfaceItemIdentifier(action.identifier)
-            button.setAccessibilityLabel(action.title)
-            button.setAccessibilityRole(.button)
-            let selected = model.selectedAction == action
-            button.contentTintColor = selected ? .controlAccentColor : .labelColor
-            button.attributedTitle = NSAttributedString(
-                string: selected ? "●  \(action.title)" : "○  \(action.title)",
-                attributes: [
-                    .font: GlanceTheme.Typography.body as Any,
-                    .foregroundColor: selected ? NSColor.controlAccentColor : NSColor.labelColor
-                ]
+            let row = QuickCaptureActionRowView(
+                action: action,
+                content: content,
+                isSelected: QuickCaptureActionPresentation.isSelected(
+                    action,
+                    selectedAction: model.selectedAction
+                )
             )
-            if selected {
-                button.setAccessibilityValue("已选择")
+            row.onActivate = { [weak self] selected in
+                self?.actionClicked(selected)
             }
-            actionStack.addArrangedSubview(button)
+            actionStack.addArrangedSubview(row)
         }
         actionStack.isHidden = model.actions.isEmpty
     }
 
-    @objc private func actionClicked(_ sender: NSButton) {
-        guard let raw = sender.identifier?.rawValue, let action = QuickCaptureAction(identifier: raw) else {
-            return
-        }
+    private func actionClicked(_ action: QuickCaptureAction) {
         model.select(action)
         submit()
     }
@@ -332,26 +332,43 @@ final class QuickCaptureWindowController: NSWindowController, NSTextViewDelegate
         scroll.documentView = textView
         scroll.translatesAutoresizingMaskIntoConstraints = false
 
+        detectedIcon.imageScaling = .scaleProportionallyDown
+        detectedIcon.setAccessibilityElement(false)
+        detectedIcon.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            detectedIcon.widthAnchor.constraint(equalToConstant: 12),
+            detectedIcon.heightAnchor.constraint(equalToConstant: 12)
+        ])
+
         detectedLabel.textColor = .secondaryLabelColor
         detectedLabel.font = GlanceTheme.Typography.tertiary
         detectedLabel.setAccessibilityRole(.staticText)
-        detectedLabel.translatesAutoresizingMaskIntoConstraints = false
+
+        detectedRow.orientation = .horizontal
+        detectedRow.alignment = .centerY
+        detectedRow.spacing = GlanceTheme.Space.xs
+        detectedRow.addArrangedSubview(detectedIcon)
+        detectedRow.addArrangedSubview(detectedLabel)
 
         actionStack.orientation = .vertical
-        actionStack.alignment = .leading
+        actionStack.alignment = .width
         actionStack.spacing = GlanceTheme.Space.xxs
-        actionStack.translatesAutoresizingMaskIntoConstraints = false
 
         errorLabel.textColor = .secondaryLabelColor
         errorLabel.font = GlanceTheme.Typography.tertiary
         errorLabel.isHidden = true
         errorLabel.setAccessibilityRole(.staticText)
-        errorLabel.translatesAutoresizingMaskIntoConstraints = false
+
+        chromeStack.orientation = .vertical
+        chromeStack.alignment = .leading
+        chromeStack.spacing = GlanceTheme.Space.xs
+        chromeStack.translatesAutoresizingMaskIntoConstraints = false
+        chromeStack.addArrangedSubview(detectedRow)
+        chromeStack.addArrangedSubview(errorLabel)
+        chromeStack.addArrangedSubview(actionStack)
 
         effect.addSubview(scroll)
-        effect.addSubview(detectedLabel)
-        effect.addSubview(actionStack)
-        effect.addSubview(errorLabel)
+        effect.addSubview(chromeStack)
         window.contentView = border
 
         NSLayoutConstraint.activate([
@@ -365,18 +382,12 @@ final class QuickCaptureWindowController: NSWindowController, NSTextViewDelegate
             scroll.topAnchor.constraint(equalTo: effect.topAnchor, constant: GlanceTheme.Space.md),
             scroll.heightAnchor.constraint(equalToConstant: 72),
 
-            detectedLabel.leadingAnchor.constraint(equalTo: effect.leadingAnchor, constant: GlanceTheme.Space.lg),
-            detectedLabel.trailingAnchor.constraint(lessThanOrEqualTo: effect.trailingAnchor, constant: -GlanceTheme.Space.lg),
-            detectedLabel.topAnchor.constraint(equalTo: scroll.bottomAnchor, constant: GlanceTheme.Space.sm),
+            chromeStack.leadingAnchor.constraint(equalTo: effect.leadingAnchor, constant: GlanceTheme.Space.lg),
+            chromeStack.trailingAnchor.constraint(equalTo: effect.trailingAnchor, constant: -GlanceTheme.Space.lg),
+            chromeStack.topAnchor.constraint(equalTo: scroll.bottomAnchor, constant: GlanceTheme.Space.sm),
+            chromeStack.bottomAnchor.constraint(equalTo: effect.bottomAnchor, constant: -GlanceTheme.Space.md),
 
-            actionStack.leadingAnchor.constraint(equalTo: effect.leadingAnchor, constant: GlanceTheme.Space.lg),
-            actionStack.trailingAnchor.constraint(equalTo: effect.trailingAnchor, constant: -GlanceTheme.Space.lg),
-            actionStack.topAnchor.constraint(equalTo: detectedLabel.bottomAnchor, constant: GlanceTheme.Space.xs),
-
-            errorLabel.leadingAnchor.constraint(equalTo: effect.leadingAnchor, constant: GlanceTheme.Space.lg),
-            errorLabel.trailingAnchor.constraint(lessThanOrEqualTo: effect.trailingAnchor, constant: -GlanceTheme.Space.lg),
-            errorLabel.topAnchor.constraint(equalTo: actionStack.bottomAnchor, constant: GlanceTheme.Space.xs),
-            errorLabel.bottomAnchor.constraint(equalTo: effect.bottomAnchor, constant: -GlanceTheme.Space.md)
+            actionStack.trailingAnchor.constraint(equalTo: chromeStack.trailingAnchor)
         ])
         refreshChrome()
     }

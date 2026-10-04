@@ -1,4 +1,5 @@
 import AppKit
+import SwiftUI
 import XCTest
 
 #if canImport(GlanceCore)
@@ -280,6 +281,181 @@ final class GlobalSearchDirectActionTests: XCTestCase {
         XCTAssertEqual(GlobalSearchActionPolicy.action(keyCode: 36), .activate)
         XCTAssertEqual(GlobalSearchActionPolicy.action(keyCode: 36, command: true), .revealInSource)
         XCTAssertEqual(GlobalSearchCopy.revealInSourceLabel, "在来源中显示")
+    }
+
+    func testEllipsisVisibilityMatchesRowQuickActionPolicy() {
+        XCTAssertFalse(
+            GlobalSearchRowActionPresentation.showsEllipsis(isHovered: false, isSelected: false)
+        )
+        XCTAssertTrue(
+            GlobalSearchRowActionPresentation.showsEllipsis(isHovered: true, isSelected: false)
+        )
+        XCTAssertTrue(
+            GlobalSearchRowActionPresentation.showsEllipsis(isHovered: false, isSelected: true)
+        )
+        XCTAssertEqual(
+            GlobalSearchRowActionPresentation.showsEllipsis(isHovered: false, isSelected: false),
+            GlanceRowQuickActionVisibility.showsSecondary(isHovered: false, isSelected: false)
+        )
+        XCTAssertEqual(
+            GlobalSearchRowActionPresentation.showsEllipsis(isHovered: true, isSelected: false),
+            GlanceRowQuickActionVisibility.showsSecondary(isHovered: true, isSelected: false)
+        )
+        XCTAssertEqual(
+            GlobalSearchRowActionPresentation.showsEllipsis(isHovered: false, isSelected: true),
+            GlanceRowQuickActionVisibility.showsSecondary(isHovered: false, isSelected: true)
+        )
+    }
+
+    func testTrailingSlotWidthStaysFixedAtOneIcon() {
+        XCTAssertEqual(GlobalSearchRowActionPresentation.trailingWidth, 26, accuracy: 0.1)
+        XCTAssertEqual(
+            GlanceRowQuickActionLayout.slotWidth(for: .globalSearch),
+            GlanceRowQuickActionLayout.slotWidth(for: .globalSearch, isHovered: true)
+        )
+        XCTAssertEqual(
+            GlanceRowQuickActionLayout.slotWidth(for: .globalSearch),
+            GlanceRowQuickActionLayout.slotWidth(for: .globalSearch, isSelected: true)
+        )
+    }
+
+    func testPanelEllipsisMenuIsRevealOnly() {
+        let resultID = GlobalSearchResultID(source: .panels, itemID: UUID())
+        var availabilityCalls = 0
+        let items = GlobalSearchResultMenu.items {
+            availabilityCalls += 1
+            return GlobalSearchResultActions.compose(resultID: resultID) { _ in
+                XCTFail("panel results must not request item actions")
+                return [.createTextPanel]
+            }.itemActions
+        }
+        XCTAssertEqual(availabilityCalls, 1)
+        XCTAssertEqual(items, [.reveal])
+    }
+
+    func testClipboardURLEllipsisMenuReusesAvailability() {
+        let record = clipboardText("https://example.com")
+        let coordinator = coordinator(log: ActionCallLog(), clipboard: record)
+        let resultID = GlobalSearchResultID(source: .clipboard, itemID: record.id)
+        let composed = GlobalSearchResultActions.compose(resultID: resultID) {
+            coordinator.availableActions(for: $0)
+        }
+        XCTAssertEqual(
+            GlobalSearchResultMenu.items { composed.itemActions },
+            [
+                .reveal,
+                .divider,
+                .action(.createTextPanel),
+                .action(.saveAsSnippet),
+                .action(.saveAsLink)
+            ]
+        )
+    }
+
+    func testFileShelfAvailabilityStaysLazyUntilMenuBuilds() {
+        let record = fileRecord(name: "brief.pdf", path: "/tmp/brief.pdf", type: "pdf")
+        let log = ActionCallLog()
+        let coordinator = coordinator(log: log, file: record, resolvedPath: record.originalPath)
+        let resultID = GlobalSearchResultID(source: .fileShelf, itemID: record.id)
+        XCTAssertEqual(log.resolveFile, 0)
+        XCTAssertEqual(
+            GlobalSearchRowActionPresentation.showsEllipsis(isHovered: true, isSelected: false),
+            true
+        )
+        XCTAssertEqual(log.resolveFile, 0)
+        let items = GlobalSearchResultMenu.items {
+            guard let sourceID = GlobalSearchItemActionBridge.sourceID(for: resultID) else {
+                return []
+            }
+            return coordinator.availableActions(for: sourceID)
+        }
+        XCTAssertEqual(log.resolveFile, 1)
+        XCTAssertEqual(items, [.reveal, .divider, .action(.createPDFPanel)])
+    }
+
+    func testSearchViewRenderDoesNotCallItemActions() {
+        let record = fileRecord(name: "brief.pdf", path: "/tmp/brief.pdf", type: "pdf")
+        let model = GlobalSearchViewModel()
+        model.applyImmediateSnapshot(
+            GlobalSearchImmediateSnapshot(
+                clipboard: [],
+                clipboardUnavailable: false,
+                files: [record],
+                filesUnavailable: false,
+                snippets: [],
+                snippetsUnavailable: false,
+                links: [],
+                linksUnavailable: false,
+                panelInputs: [],
+                panelsUnavailable: false,
+                workspaceNames: [:]
+            )
+        )
+        model.selection = GlobalSearchResultID(source: .fileShelf, itemID: record.id)
+        var calls = 0
+        let view = GlobalSearchView(
+            model: model,
+            onActivate: { _ in XCTFail("render must not activate") },
+            onRevealInSource: { _ in XCTFail("render must not reveal") },
+            onPerformItemAction: { _, _ in XCTFail("render must not perform") },
+            onItemActions: { _ in
+                calls += 1
+                return [.createPDFPanel]
+            }
+        )
+        let hosting = NSHostingView(rootView: view)
+        hosting.frame = NSRect(origin: .zero, size: GlanceConstants.globalSearchSize)
+        hosting.layoutSubtreeIfNeeded()
+        RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.2))
+        XCTAssertEqual(calls, 0)
+        XCTAssertEqual(model.selection?.itemID, record.id)
+        XCTAssertEqual(model.query, "")
+    }
+
+    func testStaleEllipsisActionKeepsSearchAndDoesNotDismiss() {
+        let snippet = snippetRecord()
+        let model = GlobalSearchViewModel()
+        model.applyImmediateSnapshot(
+            GlobalSearchImmediateSnapshot(
+                clipboard: [],
+                clipboardUnavailable: false,
+                files: [],
+                filesUnavailable: false,
+                snippets: [snippet],
+                snippetsUnavailable: false,
+                links: [],
+                linksUnavailable: false,
+                panelInputs: [],
+                panelsUnavailable: false,
+                workspaceNames: [:]
+            )
+        )
+        model.query = "公司"
+        model.selection = GlobalSearchResultID(source: .snippets, itemID: snippet.id)
+        let items = GlobalSearchResultMenu.items { [.createTextPanel] }
+        XCTAssertEqual(items, [.reveal, .divider, .action(.createTextPanel)])
+        let outcome = GlanceActionOutcome.failed(GlanceNoticeCopy.staleItem)
+        XCTAssertFalse(
+            GlobalSearchItemActionSessionPolicy.shouldDismiss(
+                after: .createTextPanel,
+                outcome: outcome
+            )
+        )
+        model.showNotice(GlanceNoticeCopy.staleItem)
+        XCTAssertEqual(model.query, "公司")
+        XCTAssertEqual(model.selection?.itemID, snippet.id)
+        XCTAssertEqual(model.notice, GlanceNoticeCopy.staleItem)
+    }
+
+    func testMoreHelpUsesTitleContext() {
+        XCTAssertEqual(
+            GlobalSearchRowActionPresentation.moreHelp(title: "项目计划"),
+            "项目计划的更多操作"
+        )
+        XCTAssertEqual(
+            GlobalSearchRowActionPresentation.moreHelp(title: "  "),
+            GlanceRowActionCopy.more
+        )
     }
 
     private func assertSearchActions(

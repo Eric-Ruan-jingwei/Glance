@@ -67,6 +67,17 @@ final class GlanceUXPolishTests: XCTestCase {
         XCTAssertEqual(SnippetRowQuickAction.actionCount, 4)
         XCTAssertEqual(LinkRowQuickAction.actionCount, 4)
         XCTAssertEqual(PanelLibraryRowQuickAction.actionCount, 3)
+        XCTAssertEqual(GlanceRowQuickActionLayout.globalSearchButtons, 1)
+        XCTAssertEqual(GlobalSearchRowActionPresentation.trailingWidth, 26, accuracy: 0.1)
+        XCTAssertEqual(
+            GlanceRowQuickActionLayout.slotWidth(for: .globalSearch),
+            26,
+            accuracy: 0.1
+        )
+        XCTAssertEqual(
+            GlanceRowQuickActionLayout.slotWidth(for: .globalSearch, isHovered: true, isSelected: true),
+            GlanceRowQuickActionLayout.slotWidth(for: .globalSearch)
+        )
 
         XCTAssertEqual(
             GlanceRowQuickActionLayout.width(for: GlanceRowQuickActionLayout.clipboardButtons),

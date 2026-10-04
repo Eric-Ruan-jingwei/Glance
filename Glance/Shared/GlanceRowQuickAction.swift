@@ -7,6 +7,7 @@ enum GlanceRowQuickActionLayout {
         case snippet
         case link
         case panelLibrary
+        case globalSearch
 
         var buttonCount: Int {
             switch self {
@@ -15,6 +16,7 @@ enum GlanceRowQuickActionLayout {
             case .snippet: return GlanceRowQuickActionLayout.snippetButtons
             case .link: return GlanceRowQuickActionLayout.linkButtons
             case .panelLibrary: return GlanceRowQuickActionLayout.panelLibraryButtons
+            case .globalSearch: return GlanceRowQuickActionLayout.globalSearchButtons
             }
         }
 
@@ -29,6 +31,7 @@ enum GlanceRowQuickActionLayout {
     static let snippetButtons = 4
     static let linkButtons = 4
     static let panelLibraryButtons = 3
+    static let globalSearchButtons = 1
 
     static func width(for buttons: Int) -> CGFloat {
         CGFloat(buttons) * buttonSide
@@ -125,6 +128,7 @@ struct GlanceRowTrailingAccessory<Normal: View, Actions: View>: View {
 
 struct GlanceRowMoreButton<Content: View>: View {
     var visible: Bool
+    var help: String = GlanceRowActionCopy.more
     @ViewBuilder var menu: () -> Content
 
     var body: some View {
@@ -140,8 +144,8 @@ struct GlanceRowMoreButton<Content: View>: View {
         }
         .menuIndicator(.hidden)
         .buttonStyle(.borderless)
-        .help(GlanceRowActionCopy.more)
-        .accessibilityLabel(GlanceRowActionCopy.more)
+        .help(help)
+        .accessibilityLabel(help)
         .opacity(visible ? 1 : 0)
         .allowsHitTesting(visible)
     }

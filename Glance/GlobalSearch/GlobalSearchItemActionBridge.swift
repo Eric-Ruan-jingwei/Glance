@@ -47,3 +47,53 @@ enum GlobalSearchItemActionSessionPolicy {
         return action.createsPanel
     }
 }
+
+enum GlobalSearchResultMenu {
+    enum Item: Equatable, Identifiable {
+        case reveal
+        case divider
+        case action(GlanceItemAction)
+
+        var id: String {
+            switch self {
+            case .reveal:
+                return "reveal"
+            case .divider:
+                return "divider"
+            case .action(let action):
+                return "action.\(action.identifier)"
+            }
+        }
+    }
+
+    static func items(itemActions: () -> [GlanceItemAction]) -> [Item] {
+        var result: [Item] = [.reveal]
+        let actions = itemActions()
+        if !actions.isEmpty {
+            result.append(.divider)
+            result.append(contentsOf: actions.map { .action($0) })
+        }
+        return result
+    }
+}
+
+enum GlobalSearchRowActionPresentation {
+    static let trailingKind = GlanceRowQuickActionLayout.Kind.globalSearch
+    static var trailingWidth: CGFloat { trailingKind.width }
+    static let sourceIconSide: CGFloat = 28
+
+    static func showsEllipsis(isHovered: Bool, isSelected: Bool) -> Bool {
+        GlanceRowQuickActionVisibility.showsSecondary(
+            isHovered: isHovered,
+            isSelected: isSelected
+        )
+    }
+
+    static func moreHelp(title: String) -> String {
+        let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            return GlanceRowActionCopy.more
+        }
+        return "\(trimmed)的更多操作"
+    }
+}

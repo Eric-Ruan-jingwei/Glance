@@ -44,6 +44,86 @@ enum QuickCaptureAction: Equatable, CaseIterable {
     }
 }
 
+enum QuickCaptureActionPresentation {
+    static let saveSnippetSymbol = "text.quote"
+    static let saveLinkSymbol = "link"
+    static let addToFileShelfSymbol = "tray"
+    static let genericFilePanelSymbol = "square.stack"
+
+    static func symbolName(
+        for action: QuickCaptureAction,
+        content: QuickCaptureContent = .empty
+    ) -> String {
+        switch action {
+        case .saveSnippet:
+            return saveSnippetSymbol
+        case .saveLink:
+            return saveLinkSymbol
+        case .addToFileShelf:
+            return addToFileShelfSymbol
+        case .createTextPanel:
+            return PanelKindSymbol.name(for: PanelKind.text)
+        case .createTodoPanel:
+            return PanelKindSymbol.name(for: PanelKind.todo)
+        case .createFilePanel:
+            return filePanelSymbolName(content: content)
+        }
+    }
+
+    static func destinationLabel(for action: QuickCaptureAction) -> String {
+        switch action {
+        case .saveSnippet:
+            return QuickCaptureCopy.destinationSnippet
+        case .saveLink:
+            return QuickCaptureCopy.destinationLink
+        case .addToFileShelf:
+            return QuickCaptureCopy.destinationFileShelf
+        case .createTextPanel, .createTodoPanel, .createFilePanel:
+            return QuickCaptureCopy.destinationPanel
+        }
+    }
+
+    static func isSelected(
+        _ action: QuickCaptureAction,
+        selectedAction: QuickCaptureAction?
+    ) -> Bool {
+        selectedAction == action
+    }
+
+    private static func filePanelSymbolName(content: QuickCaptureContent) -> String {
+        guard case .files(let urls) = content, urls.count == 1, let url = urls.first else {
+            return genericFilePanelSymbol
+        }
+        switch QuickCapturePanelFileSupport.kind(for: url) {
+        case .image:
+            return PanelKindSymbol.name(for: PanelKind.image)
+        case .pdf:
+            return PanelKindSymbol.name(for: PanelKind.pdf)
+        case nil:
+            return genericFilePanelSymbol
+        }
+    }
+}
+
+enum QuickCaptureDetectedPresentation {
+    static let textSymbol = "text.alignleft"
+    static let urlSymbol = "link"
+    static let filesSymbol = "doc.on.doc"
+
+    static func symbolName(for content: QuickCaptureContent) -> String? {
+        switch content {
+        case .empty:
+            return nil
+        case .text:
+            return textSymbol
+        case .url:
+            return urlSymbol
+        case .files:
+            return filesSymbol
+        }
+    }
+}
+
 enum QuickCapturePolicy {
     static func actions(
         for content: QuickCaptureContent,
@@ -171,6 +251,11 @@ enum QuickCaptureCopy {
     static let detectedPDF = "识别：PDF"
     static let emptyHint = "先输入内容"
     static let todoMustBeSingleLine = "待办内容需要保持单行"
+    static let destinationSnippet = "片段库"
+    static let destinationLink = "链接库"
+    static let destinationFileShelf = "文件架"
+    static let destinationPanel = "面板"
+    static let selectedAccessibilityValue = "已选择"
 
     static func detectedTitle(for content: QuickCaptureContent) -> String {
         switch content {

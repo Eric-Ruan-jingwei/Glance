@@ -113,6 +113,8 @@ enum GlanceTheme {
         static var grip: NSColor { NSColor.labelColor.withAlphaComponent(0.2) }
         static var panelMaterial: NSVisualEffectView.Material { .contentBackground }
         static var floatingMaterial: NSVisualEffectView.Material { .headerView }
+        static var rowHover: NSColor { NSColor.labelColor.withAlphaComponent(0.05) }
+        static var rowSelected: NSColor { NSColor.controlAccentColor.withAlphaComponent(0.14) }
     }
 
     static func menuSymbol(_ name: String) -> NSImage? {
