@@ -58,6 +58,11 @@ final class GlanceItemDropSession {
         return action
     }
 
+    func cachedSourceID(for destination: GlanceItemDropDestination) -> GlanceActionSourceID? {
+        guard cachedDestination == destination else { return nil }
+        return cachedSourceID
+    }
+
     func cachedAction(
         for sourceID: GlanceActionSourceID,
         destination: GlanceItemDropDestination
@@ -80,13 +85,42 @@ enum GlanceItemDropRunner {
         targeted: Bool,
         destination: GlanceItemDropDestination,
         session: GlanceItemDropSession,
-        availableActions: (GlanceActionSourceID) -> [GlanceItemAction]
+        availableActions: (GlanceActionSourceID) -> [GlanceItemAction],
+        pasteboard: NSPasteboard = NSPasteboard(name: .drag)
     ) -> Bool {
         guard targeted else {
+            return false
+        }
+        guard let sourceID = GlanceItemDragCodec.sourceIDIfSynchronouslyAvailable(
+            pasteboard: pasteboard
+        ) else {
             session.reset()
             return false
         }
-        guard let sourceID = GlanceItemDragCodec.sourceID(from: NSPasteboard(name: .drag)) else {
+        return session.plannedAction(
+            sourceID: sourceID,
+            destination: destination,
+            availableActions: availableActions
+        ) != nil
+    }
+
+    static func accepts(
+        providers: [NSItemProvider],
+        destination: GlanceItemDropDestination,
+        session: GlanceItemDropSession,
+        availableActions: (GlanceActionSourceID) -> [GlanceItemAction],
+        pasteboard: NSPasteboard = NSPasteboard(name: .drag)
+    ) -> Bool {
+        guard GlanceItemDragCodec.hasInternalPayload(providers) else {
+            return false
+        }
+        let sourceID: GlanceActionSourceID?
+        if GlanceItemDragCodec.pasteboardHasInternalItem(pasteboard) {
+            sourceID = GlanceItemDragCodec.sourceID(from: pasteboard)
+        } else {
+            sourceID = session.cachedSourceID(for: destination)
+        }
+        guard let sourceID else {
             return false
         }
         return session.plannedAction(
@@ -109,10 +143,15 @@ enum GlanceItemDropRunner {
             destination: destination,
             availableActions: availableActions(sourceID)
         )
-        let action = live ?? session.cachedAction(for: sourceID, destination: destination)
+        let cached = session.cachedAction(for: sourceID, destination: destination)
         session.reset()
-        guard let action else { return nil }
-        return perform(action, sourceID, screen)
+        if let live {
+            return perform(live, sourceID, screen)
+        }
+        if let cached {
+            return perform(cached, sourceID, screen)
+        }
+        return nil
     }
 
     static func handleProviders(
@@ -122,19 +161,40 @@ enum GlanceItemDropRunner {
         availableActions: @escaping (GlanceActionSourceID) -> [GlanceItemAction],
         perform: @escaping (GlanceItemAction, GlanceActionSourceID, NSScreen?) -> GlanceActionOutcome,
         screen: NSScreen?,
-        onFailed: @escaping (String) -> Void
+        onFailed: @escaping (String) -> Void,
+        pasteboard: NSPasteboard = NSPasteboard(name: .drag)
     ) -> Bool {
-        guard GlanceItemDragCodec.hasInternalPayload(providers) else { return false }
+        guard accepts(
+            providers: providers,
+            destination: destination,
+            session: session,
+            availableActions: availableActions,
+            pasteboard: pasteboard
+        ) else {
+            return false
+        }
         GlanceItemDragCodec.load(from: providers) { sourceID in
-            guard let sourceID else { return }
+            let resolvedID = sourceID
+                ?? GlanceItemDragCodec.sourceIDIfSynchronouslyAvailable(pasteboard: pasteboard)
+                ?? session.cachedSourceID(for: destination)
+            guard let resolvedID else {
+                NSSound.beep()
+                onFailed(GlanceNoticeCopy.staleItem)
+                return
+            }
             let outcome = drop(
-                sourceID: sourceID,
+                sourceID: resolvedID,
                 destination: destination,
                 session: session,
                 availableActions: availableActions,
                 perform: perform,
                 screen: screen
             )
+            if outcome == nil {
+                NSSound.beep()
+                onFailed(GlanceNoticeCopy.cannotSave)
+                return
+            }
             if case .failed(let message)? = outcome {
                 NSSound.beep()
                 onFailed(message)

@@ -455,6 +455,305 @@ final class GlanceItemDragTests: XCTestCase {
         XCTAssertNil(drop(.clipboard(record.id), to: .snippets, coordinator: coordinator))
     }
 
+    func testHandleProvidersRejectsClipboardPlainTextOnLinks() {
+        let record = clipboardText("hello world")
+        let log = ActionCallLog()
+        let coordinator = coordinator(log: log, clipboard: record)
+        var performs = 0
+        XCTAssertFalse(
+            handleAccepted(
+                sourceID: .clipboard(record.id),
+                destination: .links,
+                coordinator: coordinator,
+                nativeText: record.text,
+                performCount: &performs
+            )
+        )
+        XCTAssertEqual(performs, 0)
+        XCTAssertEqual(log.presentLinkEditor, 0)
+        XCTAssertEqual(log.presentSnippetEditor, 0)
+        XCTAssertEqual(log.createTextPanel, 0)
+        XCTAssertEqual(log.clipboards[record.id]?.id, record.id)
+    }
+
+    func testHandleProvidersRejectsClipboardImageOnSnippets() {
+        let record = clipboardImage()
+        let log = ActionCallLog()
+        let coordinator = coordinator(log: log, clipboard: record)
+        var performs = 0
+        XCTAssertFalse(
+            handleAccepted(
+                sourceID: .clipboard(record.id),
+                destination: .snippets,
+                coordinator: coordinator,
+                performCount: &performs
+            )
+        )
+        XCTAssertEqual(performs, 0)
+        XCTAssertEqual(log.presentSnippetEditor, 0)
+    }
+
+    func testHandleProvidersRejectsSnippetOnLinks() {
+        let snippet = snippetRecord()
+        let log = ActionCallLog()
+        let coordinator = coordinator(log: log, snippet: snippet)
+        var performs = 0
+        XCTAssertFalse(
+            handleAccepted(
+                sourceID: .snippet(snippet.id),
+                destination: .links,
+                coordinator: coordinator,
+                nativeText: snippet.content,
+                performCount: &performs
+            )
+        )
+        XCTAssertEqual(performs, 0)
+        XCTAssertEqual(log.snippets[snippet.id]?.id, snippet.id)
+    }
+
+    func testHandleProvidersRejectsLinkOnLinksWithoutExternalFallback() {
+        let link = linkRecord()
+        let log = ActionCallLog()
+        let coordinator = coordinator(log: log, link: link)
+        let url = URL(string: link.urlString)!
+        let providers = [
+            GlanceDragOffer.itemProvider(sourceID: .link(link.id), nativeURL: url)
+        ]
+        XCTAssertTrue(GlanceItemDragCodec.hasInternalPayload(providers))
+        XCTAssertTrue(providers[0].hasItemConformingToTypeIdentifier(UTType.url.identifier))
+        var performs = 0
+        var ingestedExternally = 0
+        let accepted = handleAccepted(
+            sourceID: .link(link.id),
+            destination: .links,
+            coordinator: coordinator,
+            nativeURL: url,
+            performCount: &performs
+        )
+        XCTAssertFalse(accepted)
+        if !GlanceItemDragCodec.hasInternalPayload(providers) || accepted {
+            ingestedExternally += 1
+        }
+        XCTAssertEqual(performs, 0)
+        XCTAssertEqual(ingestedExternally, 0)
+        XCTAssertEqual(log.links.count, 1)
+        XCTAssertEqual(log.presentLinkEditor, 0)
+    }
+
+    func testHandleProvidersRejectsMissingPDFOnPanels() {
+        let pdf = fileRecord(name: "brief.pdf", path: "/tmp/brief.pdf", type: "pdf")
+        let log = ActionCallLog()
+        let coordinator = coordinator(log: log, file: pdf, fileMissing: true)
+        var performs = 0
+        XCTAssertFalse(
+            handleAccepted(
+                sourceID: .fileShelf(pdf.id),
+                destination: .panels,
+                coordinator: coordinator,
+                nativeURL: URL(fileURLWithPath: pdf.originalPath),
+                performCount: &performs
+            )
+        )
+        XCTAssertEqual(performs, 0)
+        XCTAssertEqual(log.importPDF, 0)
+        XCTAssertEqual(log.files[pdf.id]?.id, pdf.id)
+    }
+
+    func testHandleProvidersRejectsInvalidInternalPayloads() {
+        let coordinator = coordinator(log: ActionCallLog())
+        let payloads: [Data] = [
+            Data("not-json".utf8),
+            Data(#"{"version":2,"source":"clipboard","itemID":"\#(UUID().uuidString)"}"#.utf8),
+            Data(#"{"version":1,"source":"panel","itemID":"\#(UUID().uuidString)"}"#.utf8),
+            Data(#"{"version":1,"source":"clipboard","itemID":"not-a-uuid"}"#.utf8)
+        ]
+        for data in payloads {
+            var performs = 0
+            let session = GlanceItemDropSession()
+            let accepted = GlanceItemDropRunner.handleProviders(
+                [invalidInternalProvider(data)],
+                destination: .links,
+                session: session,
+                availableActions: { coordinator.availableActions(for: $0) },
+                perform: { action, sourceID, screen in
+                    performs += 1
+                    return coordinator.perform(action, sourceID: sourceID, screen: screen)
+                },
+                screen: nil,
+                onFailed: { _ in },
+                pasteboard: isolatedPasteboard(data)
+            )
+            XCTAssertFalse(accepted, "payload should be rejected: \(String(data: data, encoding: .utf8) ?? "")")
+            XCTAssertEqual(performs, 0)
+        }
+    }
+
+    func testHoverAndAcceptanceStayConsistent() {
+        let plain = clipboardText("hello world")
+        let url = clipboardText("https://example.com")
+        let log = ActionCallLog()
+        let coordinator = coordinator(log: log, clipboard: plain)
+        log.clipboards[url.id] = url
+
+        assertHoverMatchesAcceptance(
+            sourceID: .clipboard(url.id),
+            destination: .links,
+            coordinator: coordinator,
+            nativeText: url.text,
+            expected: true
+        )
+        assertHoverMatchesAcceptance(
+            sourceID: .clipboard(plain.id),
+            destination: .links,
+            coordinator: coordinator,
+            nativeText: plain.text,
+            expected: false
+        )
+    }
+
+    func testValidPDFBecomingMissingAfterHoverDoesNotImport() {
+        let pdf = fileRecord(name: "brief.pdf", path: "/tmp/brief.pdf", type: "pdf")
+        let log = ActionCallLog()
+        let coordinator = coordinator(log: log, file: pdf, resolvedPath: pdf.originalPath)
+        let session = GlanceItemDropSession()
+        XCTAssertEqual(
+            session.plannedAction(
+                sourceID: .fileShelf(pdf.id),
+                destination: .panels,
+                availableActions: { coordinator.availableActions(for: $0) }
+            ),
+            .createPDFPanel
+        )
+        log.fileMissing = true
+        let outcome = GlanceItemDropRunner.drop(
+            sourceID: .fileShelf(pdf.id),
+            destination: .panels,
+            session: session,
+            availableActions: { coordinator.availableActions(for: $0) },
+            perform: { coordinator.perform($0, sourceID: $1, screen: $2) },
+            screen: nil
+        )
+        XCTAssertNotEqual(outcome, .succeeded)
+        XCTAssertEqual(outcome, .failed(GlanceNoticeCopy.fileMissing))
+        XCTAssertEqual(log.importPDF, 0)
+        XCTAssertEqual(log.files[pdf.id]?.id, pdf.id)
+    }
+
+    func testHandleProvidersAcceptsClipboardTextToSnippets() {
+        let record = clipboardText("keep this")
+        let log = ActionCallLog()
+        let coordinator = coordinator(log: log, clipboard: record)
+        var performs = 0
+        XCTAssertTrue(
+            handleAccepted(
+                sourceID: .clipboard(record.id),
+                destination: .snippets,
+                coordinator: coordinator,
+                nativeText: record.text,
+                performCount: &performs
+            )
+        )
+    }
+
+    func testProductionURLDragItemExportsInternalAndPublicURL() {
+        let id = UUID()
+        let url = URL(string: "https://example.com")!
+        let item = GlanceURLDragItem(
+            payload: GlanceItemDragPayload(sourceID: .link(id)),
+            url: url
+        )
+        let provider = NSItemProvider()
+        provider.register(item)
+        XCTAssertTrue(provider.hasItemConformingToTypeIdentifier(GlanceDragType.identifier))
+        XCTAssertTrue(provider.hasItemConformingToTypeIdentifier(UTType.url.identifier))
+        let internalReady = expectation(description: "internal")
+        provider.loadDataRepresentation(forTypeIdentifier: GlanceDragType.identifier) { data, _ in
+            XCTAssertEqual(GlanceItemDragCodec.sourceID(from: data ?? Data()), .link(id))
+            internalReady.fulfill()
+        }
+        let urlReady = expectation(description: "url")
+        provider.loadItem(forTypeIdentifier: UTType.url.identifier, options: nil) { value, _ in
+            let loaded: URL?
+            if let value = value as? URL {
+                loaded = value
+            } else if let value = value as? NSURL {
+                loaded = value as URL
+            } else if let data = value as? Data {
+                loaded = URL(dataRepresentation: data, relativeTo: nil)
+            } else {
+                loaded = nil
+            }
+            XCTAssertEqual(loaded?.absoluteString, url.absoluteString)
+            urlReady.fulfill()
+        }
+        wait(for: [internalReady, urlReady], timeout: 2)
+    }
+
+    func testProductionFileURLDragItemExportsInternalAndFileURL() {
+        let id = UUID()
+        let url = URL(fileURLWithPath: "/tmp/brief.pdf")
+        let item = GlanceURLDragItem(
+            payload: GlanceItemDragPayload(sourceID: .fileShelf(id)),
+            url: url
+        )
+        let provider = NSItemProvider()
+        provider.register(item)
+        XCTAssertTrue(provider.hasItemConformingToTypeIdentifier(GlanceDragType.identifier))
+        XCTAssertTrue(
+            provider.hasItemConformingToTypeIdentifier(UTType.fileURL.identifier)
+                || provider.hasItemConformingToTypeIdentifier(UTType.url.identifier)
+        )
+        let internalReady = expectation(description: "internal-file")
+        provider.loadDataRepresentation(forTypeIdentifier: GlanceDragType.identifier) { data, _ in
+            XCTAssertEqual(GlanceItemDragCodec.sourceID(from: data ?? Data()), .fileShelf(id))
+            internalReady.fulfill()
+        }
+        let fileReady = expectation(description: "file-url")
+        let type = provider.hasItemConformingToTypeIdentifier(UTType.fileURL.identifier)
+            ? UTType.fileURL.identifier
+            : UTType.url.identifier
+        provider.loadItem(forTypeIdentifier: type, options: nil) { value, _ in
+            let loaded: URL?
+            if let value = value as? URL {
+                loaded = value
+            } else if let value = value as? NSURL {
+                loaded = value as URL
+            } else if let data = value as? Data {
+                loaded = URL(dataRepresentation: data, relativeTo: nil)
+            } else {
+                loaded = nil
+            }
+            XCTAssertEqual(loaded?.isFileURL, true)
+            XCTAssertEqual(loaded?.path, url.path)
+            fileReady.fulfill()
+        }
+        wait(for: [internalReady, fileReady], timeout: 2)
+        XCTAssertTrue(provider.hasItemConformingToTypeIdentifier(UTType.fileURL.identifier))
+    }
+
+    func testProductionTextDragItemExportsInternalAndPlainText() {
+        let id = UUID()
+        let item = GlanceTextDragItem(
+            payload: GlanceItemDragPayload(sourceID: .snippet(id)),
+            text: "hello"
+        )
+        let provider = NSItemProvider()
+        provider.register(item)
+        XCTAssertTrue(provider.hasItemConformingToTypeIdentifier(GlanceDragType.identifier))
+        XCTAssertTrue(provider.hasItemConformingToTypeIdentifier(UTType.utf8PlainText.identifier))
+        let internalReady = expectation(description: "internal-text")
+        provider.loadDataRepresentation(forTypeIdentifier: GlanceDragType.identifier) { data, _ in
+            XCTAssertEqual(GlanceItemDragCodec.sourceID(from: data ?? Data()), .snippet(id))
+            internalReady.fulfill()
+        }
+        let textReady = expectation(description: "plain-text")
+        provider.loadDataRepresentation(forTypeIdentifier: UTType.utf8PlainText.identifier) { data, _ in
+            XCTAssertEqual(data.flatMap { String(data: $0, encoding: .utf8) }, "hello")
+            textReady.fulfill()
+        }
+        wait(for: [internalReady, textReady], timeout: 2)
+    }
+
     private func assertRoundTrip(_ sourceID: GlanceActionSourceID, source: String, id: UUID) {
         let payload = GlanceItemDragPayload(sourceID: sourceID)
         XCTAssertEqual(payload.version, 1)
@@ -479,6 +778,98 @@ final class GlanceItemDragTests: XCTestCase {
         )
     }
 
+    @discardableResult
+    private func handleAccepted(
+        sourceID: GlanceActionSourceID,
+        destination: GlanceItemDropDestination,
+        coordinator: GlanceActionCoordinator,
+        nativeText: String? = nil,
+        nativeURL: URL? = nil,
+        performCount: inout Int
+    ) -> Bool {
+        let session = GlanceItemDropSession()
+        _ = session.plannedAction(
+            sourceID: sourceID,
+            destination: destination,
+            availableActions: { coordinator.availableActions(for: $0) }
+        )
+        var performs = 0
+        let accepted = GlanceItemDropRunner.handleProviders(
+            [GlanceDragOffer.itemProvider(
+                sourceID: sourceID,
+                nativeText: nativeText,
+                nativeURL: nativeURL
+            )],
+            destination: destination,
+            session: session,
+            availableActions: { coordinator.availableActions(for: $0) },
+            perform: { action, droppedID, screen in
+                performs += 1
+                return coordinator.perform(action, sourceID: droppedID, screen: screen)
+            },
+            screen: nil,
+            onFailed: { _ in },
+            pasteboard: isolatedPasteboard(
+                GlanceItemDragCodec.encode(GlanceItemDragPayload(sourceID: sourceID))
+            )
+        )
+        performCount = performs
+        return accepted
+    }
+
+    private func assertHoverMatchesAcceptance(
+        sourceID: GlanceActionSourceID,
+        destination: GlanceItemDropDestination,
+        coordinator: GlanceActionCoordinator,
+        nativeText: String?,
+        expected: Bool
+    ) {
+        let session = GlanceItemDropSession()
+        let pasteboard = isolatedPasteboard(
+            GlanceItemDragCodec.encode(GlanceItemDragPayload(sourceID: sourceID))
+        )
+        let highlight = GlanceItemDropRunner.hoverHighlight(
+            targeted: true,
+            destination: destination,
+            session: session,
+            availableActions: { coordinator.availableActions(for: $0) },
+            pasteboard: pasteboard
+        )
+        let accepted = GlanceItemDropRunner.accepts(
+            providers: [
+                GlanceDragOffer.itemProvider(sourceID: sourceID, nativeText: nativeText)
+            ],
+            destination: destination,
+            session: session,
+            availableActions: { coordinator.availableActions(for: $0) },
+            pasteboard: pasteboard
+        )
+        XCTAssertEqual(highlight, expected)
+        XCTAssertEqual(accepted, expected)
+        XCTAssertEqual(highlight, accepted)
+    }
+
+    private func isolatedPasteboard(_ data: Data?) -> NSPasteboard {
+        let pasteboard = NSPasteboard(name: NSPasteboard.Name("glance.test.\(UUID().uuidString)"))
+        pasteboard.clearContents()
+        if let data {
+            pasteboard.setData(data, forType: GlanceDragType.pasteboardType)
+        }
+        return pasteboard
+    }
+
+    private func invalidInternalProvider(_ data: Data) -> NSItemProvider {
+        let provider = NSItemProvider()
+        provider.registerDataRepresentation(
+            forTypeIdentifier: GlanceDragType.identifier,
+            visibility: .ownProcess
+        ) { completion in
+            completion(data, nil)
+            return nil
+        }
+        return provider
+    }
+
     private func coordinator(
         log: ActionCallLog,
         clipboard: ClipboardHistoryRecord? = nil,
@@ -500,6 +891,7 @@ final class GlanceItemDragTests: XCTestCase {
         if let file {
             log.files[file.id] = file
         }
+        log.fileMissing = fileMissing
         return GlanceActionCoordinator(
             dependencies: GlanceActionDependencies(
                 createTextPanel: { _, body, _ in
@@ -527,7 +919,7 @@ final class GlanceItemDragTests: XCTestCase {
                 fileRecord: { id in log.files[id] },
                 resolveFile: { id in
                     log.resolveFile += 1
-                    if fileMissing {
+                    if log.fileMissing {
                         return .missing
                     }
                     guard let path = resolvedPath ?? log.files[id]?.originalPath else {
@@ -583,6 +975,7 @@ private final class ActionCallLog {
     var presentLinkEditor = 0
     var dismissClipboard = 0
     var resolveFile = 0
+    var fileMissing = false
     var textPanelBodies: [String] = []
     var clipboardContents: [ClipboardCaptureContent] = []
     var snippetEditorTexts: [String] = []

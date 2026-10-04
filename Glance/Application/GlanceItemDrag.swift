@@ -107,6 +107,17 @@ enum GlanceItemDragCodec {
         return nil
     }
 
+    static func sourceIDIfSynchronouslyAvailable(
+        pasteboard: NSPasteboard = NSPasteboard(name: .drag)
+    ) -> GlanceActionSourceID? {
+        sourceID(from: pasteboard)
+    }
+
+    static func pasteboardHasInternalItem(_ pasteboard: NSPasteboard) -> Bool {
+        pasteboard.data(forType: GlanceDragType.pasteboardType) != nil
+            || pasteboard.string(forType: GlanceDragType.pasteboardType) != nil
+    }
+
     static func hasInternalPayload(_ providers: [NSItemProvider]) -> Bool {
         providers.contains { $0.hasItemConformingToTypeIdentifier(GlanceDragType.identifier) }
     }

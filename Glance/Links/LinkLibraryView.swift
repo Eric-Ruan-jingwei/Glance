@@ -2,7 +2,6 @@ import AppKit
 import Combine
 import SwiftUI
 import UniformTypeIdentifiers
-import UniformTypeIdentifiers
 
 enum LinkEditorFocus: Equatable {
     case title
