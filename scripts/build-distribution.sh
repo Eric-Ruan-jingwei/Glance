@@ -67,6 +67,13 @@ verify_app() {
     echo "${label}: LSMultipleInstancesProhibited must be true" >&2
     exit 1
   fi
+
+  local archs
+  archs="$(lipo -archs "$binary")"
+  if [[ "$archs" != *arm64* || "$archs" != *x86_64* ]]; then
+    echo "${label}: expected Universal 2 (arm64 x86_64), got: ${archs}" >&2
+    exit 1
+  fi
 }
 
 SOURCE_PLIST="$ROOT/Glance/Info.plist"
@@ -146,5 +153,6 @@ echo "dist/Glance-${VERSION}.dmg"
 echo "dist/Glance-${VERSION}.zip"
 echo "dist/SHA256SUMS"
 echo
+echo "Architecture: Universal 2 (arm64 x86_64)"
 echo "Signing: ad-hoc"
 echo "Notarization: none"

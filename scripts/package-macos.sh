@@ -7,10 +7,10 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
-echo "Building Glance (release)…"
-swift build -c release --product Glance
+echo "Building Glance (release, Universal 2)…"
+swift build -c release --arch arm64 --arch x86_64 --product Glance
 
-BIN="$(swift build -c release --show-bin-path)/Glance"
+BIN="$(swift build -c release --arch arm64 --arch x86_64 --show-bin-path --product Glance)/Glance"
 APP="$ROOT/dist/Glance.app"
 
 rm -rf "$APP"
@@ -18,6 +18,12 @@ mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp "$BIN" "$APP/Contents/MacOS/Glance"
 chmod +x "$APP/Contents/MacOS/Glance"
 cp "$ROOT/Glance/Info.plist" "$APP/Contents/Info.plist"
+
+ARCHS="$(lipo -archs "$APP/Contents/MacOS/Glance")"
+if [[ "$ARCHS" != *arm64* || "$ARCHS" != *x86_64* ]]; then
+  echo "Packaged Glance binary must be Universal 2 (arm64 x86_64), got: ${ARCHS}" >&2
+  exit 1
+fi
 
 ICON="$ROOT/Glance/AppIcon.icns"
 if [[ ! -f "$ICON" ]]; then

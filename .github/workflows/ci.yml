@@ -69,6 +69,12 @@ jobs:
             echo "LSMultipleInstancesProhibited must be true in packaged Glance.app"
             exit 1
           fi
+          archs="$(lipo -archs dist/Glance.app/Contents/MacOS/Glance)"
+          echo "Packaged binary architectures: $archs"
+          if [[ "$archs" != *arm64* || "$archs" != *x86_64* ]]; then
+            echo "Packaged Glance binary must be Universal 2 (arm64 x86_64)"
+            exit 1
+          fi
 
       - name: Distribution package smoke
         run: |
@@ -95,8 +101,13 @@ jobs:
           zip_marketing="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$extract/Glance.app/Contents/Info.plist")"
           zip_build="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$extract/Glance.app/Contents/Info.plist")"
           zip_prohibited="$(/usr/libexec/PlistBuddy -c 'Print :LSMultipleInstancesProhibited' "$extract/Glance.app/Contents/Info.plist")"
+          zip_archs="$(lipo -archs "$extract/Glance.app/Contents/MacOS/Glance")"
           if [[ "$zip_marketing" != "$marketing" || "$zip_build" != "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' Glance/Info.plist)" || "$zip_prohibited" != "true" ]]; then
             echo "ZIP app metadata mismatch"
+            exit 1
+          fi
+          if [[ "$zip_archs" != *arm64* || "$zip_archs" != *x86_64* ]]; then
+            echo "ZIP Glance binary must be Universal 2 (arm64 x86_64), got: $zip_archs"
             exit 1
           fi
           hdiutil attach -nobrowse -readonly -mountpoint "$mount" "$dmg"
@@ -106,10 +117,15 @@ jobs:
           dmg_marketing="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$mount/Glance.app/Contents/Info.plist")"
           dmg_build="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$mount/Glance.app/Contents/Info.plist")"
           dmg_prohibited="$(/usr/libexec/PlistBuddy -c 'Print :LSMultipleInstancesProhibited' "$mount/Glance.app/Contents/Info.plist")"
+          dmg_archs="$(lipo -archs "$mount/Glance.app/Contents/MacOS/Glance")"
           hdiutil detach "$mount"
           mount=""
           if [[ "$dmg_marketing" != "$marketing" || "$dmg_build" != "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' Glance/Info.plist)" || "$dmg_prohibited" != "true" ]]; then
             echo "DMG app metadata mismatch"
+            exit 1
+          fi
+          if [[ "$dmg_archs" != *arm64* || "$dmg_archs" != *x86_64* ]]; then
+            echo "DMG Glance binary must be Universal 2 (arm64 x86_64), got: $dmg_archs"
             exit 1
           fi
           echo "NOTE: This beta artifact is ad-hoc signed and is not notarized."
