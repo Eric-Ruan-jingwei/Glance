@@ -32,6 +32,7 @@ enum GlanceNoticeCopy {
     static let clipboardWriteFailed = "无法写入剪贴板"
     static let cannotSave = "无法保存更改"
     static let fileShelfAddFailed = "无法加入文件架"
+    static let fileShelfPartialAddFailed = "部分文件未能加入文件架"
     static let launchAtLoginFailed = "无法更改开机启动设置"
     static let startupFailed = "Glance 无法启动"
     static let startupFailedDetail = "无法准备本机数据文件夹。现有文件没有被覆盖。"

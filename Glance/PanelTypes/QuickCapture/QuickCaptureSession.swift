@@ -6,6 +6,7 @@ struct QuickCaptureDestinations {
     var saveLink: (String) -> GlanceActionOutcome
     var addToFileShelf: ([URL]) -> GlanceActionOutcome
     var createTextPanel: (String) -> Bool
+    var createTodoPanel: (String) -> Bool
     var createImagePanel: (URL) -> Bool
     var createPDFPanel: (URL) -> Bool
 
@@ -14,6 +15,7 @@ struct QuickCaptureDestinations {
         saveLink: { _ in .failed(GlanceNoticeCopy.cannotSave) },
         addToFileShelf: { _ in .failed(GlanceNoticeCopy.fileShelfAddFailed) },
         createTextPanel: { _ in false },
+        createTodoPanel: { _ in false },
         createImagePanel: { _ in false },
         createPDFPanel: { _ in false }
     )
@@ -32,29 +34,29 @@ enum QuickCaptureExecutor {
             return destinations.saveLink(urlString)
         case (.addToFileShelf, .files(let urls)):
             return destinations.addToFileShelf(urls)
-        case (.createPanel, .text(let text)), (.createPanel, .url(let text)):
-            return destinations.createTextPanel(text)
-                ? .succeeded
-                : .failed(GlanceNoticeCopy.panelCreateFailed)
-        case (.createPanel, .files(let urls)):
-            for url in urls {
-                let created: Bool
-                switch QuickCapturePanelFileSupport.kind(for: url) {
-                case .image:
-                    created = destinations.createImagePanel(url)
-                case .pdf:
-                    created = destinations.createPDFPanel(url)
-                case nil:
-                    return .failed(GlanceNoticeCopy.panelCreateFailed)
-                }
-                if !created {
-                    return .failed(GlanceNoticeCopy.panelCreateFailed)
-                }
+        case (.createTextPanel, .text(let text)), (.createTextPanel, .url(let text)):
+            return panel(destinations.createTextPanel(text))
+        case (.createTodoPanel, .text(let text)):
+            return panel(destinations.createTodoPanel(text))
+        case (.createFilePanel, .files(let urls)):
+            guard urls.count == 1, let url = urls.first else {
+                return .failed(GlanceNoticeCopy.panelCreateFailed)
             }
-            return .succeeded
+            switch QuickCapturePanelFileSupport.kind(for: url) {
+            case .image:
+                return panel(destinations.createImagePanel(url))
+            case .pdf:
+                return panel(destinations.createPDFPanel(url))
+            case nil:
+                return .failed(GlanceNoticeCopy.panelCreateFailed)
+            }
         default:
             return .failed(GlanceNoticeCopy.cannotSave)
         }
+    }
+
+    private static func panel(_ created: Bool) -> GlanceActionOutcome {
+        created ? .succeeded : .failed(GlanceNoticeCopy.panelCreateFailed)
     }
 }
 
@@ -226,14 +228,17 @@ extension QuickCaptureDestinations {
             },
             addToFileShelf: { urls in
                 let result = environment.fileShelfService.add(paths: urls.map(\.path))
-                if result.addedIDs.isEmpty, result.updatedIDs.isEmpty {
-                    return .failed(GlanceNoticeCopy.fileShelfAddFailed)
-                }
-                return .succeeded
+                return QuickCaptureFileShelfAddPolicy.outcome(for: result, inputCount: urls.count)
             },
             createTextPanel: { text in
                 panelManager.createPanel(
                     from: QuickCaptureRequest(kind: .text, text: text),
+                    preferredScreen: screen
+                )
+            },
+            createTodoPanel: { text in
+                panelManager.createPanel(
+                    from: QuickCaptureRequest(kind: .todo, text: text),
                     preferredScreen: screen
                 )
             },

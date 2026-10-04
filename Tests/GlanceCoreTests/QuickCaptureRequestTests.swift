@@ -115,6 +115,7 @@ final class QuickCaptureReturnTests: XCTestCase {
                 saveLink: { _ in .failed("link") },
                 addToFileShelf: { _ in .failed("files") },
                 createTextPanel: { _ in false },
+                createTodoPanel: { _ in false },
                 createImagePanel: { _ in false },
                 createPDFPanel: { _ in false }
             )

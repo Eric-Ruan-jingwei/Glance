@@ -81,17 +81,16 @@ final class QuickCapturePolicyTests: XCTestCase {
         let content = QuickCaptureContent.text("note")
         XCTAssertEqual(
             QuickCapturePolicy.actions(for: content),
-            [.saveSnippet, .createPanel]
+            [.saveSnippet, .createTextPanel, .createTodoPanel]
         )
         XCTAssertEqual(QuickCapturePolicy.defaultAction(for: content), .saveSnippet)
     }
 
     func testURLActionsAndDefault() {
         let content = QuickCaptureContent.url("https://openai.com")
-        XCTAssertEqual(
-            QuickCapturePolicy.actions(for: content),
-            [.saveLink, .createPanel, .saveSnippet]
-        )
+        let actions = QuickCapturePolicy.actions(for: content)
+        XCTAssertEqual(actions, [.saveLink, .createTextPanel, .saveSnippet])
+        XCTAssertFalse(actions.contains(.createTodoPanel))
         XCTAssertEqual(QuickCapturePolicy.defaultAction(for: content), .saveLink)
     }
 
@@ -108,7 +107,7 @@ final class QuickCapturePolicyTests: XCTestCase {
         )
     }
 
-    func testSupportedImageAndPDFCanCreatePanel() {
+    func testSingleSupportedImageAndPDFCanCreatePanel() {
         let pdf = URL(fileURLWithPath: "/tmp/report.pdf")
         let png = URL(fileURLWithPath: "/tmp/photo.png")
         XCTAssertEqual(
@@ -116,18 +115,34 @@ final class QuickCapturePolicyTests: XCTestCase {
                 for: .files([pdf]),
                 fileSupportsPanel: { $0.pathExtension.lowercased() == "pdf" }
             ),
-            [.addToFileShelf, .createPanel]
+            [.addToFileShelf, .createFilePanel]
         )
         XCTAssertEqual(
             QuickCapturePolicy.actions(
                 for: .files([png]),
                 fileSupportsPanel: { $0.pathExtension.lowercased() == "png" }
             ),
-            [.addToFileShelf, .createPanel]
+            [.addToFileShelf, .createFilePanel]
+        )
+    }
+
+    func testMultipleFilesNeverOfferCreatePanel() {
+        let pdf = URL(fileURLWithPath: "/tmp/report.pdf")
+        let otherPDF = URL(fileURLWithPath: "/tmp/notes.pdf")
+        let png = URL(fileURLWithPath: "/tmp/photo.png")
+        let zip = URL(fileURLWithPath: "/tmp/archive.zip")
+        let supportsAll: (URL) -> Bool = { _ in true }
+        XCTAssertEqual(
+            QuickCapturePolicy.actions(for: .files([pdf, otherPDF]), fileSupportsPanel: supportsAll),
+            [.addToFileShelf]
+        )
+        XCTAssertEqual(
+            QuickCapturePolicy.actions(for: .files([pdf, png]), fileSupportsPanel: supportsAll),
+            [.addToFileShelf]
         )
         XCTAssertEqual(
             QuickCapturePolicy.actions(
-                for: .files([pdf, URL(fileURLWithPath: "/tmp/archive.zip")]),
+                for: .files([pdf, zip]),
                 fileSupportsPanel: { $0.pathExtension.lowercased() == "pdf" }
             ),
             [.addToFileShelf]
@@ -191,18 +206,46 @@ final class QuickCaptureExecutorTests: XCTestCase {
         XCTAssertEqual(files, [[url]])
     }
 
-    func testCreatePanelCallsOnlyPanelAPI() {
+    func testCreateTextPanelCallsOnlyTextPanelAPI() {
         var panels: [String] = []
         let destinations = trackingDestinations(
             createTextPanel: { panels.append($0); return true }
         )
         let result = QuickCaptureExecutor.perform(
-            .createPanel,
+            .createTextPanel,
             content: .text("pin me"),
             destinations: destinations
         )
         XCTAssertEqual(result, .succeeded)
         XCTAssertEqual(panels, ["pin me"])
+    }
+
+    func testCreateTodoPanelCallsOnlyTodoPanelAPI() {
+        var todos: [String] = []
+        let destinations = trackingDestinations(
+            createTodoPanel: { todos.append($0); return true }
+        )
+        XCTAssertEqual(
+            QuickCaptureExecutor.perform(
+                .createTodoPanel,
+                content: .text("Send email"),
+                destinations: destinations
+            ),
+            .succeeded
+        )
+        XCTAssertEqual(todos, ["Send email"])
+    }
+
+    func testCreateTodoPanelForURLDoesNotCallDestinations() {
+        let destinations = trackingDestinations()
+        XCTAssertEqual(
+            QuickCaptureExecutor.perform(
+                .createTodoPanel,
+                content: .url("https://example.com"),
+                destinations: destinations
+            ),
+            .failed(GlanceNoticeCopy.cannotSave)
+        )
     }
 
     func testSaveURLAsSnippetCallsOnlySnippetAPI() {
@@ -228,10 +271,24 @@ final class QuickCaptureExecutorTests: XCTestCase {
             createPDFPanel: { pdfs.append($0); return true }
         )
         XCTAssertEqual(
-            QuickCaptureExecutor.perform(.createPanel, content: .files([url]), destinations: destinations),
+            QuickCaptureExecutor.perform(.createFilePanel, content: .files([url]), destinations: destinations),
             .succeeded
         )
         XCTAssertEqual(pdfs, [url])
+    }
+
+    func testCreateFilePanelForMultipleFilesFailsWithoutCallingPanelAPIs() {
+        let pdf1 = URL(fileURLWithPath: "/tmp/one.pdf")
+        let pdf2 = URL(fileURLWithPath: "/tmp/two.pdf")
+        let destinations = trackingDestinations()
+        XCTAssertEqual(
+            QuickCaptureExecutor.perform(
+                .createFilePanel,
+                content: .files([pdf1, pdf2]),
+                destinations: destinations
+            ),
+            .failed(GlanceNoticeCopy.panelCreateFailed)
+        )
     }
 
     private func trackingDestinations(
@@ -247,6 +304,9 @@ final class QuickCaptureExecutorTests: XCTestCase {
         createTextPanel: @escaping (String) -> Bool = { _ in
             XCTFail("text panel"); return false
         },
+        createTodoPanel: @escaping (String) -> Bool = { _ in
+            XCTFail("todo panel"); return false
+        },
         createImagePanel: @escaping (URL) -> Bool = { _ in
             XCTFail("image panel"); return false
         },
@@ -259,6 +319,7 @@ final class QuickCaptureExecutorTests: XCTestCase {
             saveLink: saveLink,
             addToFileShelf: addToFileShelf,
             createTextPanel: createTextPanel,
+            createTodoPanel: createTodoPanel,
             createImagePanel: createImagePanel,
             createPDFPanel: createPDFPanel
         )
@@ -276,6 +337,7 @@ final class QuickCaptureModelTests: XCTestCase {
             saveLink: { _ in .failed("link") },
             addToFileShelf: { _ in .failed("files") },
             createTextPanel: { _ in false },
+            createTodoPanel: { _ in false },
             createImagePanel: { _ in false },
             createPDFPanel: { _ in false }
         )
@@ -297,6 +359,7 @@ final class QuickCaptureModelTests: XCTestCase {
             saveLink: { _ in .failed("link") },
             addToFileShelf: { _ in .failed("无法加入文件架") },
             createTextPanel: { _ in false },
+            createTodoPanel: { _ in false },
             createImagePanel: { _ in false },
             createPDFPanel: { _ in false }
         )
@@ -319,6 +382,7 @@ final class QuickCaptureModelTests: XCTestCase {
             saveLink: { _ in .succeeded },
             addToFileShelf: { _ in .failed("files") },
             createTextPanel: { _ in false },
+            createTodoPanel: { _ in false },
             createImagePanel: { _ in false },
             createPDFPanel: { _ in false }
         )
@@ -333,10 +397,94 @@ final class QuickCaptureModelTests: XCTestCase {
         model.setText("https://example.com")
         XCTAssertEqual(model.selectedAction, .saveLink)
         model.moveAction(1)
-        XCTAssertEqual(model.selectedAction, .createPanel)
+        XCTAssertEqual(model.selectedAction, .createTextPanel)
         model.moveAction(1)
         XCTAssertEqual(model.selectedAction, .saveSnippet)
         XCTAssertEqual(model.content, .url("https://example.com"))
+    }
+
+    func testFileShelfPartialFailureKeepsFilesAndDoesNotComplete() {
+        let model = QuickCaptureModel()
+        let first = URL(fileURLWithPath: "/tmp/a.txt")
+        let second = URL(fileURLWithPath: "/tmp/b.txt")
+        let third = URL(fileURLWithPath: "/tmp/c.txt")
+        model.setFiles([first, second, third])
+        let failed = QuickCaptureDestinations(
+            saveSnippet: { _ in .failed("snippet") },
+            saveLink: { _ in .failed("link") },
+            addToFileShelf: { urls in
+                QuickCaptureFileShelfAddPolicy.outcome(
+                    for: FileShelfAddResult(
+                        addedIDs: [UUID(), UUID()],
+                        failed: 1
+                    ),
+                    inputCount: urls.count
+                )
+            },
+            createTextPanel: { _ in false },
+            createTodoPanel: { _ in false },
+            createImagePanel: { _ in false },
+            createPDFPanel: { _ in false }
+        )
+        XCTAssertFalse(model.submit(using: failed))
+        XCTAssertEqual(model.content, .files([
+            URL(fileURLWithPath: FileShelfIdentity.standardizedPath(for: first)),
+            URL(fileURLWithPath: FileShelfIdentity.standardizedPath(for: second)),
+            URL(fileURLWithPath: FileShelfIdentity.standardizedPath(for: third))
+        ]))
+        XCTAssertEqual(model.error, GlanceNoticeCopy.fileShelfPartialAddFailed)
+        XCTAssertFalse(model.didComplete)
+    }
+}
+
+final class QuickCaptureFileShelfAddPolicyTests: XCTestCase {
+    func testAddedAndUpdatedCountAsCompleteSuccess() {
+        XCTAssertEqual(
+            QuickCaptureFileShelfAddPolicy.outcome(
+                for: FileShelfAddResult(
+                    addedIDs: [UUID()],
+                    updatedIDs: [UUID()]
+                ),
+                inputCount: 2
+            ),
+            .succeeded
+        )
+    }
+
+    func testPartialFailureWhenSomeAddsFail() {
+        XCTAssertEqual(
+            QuickCaptureFileShelfAddPolicy.outcome(
+                for: FileShelfAddResult(
+                    addedIDs: [UUID(), UUID()],
+                    failed: 1
+                ),
+                inputCount: 3
+            ),
+            .failed(GlanceNoticeCopy.fileShelfPartialAddFailed)
+        )
+    }
+
+    func testRejectedDirectoryIsPartialFailure() {
+        XCTAssertEqual(
+            QuickCaptureFileShelfAddPolicy.outcome(
+                for: FileShelfAddResult(
+                    addedIDs: [UUID()],
+                    rejectedDirectories: 1
+                ),
+                inputCount: 2
+            ),
+            .failed(GlanceNoticeCopy.fileShelfPartialAddFailed)
+        )
+    }
+
+    func testCompleteFailureUsesGenericMessage() {
+        XCTAssertEqual(
+            QuickCaptureFileShelfAddPolicy.outcome(
+                for: FileShelfAddResult(failed: 2),
+                inputCount: 2
+            ),
+            .failed(GlanceNoticeCopy.fileShelfAddFailed)
+        )
     }
 }
 

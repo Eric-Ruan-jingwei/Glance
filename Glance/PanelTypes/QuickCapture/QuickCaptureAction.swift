@@ -4,7 +4,9 @@ enum QuickCaptureAction: Equatable, CaseIterable {
     case saveSnippet
     case saveLink
     case addToFileShelf
-    case createPanel
+    case createTextPanel
+    case createTodoPanel
+    case createFilePanel
 
     var title: String {
         switch self {
@@ -14,9 +16,31 @@ enum QuickCaptureAction: Equatable, CaseIterable {
             return QuickCaptureCopy.saveLink
         case .addToFileShelf:
             return QuickCaptureCopy.addToFileShelf
-        case .createPanel:
-            return QuickCaptureCopy.createPanel
+        case .createTextPanel:
+            return QuickCaptureCopy.createTextPanel
+        case .createTodoPanel:
+            return QuickCaptureCopy.createTodoPanel
+        case .createFilePanel:
+            return QuickCaptureCopy.createFilePanel
         }
+    }
+
+    var identifier: String {
+        switch self {
+        case .saveSnippet: return "saveSnippet"
+        case .saveLink: return "saveLink"
+        case .addToFileShelf: return "addToFileShelf"
+        case .createTextPanel: return "createTextPanel"
+        case .createTodoPanel: return "createTodoPanel"
+        case .createFilePanel: return "createFilePanel"
+        }
+    }
+
+    init?(identifier: String) {
+        guard let match = Self.allCases.first(where: { $0.identifier == identifier }) else {
+            return nil
+        }
+        self = match
     }
 }
 
@@ -29,13 +53,13 @@ enum QuickCapturePolicy {
         case .empty:
             return []
         case .text:
-            return [.saveSnippet, .createPanel]
+            return [.saveSnippet, .createTextPanel, .createTodoPanel]
         case .url:
-            return [.saveLink, .createPanel, .saveSnippet]
+            return [.saveLink, .createTextPanel, .saveSnippet]
         case .files(let urls):
             var items: [QuickCaptureAction] = [.addToFileShelf]
-            if !urls.isEmpty, urls.allSatisfy(fileSupportsPanel) {
-                items.append(.createPanel)
+            if urls.count == 1, let url = urls.first, fileSupportsPanel(url) {
+                items.append(.createFilePanel)
             }
             return items
         }
@@ -106,7 +130,9 @@ enum QuickCaptureCopy {
     static let saveSnippet = "保存为片段"
     static let saveLink = "保存到链接库"
     static let addToFileShelf = "加入文件架"
-    static let createPanel = "创建面板"
+    static let createTextPanel = "创建文字面板"
+    static let createTodoPanel = "创建待办面板"
+    static let createFilePanel = "创建面板"
     static let detectedText = "识别：文字"
     static let detectedLink = "识别：链接"
     static let detectedFile = "识别：文件"
@@ -136,5 +162,24 @@ enum QuickCaptureCopy {
 
     static func fileSummary(for urls: [URL]) -> String {
         urls.map(\.lastPathComponent).joined(separator: "\n")
+    }
+}
+
+enum QuickCaptureFileShelfAddPolicy {
+    static func outcome(
+        for result: FileShelfAddResult,
+        inputCount: Int
+    ) -> GlanceActionOutcome {
+        let handled = result.addedIDs.count + result.updatedIDs.count
+        if inputCount > 0,
+           handled == inputCount,
+           result.failed == 0,
+           result.rejectedDirectories == 0 {
+            return .succeeded
+        }
+        if handled == 0 {
+            return .failed(GlanceNoticeCopy.fileShelfAddFailed)
+        }
+        return .failed(GlanceNoticeCopy.fileShelfPartialAddFailed)
     }
 }

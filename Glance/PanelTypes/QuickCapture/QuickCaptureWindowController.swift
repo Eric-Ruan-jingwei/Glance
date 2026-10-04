@@ -159,7 +159,7 @@ final class QuickCaptureWindowController: NSWindowController, NSTextViewDelegate
             button.isBordered = false
             button.alignment = .left
             button.font = GlanceTheme.Typography.body
-            button.identifier = NSUserInterfaceItemIdentifier(actionTitleKey(action))
+            button.identifier = NSUserInterfaceItemIdentifier(action.identifier)
             button.setAccessibilityLabel(action.title)
             button.setAccessibilityRole(.button)
             let selected = model.selectedAction == action
@@ -179,26 +179,10 @@ final class QuickCaptureWindowController: NSWindowController, NSTextViewDelegate
         actionStack.isHidden = model.actions.isEmpty
     }
 
-    private func actionTitleKey(_ action: QuickCaptureAction) -> String {
-        switch action {
-        case .saveSnippet: return "saveSnippet"
-        case .saveLink: return "saveLink"
-        case .addToFileShelf: return "addToFileShelf"
-        case .createPanel: return "createPanel"
-        }
-    }
-
     @objc private func actionClicked(_ sender: NSButton) {
-        guard let identifier = sender.identifier?.rawValue else { return }
-        let action: QuickCaptureAction?
-        switch identifier {
-        case "saveSnippet": action = .saveSnippet
-        case "saveLink": action = .saveLink
-        case "addToFileShelf": action = .addToFileShelf
-        case "createPanel": action = .createPanel
-        default: action = nil
+        guard let raw = sender.identifier?.rawValue, let action = QuickCaptureAction(identifier: raw) else {
+            return
         }
-        guard let action else { return }
         model.select(action)
         submit()
     }

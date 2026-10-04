@@ -286,7 +286,7 @@ The default shortcut `⌥⌘J` opens a transient capture window on the display u
 
 - Opening with an empty draft can prefill the current pasteboard (text, http(s) URL, or file URLs) without saving it.
 - Glance classifies **Text**, **Link** (`http`/`https` only), or **Files**. `example.com` stays Text.
-- Default actions: Text → Save as Snippet; Link → Save to Links; File → Add to File Shelf. Create Panel stays available. Actions are never auto-executed.
+- Default actions: Text → Save as Snippet; Link → Save to Links; File → Add to File Shelf. Text also offers Create Text Panel and Create Todo Panel. A single image or PDF can Create Panel. Multiple files only go to File Shelf. Actions are never auto-executed.
 - `↑` / `↓` move the current action. `Enter` or `⌘Enter` runs it. `Shift+Enter` inserts a newline while typing text.
 - Empty or whitespace-only input does not save. A failed save keeps the draft and shows a short error.
 - File Shelf capture bookmarks the original file; Glance does not move or delete it.
