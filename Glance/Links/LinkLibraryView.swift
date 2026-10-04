@@ -1,5 +1,7 @@
+import AppKit
 import Combine
 import SwiftUI
+import UniformTypeIdentifiers
 import UniformTypeIdentifiers
 
 enum LinkEditorFocus: Equatable {
@@ -22,9 +24,12 @@ final class LinkLibraryViewModel: ObservableObject {
     @Published var presentationID = 0
     @Published var editor: LinkEditorSession?
     @Published var isDropTargeted = false
+    @Published var isDropCandidate = false
+    @Published var isInternalDropHighlighted = false
     @Published var notice: String?
 
     let service: LinkService
+    let dropSession = GlanceItemDropSession()
     private var cancellables = Set<AnyCancellable>()
     private var noticeTask: Task<Void, Never>?
 
@@ -46,6 +51,9 @@ final class LinkLibraryViewModel: ObservableObject {
         editor = nil
         notice = nil
         isDropTargeted = false
+        isDropCandidate = false
+        isInternalDropHighlighted = false
+        dropSession.reset()
         selection = displayed.first?.id
         presentationID += 1
     }
@@ -185,6 +193,10 @@ struct LinkLibraryView: View {
     var onTogglePin: (UUID) -> Void
     var onDelete: (UUID) -> Void
     var onPerformItemAction: (GlanceItemAction, UUID) -> Void
+    var onAvailableSourceActions: (GlanceActionSourceID) -> [GlanceItemAction] = { _ in [] }
+    var onPerformSourceAction: (GlanceItemAction, GlanceActionSourceID, NSScreen?) -> GlanceActionOutcome = { _, _, _ in
+        .failed(GlanceNoticeCopy.panelCreateFailed)
+    }
     var onDropItems: ([LinkDropItem]) -> Void
     var relativeNow: Date = Date()
 
@@ -205,19 +217,44 @@ struct LinkLibraryView: View {
                 onCancel: { model.cancelEditor() }
             )
         }
-        .onDrop(of: [UTType.url, UTType.plainText], isTargeted: $model.isDropTargeted) { providers in
+        .onDrop(of: [GlanceDragType.utType, UTType.url, UTType.plainText], isTargeted: $model.isDropCandidate) { providers in
+            if GlanceItemDragCodec.hasInternalPayload(providers) {
+                return GlanceItemDropRunner.handleProviders(
+                    providers,
+                    destination: .links,
+                    session: model.dropSession,
+                    availableActions: onAvailableSourceActions,
+                    perform: onPerformSourceAction,
+                    screen: DisplayManager.screenContainingMouse(),
+                    onFailed: { message in
+                        model.showNotice(message)
+                    }
+                )
+            }
             MacLinkDropCollector.collect(providers) { items in
                 onDropItems(items)
             }
             return true
         }
-        .overlay {
-            if model.isDropTargeted {
-                RoundedRectangle(cornerRadius: GlanceTheme.Radius.panel, style: .continuous)
-                    .strokeBorder(Color.accentColor.opacity(0.7), lineWidth: 2)
-                    .padding(4)
-                    .allowsHitTesting(false)
+        .onChange(of: model.isDropCandidate) { _, targeted in
+            if GlanceItemDragCodec.sourceID(from: NSPasteboard(name: .drag)) != nil {
+                model.isDropTargeted = false
+                model.isInternalDropHighlighted = GlanceItemDropRunner.hoverHighlight(
+                    targeted: targeted,
+                    destination: .links,
+                    session: model.dropSession,
+                    availableActions: onAvailableSourceActions
+                )
+            } else {
+                model.isInternalDropHighlighted = false
+                model.isDropTargeted = targeted
+                if !targeted {
+                    model.dropSession.reset()
+                }
             }
+        }
+        .overlay {
+            GlanceDropHighlight(isActive: model.isDropTargeted || model.isInternalDropHighlighted)
         }
         .overlay(alignment: .bottom) {
             if let notice = model.notice {
@@ -328,7 +365,10 @@ struct LinkLibraryView: View {
                 )
                 .id(record.id)
                 .contentShape(Rectangle())
-                .modifier(LinkDragOutModifier(urlString: LinkDragPayload.urlString(from: record.urlString)))
+                .modifier(LinkDragOutModifier(
+                    recordID: record.id,
+                    urlString: LinkDragPayload.urlString(from: record.urlString)
+                ))
                 .onTapGesture(count: 2) {
                     onOpen(record.id)
                 }
@@ -415,14 +455,14 @@ struct LinkLibraryView: View {
 }
 
 private struct LinkDragOutModifier: ViewModifier {
+    var recordID: UUID
     var urlString: String?
 
     func body(content: Content) -> some View {
-        if let urlString, let url = URL(string: urlString) {
-            content.draggable(url)
-        } else {
-            content
-        }
+        content.modifier(GlanceItemDragModifier(
+            sourceID: .link(recordID),
+            nativeURL: urlString.flatMap { URL(string: $0) }
+        ))
     }
 }
 

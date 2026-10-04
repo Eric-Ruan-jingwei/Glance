@@ -1,6 +1,7 @@
 import AppKit
 import Combine
 import SwiftUI
+import UniformTypeIdentifiers
 
 enum ClipboardHistoryTab: Int, CaseIterable {
     case recent
@@ -208,6 +209,10 @@ struct ClipboardHistoryView: View {
                 )
                 .id(record.id)
                 .contentShape(Rectangle())
+                .modifier(GlanceItemDragModifier(
+                    sourceID: .clipboard(record.id),
+                    nativeText: record.kind == .text ? record.text : nil
+                ))
                 .onTapGesture(count: 2) {
                     onReuse(record.id)
                 }

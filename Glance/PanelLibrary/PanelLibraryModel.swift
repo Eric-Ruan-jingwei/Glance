@@ -12,6 +12,9 @@ final class PanelLibraryModel: ObservableObject {
     @Published var selectedPanelIDs: Set<UUID> = []
     @Published var isLoadingSummaries = false
     @Published private(set) var pendingScrollID: UUID?
+    @Published var isDropCandidate = false
+    @Published var isInternalDropHighlighted = false
+    @Published var notice: String?
 
     var loadSummaries: () -> [PanelSummary] = { [] }
     var loadWorkspaces: () -> [WorkspaceRecord] = { [WorkspaceRecord.makeDefault()] }
@@ -35,10 +38,16 @@ final class PanelLibraryModel: ObservableObject {
     var presentBatchError: (Error) -> Void = { PanelBatchTagPrompt.presentError($0) }
     var loadSummaryInputs: (() -> [PanelSummaryInput])?
     var summaryLoader: any PanelSummaryLoading = PanelSummaryLoader()
+    let dropSession = GlanceItemDropSession()
+    var availableActionsForSource: (GlanceActionSourceID) -> [GlanceItemAction] = { _ in [] }
+    var performActionForSource: (GlanceItemAction, GlanceActionSourceID, NSScreen?) -> GlanceActionOutcome = { _, _, _ in
+        .failed(GlanceNoticeCopy.panelCreateFailed)
+    }
 
     private var summaryGeneration: UInt64 = 0
     private var summaryLoadTask: Task<Void, Never>?
     private var pendingRevealID: UUID?
+    private var noticeTask: Task<Void, Never>?
 
     var workspaceSummaries: [PanelSummary] {
         summaries.filter { $0.workspaceID == selectedWorkspaceID }
@@ -121,7 +130,22 @@ final class PanelLibraryModel: ObservableObject {
         selectedPanelIDs = []
         pendingRevealID = nil
         pendingScrollID = nil
+        isDropCandidate = false
+        isInternalDropHighlighted = false
+        notice = nil
+        dropSession.reset()
+        noticeTask?.cancel()
         cancelSummaryLoading()
+    }
+
+    func showNotice(_ message: String) {
+        noticeTask?.cancel()
+        notice = message
+        noticeTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(nanoseconds: 2_000_000_000)
+            guard !Task.isCancelled else { return }
+            self?.notice = nil
+        }
     }
 
     @discardableResult

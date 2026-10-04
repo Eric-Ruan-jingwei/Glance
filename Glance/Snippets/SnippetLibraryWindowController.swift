@@ -4,6 +4,8 @@ import SwiftUI
 @MainActor
 final class SnippetLibraryWindowController: NSWindowController {
     var onPerformItemAction: ((GlanceItemAction, UUID, NSScreen?) -> GlanceActionOutcome)?
+    var onAvailableActionsForSource: ((GlanceActionSourceID) -> [GlanceItemAction])?
+    var onPerformActionForSource: ((GlanceItemAction, GlanceActionSourceID, NSScreen?) -> GlanceActionOutcome)?
 
     private let model: SnippetLibraryViewModel
     private let clipboardWriter: GlanceClipboardWriter
@@ -88,6 +90,13 @@ final class SnippetLibraryWindowController: NSWindowController {
             onDelete: { [weak self] id in self?.delete(id) },
             onPerformItemAction: { [weak self] action, id in
                 self?.performItemAction(action, id: id)
+            },
+            onAvailableSourceActions: { [weak self] sourceID in
+                self?.onAvailableActionsForSource?(sourceID) ?? []
+            },
+            onPerformSourceAction: { [weak self] action, sourceID, screen in
+                self?.onPerformActionForSource?(action, sourceID, screen)
+                    ?? .failed(GlanceNoticeCopy.panelCreateFailed)
             }
         )
         let hosting = NSHostingController(rootView: view)

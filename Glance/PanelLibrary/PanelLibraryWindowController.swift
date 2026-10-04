@@ -2,6 +2,22 @@ import AppKit
 import SwiftUI
 
 final class PanelLibraryWindowController: NSWindowController, NSWindowDelegate {
+    var onAvailableActionsForSource: ((GlanceActionSourceID) -> [GlanceItemAction])? {
+        didSet {
+            model.availableActionsForSource = { [weak self] sourceID in
+                self?.onAvailableActionsForSource?(sourceID) ?? []
+            }
+        }
+    }
+    var onPerformActionForSource: ((GlanceItemAction, GlanceActionSourceID, NSScreen?) -> GlanceActionOutcome)? {
+        didSet {
+            model.performActionForSource = { [weak self] action, sourceID, screen in
+                self?.onPerformActionForSource?(action, sourceID, screen)
+                    ?? .failed(GlanceNoticeCopy.panelCreateFailed)
+            }
+        }
+    }
+
     private let model: PanelLibraryModel
 
     convenience init(panelManager: PanelManager) {

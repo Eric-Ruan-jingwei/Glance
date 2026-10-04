@@ -1,5 +1,7 @@
+import AppKit
 import Combine
 import SwiftUI
+import UniformTypeIdentifiers
 
 enum SnippetEditorFocus: Equatable {
     case title
@@ -20,8 +22,11 @@ final class SnippetLibraryViewModel: ObservableObject {
     @Published var presentationID = 0
     @Published var editor: SnippetEditorSession?
     @Published var notice: String?
+    @Published var isDropCandidate = false
+    @Published var isInternalDropHighlighted = false
 
     let service: SnippetService
+    let dropSession = GlanceItemDropSession()
     private var cancellables = Set<AnyCancellable>()
     private var noticeTask: Task<Void, Never>?
 
@@ -42,6 +47,9 @@ final class SnippetLibraryViewModel: ObservableObject {
         query = ""
         editor = nil
         notice = nil
+        isDropCandidate = false
+        isInternalDropHighlighted = false
+        dropSession.reset()
         selection = displayed.first?.id
         presentationID += 1
     }
@@ -156,6 +164,10 @@ struct SnippetLibraryView: View {
     var onTogglePin: (UUID) -> Void
     var onDelete: (UUID) -> Void
     var onPerformItemAction: (GlanceItemAction, UUID) -> Void
+    var onAvailableSourceActions: (GlanceActionSourceID) -> [GlanceItemAction] = { _ in [] }
+    var onPerformSourceAction: (GlanceItemAction, GlanceActionSourceID, NSScreen?) -> GlanceActionOutcome = { _, _, _ in
+        .failed(GlanceNoticeCopy.panelCreateFailed)
+    }
     var relativeNow: Date = Date()
 
     var body: some View {
@@ -168,6 +180,30 @@ struct SnippetLibraryView: View {
         }
         .frame(minWidth: 560, minHeight: 460)
         .background(Color(nsColor: .windowBackgroundColor))
+        .onDrop(of: [GlanceDragType.utType], isTargeted: $model.isDropCandidate) { providers in
+            GlanceItemDropRunner.handleProviders(
+                providers,
+                destination: .snippets,
+                session: model.dropSession,
+                availableActions: onAvailableSourceActions,
+                perform: onPerformSourceAction,
+                screen: DisplayManager.screenContainingMouse(),
+                onFailed: { message in
+                    model.showNotice(message)
+                }
+            )
+        }
+        .onChange(of: model.isDropCandidate) { _, targeted in
+            model.isInternalDropHighlighted = GlanceItemDropRunner.hoverHighlight(
+                targeted: targeted,
+                destination: .snippets,
+                session: model.dropSession,
+                availableActions: onAvailableSourceActions
+            )
+        }
+        .overlay {
+            GlanceDropHighlight(isActive: model.isInternalDropHighlighted)
+        }
         .overlay(alignment: .bottom) {
             if let notice = model.notice {
                 Text(notice)
@@ -284,6 +320,10 @@ struct SnippetLibraryView: View {
                 )
                 .id(record.id)
                 .contentShape(Rectangle())
+                .modifier(GlanceItemDragModifier(
+                    sourceID: .snippet(record.id),
+                    nativeText: record.content
+                ))
                 .onTapGesture(count: 2) {
                     onEdit(record.id)
                 }

@@ -260,6 +260,7 @@ struct FileShelfView: View {
                     contextMenu(for: record, missing: resolved.isMissing, resolution: resolved)
                 }
                 .modifier(FileShelfDragModifier(
+                    recordID: record.id,
                     path: FileShelfDragPayload.fileURL(
                         resolvedPath: resolved.urlPath,
                         fileExists: !resolved.isMissing
@@ -384,14 +385,14 @@ struct FileShelfView: View {
 }
 
 private struct FileShelfDragModifier: ViewModifier {
+    var recordID: UUID
     var path: String?
 
     func body(content: Content) -> some View {
-        if let path {
-            content.draggable(URL(fileURLWithPath: path))
-        } else {
-            content
-        }
+        content.modifier(GlanceItemDragModifier(
+            sourceID: .fileShelf(recordID),
+            nativeURL: path.map { URL(fileURLWithPath: $0) }
+        ))
     }
 }
 

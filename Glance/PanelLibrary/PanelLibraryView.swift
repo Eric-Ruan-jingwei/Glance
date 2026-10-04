@@ -1,4 +1,6 @@
+import AppKit
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct PanelLibraryView: View {
     @ObservedObject var model: PanelLibraryModel
@@ -172,6 +174,41 @@ struct PanelLibraryView: View {
                             .controlSize(.small)
                         }
                     }
+                }
+            }
+            .onDrop(of: [GlanceDragType.utType], isTargeted: $model.isDropCandidate) { providers in
+                GlanceItemDropRunner.handleProviders(
+                    providers,
+                    destination: .panels,
+                    session: model.dropSession,
+                    availableActions: model.availableActionsForSource,
+                    perform: model.performActionForSource,
+                    screen: DisplayManager.screenContainingMouse(),
+                    onFailed: { message in
+                        model.showNotice(message)
+                    }
+                )
+            }
+            .onChange(of: model.isDropCandidate) { _, targeted in
+                model.isInternalDropHighlighted = GlanceItemDropRunner.hoverHighlight(
+                    targeted: targeted,
+                    destination: .panels,
+                    session: model.dropSession,
+                    availableActions: model.availableActionsForSource
+                )
+            }
+            .overlay {
+                GlanceDropHighlight(isActive: model.isInternalDropHighlighted)
+            }
+            .overlay(alignment: .bottom) {
+                if let notice = model.notice {
+                    Text(notice)
+                        .font(.caption)
+                        .padding(.horizontal, GlanceTheme.Space.md)
+                        .padding(.vertical, GlanceTheme.Space.xs)
+                        .background(.thinMaterial, in: Capsule())
+                        .padding(.bottom, GlanceTheme.Space.lg)
+                        .allowsHitTesting(false)
                 }
             }
         }

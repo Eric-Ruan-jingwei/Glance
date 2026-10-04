@@ -112,6 +112,8 @@ enum MacLinkDropCollector {
 @MainActor
 final class LinkLibraryWindowController: NSWindowController {
     var onPerformItemAction: ((GlanceItemAction, UUID, NSScreen?) -> GlanceActionOutcome)?
+    var onAvailableActionsForSource: ((GlanceActionSourceID) -> [GlanceItemAction])?
+    var onPerformActionForSource: ((GlanceItemAction, GlanceActionSourceID, NSScreen?) -> GlanceActionOutcome)?
 
     private let model: LinkLibraryViewModel
     private let clipboardWriter: GlanceClipboardWriter
@@ -203,6 +205,13 @@ final class LinkLibraryWindowController: NSWindowController {
             onDelete: { [weak self] id in self?.delete(id) },
             onPerformItemAction: { [weak self] action, id in
                 self?.performItemAction(action, id: id)
+            },
+            onAvailableSourceActions: { [weak self] sourceID in
+                self?.onAvailableActionsForSource?(sourceID) ?? []
+            },
+            onPerformSourceAction: { [weak self] action, sourceID, screen in
+                self?.onPerformActionForSource?(action, sourceID, screen)
+                    ?? .failed(GlanceNoticeCopy.panelCreateFailed)
             },
             onDropItems: { [weak self] items in self?.handleDrop(items) }
         )

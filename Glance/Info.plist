@@ -34,5 +34,18 @@
 	<false/>
 	<key>NSSupportsSuddenTermination</key>
 	<false/>
+	<key>UTExportedTypeDeclarations</key>
+	<array>
+		<dict>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.data</string>
+			</array>
+			<key>UTTypeDescription</key>
+			<string>Glance Item</string>
+			<key>UTTypeIdentifier</key>
+			<string>com.glance.app.item</string>
+		</dict>
+	</array>
 </dict>
 </plist>

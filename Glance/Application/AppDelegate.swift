@@ -189,6 +189,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, GlanceWindowHost {
             return panelLibrary
         }
         let window = PanelLibraryWindowController(panelManager: panelManager!)
+        window.onAvailableActionsForSource = { [weak self] sourceID in
+            self?.actionCoordinator?.availableActions(for: sourceID) ?? []
+        }
+        window.onPerformActionForSource = { [weak self] action, sourceID, screen in
+            self?.actionCoordinator?.perform(action, sourceID: sourceID, screen: screen)
+                ?? .failed(GlanceNoticeCopy.panelCreateFailed)
+        }
         panelLibrary = window
         return window
     }
@@ -223,6 +230,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, GlanceWindowHost {
             self?.actionCoordinator?.perform(action, sourceID: .snippet(id), screen: screen)
                 ?? .failed(GlanceNoticeCopy.panelCreateFailed)
         }
+        window.onAvailableActionsForSource = { [weak self] sourceID in
+            self?.actionCoordinator?.availableActions(for: sourceID) ?? []
+        }
+        window.onPerformActionForSource = { [weak self] action, sourceID, screen in
+            self?.actionCoordinator?.perform(action, sourceID: sourceID, screen: screen)
+                ?? .failed(GlanceNoticeCopy.panelCreateFailed)
+        }
         snippetWindow = window
         return window
     }
@@ -238,6 +252,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, GlanceWindowHost {
         )
         window.onPerformItemAction = { [weak self] action, id, screen in
             self?.actionCoordinator?.perform(action, sourceID: .link(id), screen: screen)
+                ?? .failed(GlanceNoticeCopy.panelCreateFailed)
+        }
+        window.onAvailableActionsForSource = { [weak self] sourceID in
+            self?.actionCoordinator?.availableActions(for: sourceID) ?? []
+        }
+        window.onPerformActionForSource = { [weak self] action, sourceID, screen in
+            self?.actionCoordinator?.perform(action, sourceID: sourceID, screen: screen)
                 ?? .failed(GlanceNoticeCopy.panelCreateFailed)
         }
         linkWindow = window
