@@ -3,7 +3,7 @@ import SwiftUI
 
 @MainActor
 final class FileShelfWindowController: NSWindowController {
-    var onCreatePanel: ((UUID, NSScreen?) -> GlanceActionOutcome)?
+    var onPerformItemAction: ((GlanceItemAction, UUID, NSScreen?) -> GlanceActionOutcome)?
 
     private let model: FileShelfViewModel
     private let clipboardWriter: GlanceClipboardWriter
@@ -79,7 +79,9 @@ final class FileShelfWindowController: NSWindowController {
             },
             onRemove: { [weak self] id in self?.remove(id) },
             onRelink: { [weak self] id in self?.relink(id) },
-            onCreatePanel: { [weak self] id in self?.createPanel(id) },
+            onPerformItemAction: { [weak self] action, id in
+                self?.performItemAction(action, id: id)
+            },
             onDropPaths: { [weak self] paths in
                 self?.model.service.add(paths: paths)
             }
@@ -89,11 +91,13 @@ final class FileShelfWindowController: NSWindowController {
         window.contentViewController = hosting
     }
 
-    private func createPanel(_ id: UUID) {
+    private func performItemAction(_ action: GlanceItemAction, id: UUID) {
         let screen = window?.screen ?? DisplayManager.screenContainingMouse()
-        switch onCreatePanel?(id, screen) ?? .failed(GlanceNoticeCopy.panelCreateFailed) {
+        switch onPerformItemAction?(action, id, screen) ?? .failed(GlanceNoticeCopy.panelCreateFailed) {
         case .succeeded:
-            dismiss(deactivate: false)
+            if action.createsPanel {
+                dismiss(deactivate: false)
+            }
         case .failed(let message):
             NSSound.beep()
             model.service.notice = message

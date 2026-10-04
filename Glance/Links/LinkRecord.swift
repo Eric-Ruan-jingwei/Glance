@@ -309,7 +309,7 @@ enum LinkCopy {
     static let openLabel = "打开"
     static let copyLabel = "复制链接"
     static let editLabel = "编辑…"
-    static let createPanelLabel = "创建面板"
+    static let createPanelLabel = "创建文字面板"
     static let pinLabel = "置顶"
     static let unpinLabel = "取消置顶"
     static let deleteLabel = "删除…"

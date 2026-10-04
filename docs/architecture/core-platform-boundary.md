@@ -102,7 +102,7 @@ Links are a fifth peer domain. Core owns `LinkRecord`, `WebLinkPolicy`, title ge
 
 Global Search is a sixth capability, not a sixth data domain. Core owns `GlobalSearchDocument`, ranking, snapshot projection, and action planning. It depends on the five existing domains and never the reverse. The search window, Carbon hotkey, and status-menu item stay on macOS. Search documents are not persisted.
 
-Cross-module workflow actions live in `GlanceActionCoordinator`. Snippets, Links, and File Shelf do not import `PanelManager`. File Shelf → Panel copies into existing Panel storage. Global Search `⌘Enter` reveals a live record through each library’s `present(selecting:)` API. Clipboard self-writes go through `GlanceClipboardWriter` so the monitor adopts the change count.
+Cross-module workflow actions live in `GlanceActionCoordinator`. Availability is `GlanceItemActionPolicy`; execution is `GlanceItemActionExecutor` via `perform(_:sourceID:screen:)`. Windows request actions by stable identifier and do not own domain routing. Snippets, Links, and File Shelf do not import `PanelManager`. File Shelf → Panel copies into existing Panel storage. Global Search `⌘Enter` reveals a live record through each library’s `present(selecting:)` API. Clipboard self-writes go through `GlanceClipboardWriter` so the monitor adopts the change count.
 
 PDF payload files (`document.pdf`, `pdf.json`) are portable. `MacPDFImporter` uses `NSOpenPanel` on the main actor. Validation and page-count inspection use Core Graphics (`CGPDFDocument`) so large copies can leave the main actor. `PDFView` stays on macOS for rendering. Glance does not write PDFKit archives.
 

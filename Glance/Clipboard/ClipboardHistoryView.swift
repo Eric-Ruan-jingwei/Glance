@@ -92,11 +92,9 @@ struct ClipboardHistoryView: View {
     @FocusState private var searchFocused: Bool
     var onEnableRecording: () -> Void
     var onReuse: (UUID) -> Void
-    var onCreatePanel: (UUID) -> Void
     var onToggleFavorite: (UUID) -> Void
     var onDelete: (UUID) -> Void
-    var onSaveAsSnippet: (UUID) -> Void = { _ in }
-    var onSaveAsLink: (UUID) -> Void = { _ in }
+    var onPerformItemAction: (GlanceItemAction, UUID) -> Void
     var relativeNow: Date = Date()
 
     var body: some View {
@@ -217,15 +215,11 @@ struct ClipboardHistoryView: View {
                     model.selection = record.id
                 }
                 .contextMenu {
-                    if ClipboardSnippetHandoff.isAvailable(for: record) {
-                        Button(ClipboardHistoryCopy.saveAsSnippet) {
-                            onSaveAsSnippet(record.id)
+                    ForEach(GlanceItemActionPolicy.secondaryActions(for: .clipboard(record)), id: \.identifier) { action in
+                        Button(action.title) {
+                            onPerformItemAction(action, record.id)
                         }
-                    }
-                    if ClipboardWebLinkHandoff.isAvailable(for: record) {
-                        Button(LinkCopy.saveAsLink) {
-                            onSaveAsLink(record.id)
-                        }
+                        .accessibilityIdentifier(action.identifier)
                     }
                     Button(record.isFavorite ? ClipboardHistoryCopy.unfavoriteLabel : ClipboardHistoryCopy.favoriteLabel) {
                         onToggleFavorite(record.id)

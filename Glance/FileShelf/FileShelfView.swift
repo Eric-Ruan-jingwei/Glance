@@ -124,7 +124,7 @@ struct FileShelfView: View {
     var onToggleFavorite: (UUID) -> Void
     var onRemove: (UUID) -> Void
     var onRelink: (UUID) -> Void
-    var onCreatePanel: (UUID) -> Void
+    var onPerformItemAction: (GlanceItemAction, UUID) -> Void
     var onDropPaths: ([String]) -> Void
     var relativeNow: Date = Date()
 
@@ -257,7 +257,7 @@ struct FileShelfView: View {
                     model.selection = record.id
                 }
                 .contextMenu {
-                    contextMenu(for: record, missing: resolved.isMissing)
+                    contextMenu(for: record, missing: resolved.isMissing, resolvedPath: resolved.urlPath)
                 }
                 .modifier(FileShelfDragModifier(
                     path: FileShelfDragPayload.fileURL(
@@ -287,7 +287,7 @@ struct FileShelfView: View {
     }
 
     @ViewBuilder
-    private func contextMenu(for record: FileShelfRecord, missing: Bool) -> some View {
+    private func contextMenu(for record: FileShelfRecord, missing: Bool, resolvedPath: String?) -> some View {
         if missing {
             Button(FileShelfCopy.relinkLabel) { onRelink(record.id) }
         } else {
@@ -296,8 +296,11 @@ struct FileShelfView: View {
             Button(FileShelfCopy.previewLabel) { onPreview(record.id) }
             Button(FileShelfCopy.copyFileLabel) { onCopyFile(record.id) }
             Button(FileShelfCopy.copyPathLabel) { onCopyPath(record.id) }
-            if let kind = FileShelfPanelSupport.kind(for: record) {
-                Button(FileShelfPanelSupport.menuTitle(for: kind)) { onCreatePanel(record.id) }
+            ForEach(fileShelfActions(for: record, resolvedPath: resolvedPath), id: \.identifier) { action in
+                Button(action.title) {
+                    onPerformItemAction(action, record.id)
+                }
+                .accessibilityIdentifier(action.identifier)
             }
         }
         Button(record.isFavorite ? FileShelfCopy.unfavoriteLabel : FileShelfCopy.favoriteLabel) {
@@ -306,6 +309,12 @@ struct FileShelfView: View {
         Button(FileShelfCopy.removeLabel, role: .destructive) {
             onRemove(record.id)
         }
+    }
+
+    private func fileShelfActions(for record: FileShelfRecord, resolvedPath: String?) -> [GlanceItemAction] {
+        GlanceItemActionPolicy.actions(
+            for: .fileShelf(record, resolvedURL: resolvedPath.map { URL(fileURLWithPath: $0) })
+        )
     }
 
     private func emptyState(title: String, detail: String?) -> some View {

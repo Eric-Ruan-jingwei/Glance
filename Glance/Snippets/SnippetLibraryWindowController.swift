@@ -3,7 +3,7 @@ import SwiftUI
 
 @MainActor
 final class SnippetLibraryWindowController: NSWindowController {
-    var onCreatePanel: ((SnippetRecord, NSScreen?) -> GlanceActionOutcome)?
+    var onPerformItemAction: ((GlanceItemAction, UUID, NSScreen?) -> GlanceActionOutcome)?
 
     private let model: SnippetLibraryViewModel
     private let clipboardWriter: GlanceClipboardWriter
@@ -86,7 +86,9 @@ final class SnippetLibraryWindowController: NSWindowController {
                 _ = self?.model.service.togglePin(id: id)
             },
             onDelete: { [weak self] id in self?.delete(id) },
-            onCreatePanel: { [weak self] id in self?.createPanel(id) }
+            onPerformItemAction: { [weak self] action, id in
+                self?.performItemAction(action, id: id)
+            }
         )
         let hosting = NSHostingController(rootView: view)
         hosting.view.frame = NSRect(origin: .zero, size: GlanceConstants.snippetLibrarySize)
@@ -104,12 +106,13 @@ final class SnippetLibraryWindowController: NSWindowController {
         dismiss(deactivate: true)
     }
 
-    private func createPanel(_ id: UUID) {
-        guard let record = model.service.records.first(where: { $0.id == id }) else { return }
+    private func performItemAction(_ action: GlanceItemAction, id: UUID) {
         let screen = window?.screen ?? DisplayManager.screenContainingMouse()
-        switch onCreatePanel?(record, screen) ?? .failed(GlanceNoticeCopy.panelCreateFailed) {
+        switch onPerformItemAction?(action, id, screen) ?? .failed(GlanceNoticeCopy.panelCreateFailed) {
         case .succeeded:
-            dismiss(deactivate: false)
+            if action.createsPanel {
+                dismiss(deactivate: false)
+            }
         case .failed(let message):
             NSSound.beep()
             model.showNotice(message)

@@ -3,9 +3,7 @@ import SwiftUI
 
 @MainActor
 final class ClipboardHistoryWindowController: NSWindowController {
-    var onCreatePanel: (ClipboardCaptureContent, NSScreen?) -> Bool = { _, _ in false }
-    var onSaveAsSnippet: ((String) -> Void)?
-    var onSaveAsLink: ((String) -> Void)?
+    var onPerformItemAction: ((GlanceItemAction, UUID, NSScreen?) -> GlanceActionOutcome)?
 
     private let model: ClipboardHistoryViewModel
     private let monitor: ClipboardHistoryMonitor
@@ -68,7 +66,6 @@ final class ClipboardHistoryWindowController: NSWindowController {
             model: model,
             onEnableRecording: { [weak self] in self?.enableRecording() },
             onReuse: { [weak self] id in self?.reuse(id) },
-            onCreatePanel: { [weak self] id in self?.createPanel(id) },
             onToggleFavorite: { [weak self] id in
                 self?.model.service.toggleFavorite(id: id)
             },
@@ -76,11 +73,8 @@ final class ClipboardHistoryWindowController: NSWindowController {
                 self?.model.thumbnails.evict(id)
                 self?.model.service.delete(id: id)
             },
-            onSaveAsSnippet: { [weak self] id in
-                self?.saveAsSnippet(id)
-            },
-            onSaveAsLink: { [weak self] id in
-                self?.saveAsLink(id)
+            onPerformItemAction: { [weak self] action, id in
+                self?.performItemAction(action, id: id)
             }
         )
         let hosting = NSHostingController(rootView: view)
@@ -102,26 +96,25 @@ final class ClipboardHistoryWindowController: NSWindowController {
         dismiss(deactivate: true)
     }
 
-    private func saveAsSnippet(_ id: UUID) {
-        guard let record = model.service.records.first(where: { $0.id == id }),
-              let draft = ClipboardSnippetHandoff.draft(from: record) else { return }
-        onSaveAsSnippet?(draft.content)
-    }
-
-    private func saveAsLink(_ id: UUID) {
-        guard let record = model.service.records.first(where: { $0.id == id }),
-              let url = ClipboardWebLinkHandoff.normalizedURL(from: record) else { return }
-        onSaveAsLink?(url)
+    private func performItemAction(_ action: GlanceItemAction, id: UUID) {
+        let screen = window?.screen ?? DisplayManager.screenContainingMouse()
+        switch onPerformItemAction?(action, id, screen) ?? .failed(GlanceNoticeCopy.panelCreateFailed) {
+        case .succeeded:
+            if action.createsPanel {
+                dismiss(deactivate: false)
+            }
+        case .failed:
+            NSSound.beep()
+        }
     }
 
     private func createPanel(_ id: UUID) {
-        guard let content = model.service.content(for: id) else { return }
-        let screen = window?.screen ?? DisplayManager.screenContainingMouse()
-        if onCreatePanel(content, screen) {
-            dismiss(deactivate: false)
-        } else {
+        guard let record = model.service.records.first(where: { $0.id == id }) else { return }
+        guard let action = GlanceItemActionPolicy.panelAction(for: .clipboard(record)) else {
             NSSound.beep()
+            return
         }
+        performItemAction(action, id: id)
     }
 
     private func installDismissalMonitors() {

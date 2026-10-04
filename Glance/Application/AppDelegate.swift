@@ -202,14 +202,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, GlanceWindowHost {
             service: environment.clipboardHistoryService,
             monitor: environment.clipboardHistoryMonitor
         )
-        window.onCreatePanel = { [weak self] content, screen in
-            self?.actionCoordinator?.createPanel(fromClipboard: content, screen: screen) ?? false
-        }
-        window.onSaveAsSnippet = { [weak self] text in
-            self?.actionCoordinator?.saveClipboardTextAsSnippet(text)
-        }
-        window.onSaveAsLink = { [weak self] url in
-            self?.actionCoordinator?.saveClipboardTextAsLink(url)
+        window.onPerformItemAction = { [weak self] action, id, screen in
+            self?.actionCoordinator?.perform(action, sourceID: .clipboard(id), screen: screen)
+                ?? .failed(GlanceNoticeCopy.panelCreateFailed)
         }
         clipboardWindow = window
         return window
@@ -224,8 +219,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, GlanceWindowHost {
             service: environment.snippetService,
             monitor: environment.clipboardHistoryMonitor
         )
-        window.onCreatePanel = { [weak self] record, screen in
-            self?.actionCoordinator?.createPanel(from: record, screen: screen) ?? .failed(GlanceNoticeCopy.panelCreateFailed)
+        window.onPerformItemAction = { [weak self] action, id, screen in
+            self?.actionCoordinator?.perform(action, sourceID: .snippet(id), screen: screen)
+                ?? .failed(GlanceNoticeCopy.panelCreateFailed)
         }
         snippetWindow = window
         return window
@@ -240,8 +236,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, GlanceWindowHost {
             service: environment.linkService,
             monitor: environment.clipboardHistoryMonitor
         )
-        window.onCreatePanel = { [weak self] record, screen in
-            self?.actionCoordinator?.createPanel(from: record, screen: screen) ?? .failed(GlanceNoticeCopy.panelCreateFailed)
+        window.onPerformItemAction = { [weak self] action, id, screen in
+            self?.actionCoordinator?.perform(action, sourceID: .link(id), screen: screen)
+                ?? .failed(GlanceNoticeCopy.panelCreateFailed)
         }
         linkWindow = window
         return window
@@ -255,8 +252,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, GlanceWindowHost {
             service: environment!.fileShelfService,
             monitor: environment!.clipboardHistoryMonitor
         )
-        window.onCreatePanel = { [weak self] id, screen in
-            self?.actionCoordinator?.createPanel(fromFileShelfID: id, screen: screen)
+        window.onPerformItemAction = { [weak self] action, id, screen in
+            self?.actionCoordinator?.perform(action, sourceID: .fileShelf(id), screen: screen)
                 ?? .failed(GlanceNoticeCopy.panelCreateFailed)
         }
         fileShelfWindow = window

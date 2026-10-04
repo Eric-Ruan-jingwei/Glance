@@ -184,7 +184,7 @@ struct LinkLibraryView: View {
     var onCreate: () -> Void
     var onTogglePin: (UUID) -> Void
     var onDelete: (UUID) -> Void
-    var onCreatePanel: (UUID) -> Void
+    var onPerformItemAction: (GlanceItemAction, UUID) -> Void
     var onDropItems: ([LinkDropItem]) -> Void
     var relativeNow: Date = Date()
 
@@ -339,7 +339,12 @@ struct LinkLibraryView: View {
                     Button(LinkCopy.openLabel) { onOpen(record.id) }
                     Button(LinkCopy.copyLabel) { onCopy(record.id) }
                     Button(LinkCopy.editLabel) { onEdit(record.id) }
-                    Button(LinkCopy.createPanelLabel) { onCreatePanel(record.id) }
+                    ForEach(GlanceItemActionPolicy.actions(for: .link(record)), id: \.identifier) { action in
+                        Button(action.title) {
+                            onPerformItemAction(action, record.id)
+                        }
+                        .accessibilityIdentifier(action.identifier)
+                    }
                     Button(record.isPinned ? LinkCopy.unpinLabel : LinkCopy.pinLabel) {
                         onTogglePin(record.id)
                     }

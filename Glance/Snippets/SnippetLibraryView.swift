@@ -155,7 +155,7 @@ struct SnippetLibraryView: View {
     var onCreate: () -> Void
     var onTogglePin: (UUID) -> Void
     var onDelete: (UUID) -> Void
-    var onCreatePanel: (UUID) -> Void
+    var onPerformItemAction: (GlanceItemAction, UUID) -> Void
     var relativeNow: Date = Date()
 
     var body: some View {
@@ -293,7 +293,12 @@ struct SnippetLibraryView: View {
                 .contextMenu {
                     Button(SnippetCopy.copyLabel) { onCopy(record.id) }
                     Button(SnippetCopy.editLabel) { onEdit(record.id) }
-                    Button(SnippetCopy.createPanelLabel) { onCreatePanel(record.id) }
+                    ForEach(GlanceItemActionPolicy.actions(for: .snippet(record)), id: \.identifier) { action in
+                        Button(action.title) {
+                            onPerformItemAction(action, record.id)
+                        }
+                        .accessibilityIdentifier(action.identifier)
+                    }
                     Button(record.isPinned ? SnippetCopy.unpinLabel : SnippetCopy.pinLabel) {
                         onTogglePin(record.id)
                     }

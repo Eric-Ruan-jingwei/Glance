@@ -21,6 +21,8 @@ struct GlanceActionDependencies {
     var link: (UUID) -> LinkRecord?
     var fileRecord: (UUID) -> FileShelfRecord?
     var resolveFile: (UUID) -> FileShelfResolvedReference
+    var clipboardRecord: (UUID) -> ClipboardHistoryRecord?
+    var clipboardContent: (UUID) -> ClipboardCaptureContent?
     var clipboardExists: (UUID) -> Bool
     var panelExists: (UUID) -> Bool
     var presentClipboard: (UUID) -> Bool
@@ -55,6 +57,41 @@ final class GlanceActionCoordinator {
         )
     }
 
+    func availableActions(for sourceID: GlanceActionSourceID) -> [GlanceItemAction] {
+        guard let source = GlanceItemActionExecutor.resolve(sourceID, dependencies: dependencies) else {
+            return []
+        }
+        return GlanceItemActionPolicy.actions(for: source)
+    }
+
+    @discardableResult
+    func perform(
+        _ action: GlanceItemAction,
+        sourceID: GlanceActionSourceID,
+        screen: NSScreen?
+    ) -> GlanceActionOutcome {
+        GlanceItemActionExecutor.perform(
+            action,
+            sourceID: sourceID,
+            screen: screen,
+            dependencies: dependencies
+        )
+    }
+
+    @discardableResult
+    func perform(
+        _ action: GlanceItemAction,
+        source: GlanceActionSource,
+        screen: NSScreen?
+    ) -> GlanceActionOutcome {
+        GlanceItemActionExecutor.perform(
+            action,
+            source: source,
+            screen: screen,
+            dependencies: dependencies
+        )
+    }
+
     @discardableResult
     func createPanel(
         fromClipboard content: ClipboardCaptureContent,
@@ -74,33 +111,19 @@ final class GlanceActionCoordinator {
     }
 
     func createPanel(from snippet: SnippetRecord, screen: NSScreen?) -> GlanceActionOutcome {
-        let request = SnippetPanelHandoff.request(from: snippet)
-        if dependencies.createTextPanel(request.customTitle, request.content, screen) {
-            return .succeeded
-        }
-        return .failed(GlanceNoticeCopy.panelCreateFailed)
+        perform(.createTextPanel, source: .snippet(snippet), screen: screen)
     }
 
     func createPanel(fromSnippetID id: UUID, screen: NSScreen?) -> GlanceActionOutcome {
-        guard let record = dependencies.snippet(id) else {
-            return .failed(GlanceNoticeCopy.staleItem)
-        }
-        return createPanel(from: record, screen: screen)
+        perform(.createTextPanel, sourceID: .snippet(id), screen: screen)
     }
 
     func createPanel(from link: LinkRecord, screen: NSScreen?) -> GlanceActionOutcome {
-        let request = LinkPanelHandoff.request(from: link)
-        if dependencies.createTextPanel(request.customTitle, request.content, screen) {
-            return .succeeded
-        }
-        return .failed(GlanceNoticeCopy.panelCreateFailed)
+        perform(.createTextPanel, source: .link(link), screen: screen)
     }
 
     func createPanel(fromLinkID id: UUID, screen: NSScreen?) -> GlanceActionOutcome {
-        guard let record = dependencies.link(id) else {
-            return .failed(GlanceNoticeCopy.staleItem)
-        }
-        return createPanel(from: record, screen: screen)
+        perform(.createTextPanel, sourceID: .link(id), screen: screen)
     }
 
     func createPanel(fromFileShelfID id: UUID, screen: NSScreen?) -> GlanceActionOutcome {
@@ -111,19 +134,14 @@ final class GlanceActionCoordinator {
         guard !resolved.isMissing, let path = resolved.urlPath else {
             return .failed(GlanceNoticeCopy.fileMissing)
         }
-        let url = URL(fileURLWithPath: path)
-        guard let kind = FileShelfPanelSupport.kind(for: record, resolvedURL: url) else {
+        let source = GlanceActionSource.fileShelf(
+            record,
+            resolvedURL: URL(fileURLWithPath: path)
+        )
+        guard let action = GlanceItemActionPolicy.panelAction(for: source) else {
             return .failed(GlanceNoticeCopy.panelCreateFailed)
         }
-        let title = record.displayName
-        let ok: Bool
-        switch kind {
-        case .image:
-            ok = dependencies.importImage(url, title, screen)
-        case .pdf:
-            ok = dependencies.importPDF(url, title, screen)
-        }
-        return ok ? .succeeded : .failed(GlanceNoticeCopy.panelCreateFailed)
+        return perform(action, source: source, screen: screen)
     }
 
     func revealInSource(_ id: GlobalSearchResultID) -> GlanceActionOutcome {
@@ -204,6 +222,12 @@ extension GlanceActionDependencies {
             },
             resolveFile: { id in
                 environment.fileShelfService.resolve(id, allowCache: false)
+            },
+            clipboardRecord: { id in
+                environment.clipboardHistoryService.records.first { $0.id == id }
+            },
+            clipboardContent: { id in
+                environment.clipboardHistoryService.content(for: id)
             },
             clipboardExists: { id in
                 environment.clipboardHistoryService.records.contains { $0.id == id }

@@ -538,13 +538,18 @@ private func probeDependencies(
     link: @escaping (UUID) -> LinkRecord? = { _ in nil },
     fileRecord: @escaping (UUID) -> FileShelfRecord? = { _ in nil },
     resolveFile: @escaping (UUID) -> FileShelfResolvedReference = { _ in .missing },
+    clipboardRecord: @escaping (UUID) -> ClipboardHistoryRecord? = { _ in nil },
+    clipboardContent: @escaping (UUID) -> ClipboardCaptureContent? = { _ in nil },
     clipboardExists: @escaping (UUID) -> Bool = { _ in false },
     panelExists: @escaping (UUID) -> Bool = { _ in false },
     presentClipboard: @escaping (UUID) -> Bool = { _ in false },
     presentFileShelf: @escaping (UUID) -> Bool = { _ in false },
     presentSnippets: @escaping (UUID) -> Bool = { _ in false },
     presentLinks: @escaping (UUID) -> Bool = { _ in false },
-    presentPanelLibrary: @escaping (UUID) -> Bool = { _ in false }
+    presentPanelLibrary: @escaping (UUID) -> Bool = { _ in false },
+    presentSnippetEditor: @escaping (String) -> Void = { _ in },
+    presentLinkEditor: @escaping (String) -> Void = { _ in },
+    dismissClipboard: @escaping () -> Void = {}
 ) -> GlanceActionDependencies {
     GlanceActionDependencies(
         createTextPanel: createTextPanel,
@@ -555,6 +560,8 @@ private func probeDependencies(
         link: link,
         fileRecord: fileRecord,
         resolveFile: resolveFile,
+        clipboardRecord: clipboardRecord,
+        clipboardContent: clipboardContent,
         clipboardExists: clipboardExists,
         panelExists: panelExists,
         presentClipboard: presentClipboard,
@@ -562,9 +569,9 @@ private func probeDependencies(
         presentSnippets: presentSnippets,
         presentLinks: presentLinks,
         presentPanelLibrary: presentPanelLibrary,
-        presentSnippetEditor: { _ in },
-        presentLinkEditor: { _ in },
-        dismissClipboard: {}
+        presentSnippetEditor: presentSnippetEditor,
+        presentLinkEditor: presentLinkEditor,
+        dismissClipboard: dismissClipboard
     )
 }
 
