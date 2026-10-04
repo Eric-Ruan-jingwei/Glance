@@ -32,10 +32,9 @@
       <div class="mark" id="mark1"><div class="m-body"></div><div class="m-shadow"></div><div class="m-note"></div></div>
       <div id="ghosts"><div id="ghostsIn"></div></div>
       <div class="ring" id="ring1"></div>
-      <h1 class="s1-head" id="head1"><span class="ln"><span>重要的事，</span></span><span class="ln"><span>总被窗口淹没。</span></span></h1>
+      <h1 class="s1-head" id="head1"><span class="ln"><span>重要的事，总被淹没。</span></span></h1>
       <div class="word" id="word1"><span class="wm">Glance</span></div>
-      <p class="tag" id="tag1"><span>把重要内容留在眼前，</span><span>也把常用工具收进菜单栏。</span></p>
-      <p class="meta" id="meta1">轻量 · 本地优先 · 原生 macOS</p>
+      <p class="tag" id="tag1"><span>把重要的，留在眼前。</span></p>
     </div>
   </section>
 
@@ -79,21 +78,19 @@
       <svg style="width:20px;height:20px"><use href="#i-wifi"/></svg>
       <span>10月4日 周日 22:42</span>
     </div>
-    <div class="cap" id="cap3" style="top:700px">
-      <div class="ln idx"><span>01</span></div>
-      <div class="ln ttl"><span>面板</span></div>
-      <div class="dsc"><span class="ln"><span>文字、待办、Markdown、图片与 PDF，</span></span><span class="ln"><span>长期浮在所有窗口之上。</span></span></div>
+    <div class="cap" id="cap3" style="top:790px">
+      <div class="ln lbl"><span>面板</span></div>
+      <div class="ln ttl"><span>始终在最前。</span></div>
     </div>
   </section>
 
   <!-- S4: quick capture -->
   <section class="scene" id="s4">
     <div class="keys" id="keys4"><kbd>⌥</kbd><kbd>⌘</kbd><kbd>J</kbd></div>
-    <div class="cap" id="cap4" style="top:320px">
-      <div class="ln idx"><span>02</span></div>
-      <div class="ln ttl"><span>快速记录</span></div>
+    <div class="cap" id="cap4" style="top:380px">
+      <div class="ln lbl"><span>快速记录</span></div>
+      <div class="ln ttl"><span>随手一记。</span></div>
       <div class="keys-sm" id="k4slot"></div>
-      <div class="dsc"><span class="ln"><span>从任何应用里记下一条。</span></span><span class="ln"><span>先识别内容，再由你决定放进哪里。</span></span></div>
     </div>
     <div class="qc" id="qc">
       <div class="qc-text"><span id="qcType">把需求整理成可执行的下一步。</span><i class="caret" id="qcCaret"></i></div>
@@ -110,21 +107,95 @@
   <!-- S5: six tools, one workflow -->
   <section class="scene" id="s5">
     <div class="cam" id="s5cam">
-      <div class="s5-head" id="head5"><span class="ln"><span>六个工具，</span></span><span class="ln"><span>一套工作流。</span></span></div>
-      <p class="s5-sub" id="sub5">面板、剪贴板、文件架、片段库、链接库、全局搜索<br>平级共存，用跨工具操作连在一起。</p>
+      <div class="s5-head" id="head5"><span class="ln"><span>六个工具，</span></span><span class="ln"><span>一个入口。</span></span></div>
       <div class="tiles" id="tiles">
-        <div class="tile hero"><kbd class="t-k">⌥⌘G</kbd><div class="t-ic"><svg><use href="#i-pin"/></svg></div><div class="t-nm">面板</div><div class="t-ds">文字、待办、图片、PDF<br>长期浮在桌面</div></div>
-        <div class="tile"><kbd class="t-k">⌥⌘V</kbd><div class="t-ic"><svg><use href="#i-clip"/></svg></div><div class="t-nm">剪贴板</div><div class="t-ds">留下最近复制的<br>文字和图片</div></div>
-        <div class="tile"><kbd class="t-k">⌥⌘F</kbd><div class="t-ic"><svg><use href="#i-tray"/></svg></div><div class="t-nm">文件架</div><div class="t-ds">保存文件引用<br>不复制原文件</div></div>
-        <div class="tile" id="tSnip"><i class="t-flash" id="tFlash"></i><kbd class="t-k">⌥⌘S</kbd><div class="t-ic" id="tSnipIc"><svg><use href="#i-quote"/></svg></div><div class="t-nm">片段库</div><div class="t-ds">长期复用的回复、<br>命令和地址</div></div>
-        <div class="tile"><kbd class="t-k">⌥⌘L</kbd><div class="t-ic"><svg><use href="#i-link"/></svg></div><div class="t-nm">链接库</div><div class="t-ds">有意留下的网页<br>用默认浏览器打开</div></div>
-        <div class="tile"><kbd class="t-k">⌥⌘K</kbd><div class="t-ic"><svg><use href="#i-search"/></svg></div><div class="t-nm">全局搜索</div><div class="t-ds">在所有本地数据里<br>找回任何一条</div></div>
+        <div class="tile hero"><div class="t-ic"><svg><use href="#i-pin"/></svg></div><div class="t-nm">面板</div></div>
+        <div class="tile" id="tClip"><div class="t-ic"><svg><use href="#i-clip"/></svg></div><div class="t-nm">剪贴板</div></div>
+        <div class="tile"><div class="t-ic"><svg><use href="#i-tray"/></svg></div><div class="t-nm">文件架</div></div>
+        <div class="tile" id="tSnip"><i class="t-flash" id="tFlash"></i><div class="t-ic" id="tSnipIc"><svg><use href="#i-quote"/></svg></div><div class="t-nm">片段库</div></div>
+        <div class="tile"><div class="t-ic"><svg><use href="#i-link"/></svg></div><div class="t-nm">链接库</div></div>
+        <div class="tile"><div class="t-ic"><svg><use href="#i-search"/></svg></div><div class="t-nm">全局搜索</div></div>
       </div>
     </div>
     <div id="flow">
-      <p class="flow-over" id="flowOver">不是六个孤立的小工具，而是一条连起来的工作流</p>
       <svg id="flowSvg" width="1920" height="1080" style="position:absolute;inset:0"><path id="flowPath" d="M140 640 H1780" stroke="#c65d3b" stroke-width="3" fill="none" stroke-linecap="round"/></svg>
     </div>
+  </section>
+
+  <!-- S5r: the tool reel — one camera pan across four windows -->
+  <section class="scene" id="s5r">
+    <div class="wall" id="rWall"></div>
+    <div id="track">
+      <div class="station" style="left:0">
+        <div class="win rw" id="rwClip">
+          <div class="tb"><i></i><i></i><i></i><span>剪贴板</span></div>
+          <div class="r-in"><svg><use href="#i-clip"/></svg><span>搜索剪贴板…</span></div>
+          <div class="fs-seg"><span>最近</span><span>收藏</span></div>
+          <div class="rlist">
+            <div class="r-sel" id="clipSel"></div>
+            <div class="rr" id="clipNew"><span class="ri"><svg><use href="#i-md"/></svg></span><div><b>请审核最新设计稿件</b><small>文字 · 刚刚</small></div></div>
+            <div class="rr clipOld" style="top:0"><span class="ri"><svg><use href="#i-md"/></svg></span><div><b>把需求整理成可执行的下一步。</b><small>文字 · 2 小时前</small></div></div>
+            <div class="rr clipOld" style="top:84px"><span class="thumb"></span><div><b>截图 2026-10-04 22.31</b><small>图片 · 1440 × 900</small></div></div>
+            <div class="rr clipOld" style="top:168px"><span class="ri"><svg><use href="#i-md"/></svg></span><div><b>git commit -m 'update'</b><small>文字 · 3 小时前</small></div></div>
+            <div class="rr clipOld" style="top:252px"><span class="ri"><svg><use href="#i-md"/></svg></span><div><b>github.com/Eric-Ruan-jingwei/Glance</b><small>文字 · 昨天</small></div></div>
+          </div>
+          <div class="sw-ft"><span id="clipKey"><kbd>↵</kbd>复制</span><span><kbd>⌘↵</kbd>创建面板</span><span><kbd>Esc</kbd>关闭</span></div>
+          <div class="toast" id="clipToast"><svg><use href="#i-check"/></svg>已复制</div>
+        </div>
+      </div>
+      <div class="station" style="left:1920px">
+        <div class="win rw">
+          <div class="tb"><i></i><i></i><i></i><span>文件架</span></div>
+          <div class="r-in"><svg><use href="#i-tray"/></svg><span>搜索文件…</span></div>
+          <div class="fs-seg"><span>最近</span><span>收藏</span></div>
+          <div class="rlist">
+            <div class="r-sel" id="fileSel"></div>
+            <div class="rr" id="fileNew"><span class="doc pdf">PDF</span><div><b>设计规范.pdf</b><small>PDF · 3.2 MB · 刚刚</small></div></div>
+            <div class="rr fileOld" style="top:0"><span class="doc">MD</span><div><b>需求说明.md</b><small>MD · 2 KB · 2 小时前</small></div></div>
+            <div class="rr fileOld" style="top:84px"><span class="doc">MD</span><div><b>版本计划.md</b><small>MD · 4 KB · 2 小时前</small></div></div>
+            <div class="rr fileOld" style="top:168px"><span class="doc">PDF</span><div><b>发布清单.pdf</b><small>PDF · 88 KB · 昨天</small></div></div>
+          </div>
+          <div class="sw-ft"><span><kbd>↵</kbd>打开</span><span><kbd>⌘↵</kbd>在 Finder 中显示</span><span id="fileKey"><kbd>Space</kbd>预览</span></div>
+        </div>
+        <div class="ddoc" id="ddoc"><i></i><span>PDF</span></div>
+      </div>
+      <div class="station" style="left:3840px">
+        <div class="win rw">
+          <div class="tb"><i></i><i></i><i></i><span>片段库</span></div>
+          <div class="r-in"><svg><use href="#i-quote"/></svg><span>搜索片段…</span></div>
+          <div class="fs-seg"><span>全部</span><span>收藏</span></div>
+          <div class="rlist">
+            <div class="r-sel" id="snipSel"></div>
+            <div class="rr" style="top:0"><span class="ri"><svg><use href="#i-quote"/></svg></span><div><b>把需求整理成可执行的下一步。</b><small>刚刚 · 来自快速记录</small></div></div>
+            <div class="rr" style="top:84px"><span class="ri"><svg><use href="#i-quote"/></svg></span><div><b>邮件回复模板</b><small>您好，已收到，我会在今天内回复…</small></div></div>
+            <div class="rr" style="top:168px"><span class="ri"><svg><use href="#i-quote"/></svg></span><div><b>打包命令</b><small class="mono">./scripts/package-macos.sh</small></div></div>
+            <div class="rr" style="top:252px"><span class="ri"><svg><use href="#i-quote"/></svg></span><div><b>公司地址</b><small>杭州市西湖区文三路 ……</small></div></div>
+          </div>
+          <div class="sw-ft"><span id="snipKey"><kbd>↵</kbd>复制</span><span><kbd>⌘↵</kbd>创建面板</span><span><kbd>Esc</kbd>关闭</span></div>
+          <div class="toast" id="snipToast"><svg><use href="#i-check"/></svg>已复制</div>
+        </div>
+      </div>
+      <div class="station" style="left:5760px">
+        <div class="win rw">
+          <div class="tb"><i></i><i></i><i></i><span>链接库</span></div>
+          <div class="r-in"><svg><use href="#i-link"/></svg><span>搜索链接…</span></div>
+          <div class="fs-seg"><span>最近</span><span>收藏</span></div>
+          <div class="rlist">
+            <div class="r-sel" id="linkSel"></div>
+            <div class="rr" style="top:0"><span class="fav" style="background:#1d1d1f">G</span><div><b>Glance · GitHub</b><small>github.com/Eric-Ruan-jingwei/Glance</small></div></div>
+            <div class="rr" style="top:84px"><span class="fav" style="background:#8e8e93"></span><div><b>Human Interface Guidelines</b><small>developer.apple.com/design</small></div></div>
+            <div class="rr" style="top:168px"><span class="fav" style="background:#e3a33b">H</span><div><b>Homebrew Formulae</b><small>formulae.brew.sh</small></div></div>
+            <div class="rr" style="top:252px"><span class="fav" style="background:#5a9a4a">G</span><div><b>GSAP 文档</b><small>gsap.com/docs</small></div></div>
+          </div>
+          <div class="sw-ft"><span id="linkKey"><kbd>↵</kbd>在浏览器中打开</span><span><kbd>⌘C</kbd>复制链接</span><span><kbd>Esc</kbd>关闭</span></div>
+          <div class="toast" id="linkToast"><svg><use href="#i-link"/></svg>已在默认浏览器打开</div>
+        </div>
+      </div>
+    </div>
+    <div class="cap rc"><div class="ln lbl"><span>剪贴板</span></div><div class="ln ttl"><span>复制过的，</span></div><div class="ln ttl"><span>都还在。</span></div></div>
+    <div class="cap rc"><div class="ln lbl"><span>文件架</span></div><div class="ln ttl"><span>文件，</span></div><div class="ln ttl"><span>随手一放。</span></div></div>
+    <div class="cap rc"><div class="ln lbl"><span>片段库</span></div><div class="ln ttl"><span>常用的话，</span></div><div class="ln ttl"><span>一键取用。</span></div></div>
+    <div class="cap rc"><div class="ln lbl"><span>链接库</span></div><div class="ln ttl"><span>想留的网页，</span></div><div class="ln ttl"><span>留得住。</span></div></div>
   </section>
 
   <!-- S6 + S7: search, then the privacy pull-back -->
@@ -150,12 +221,10 @@
         <div class="sw-ft" style="background:#f7f7f8"><span><kbd>↵</kbd>打开</span><span><kbd>⌘↵</kbd>在 Finder 中显示</span><span><kbd>Space</kbd>预览</span><span><kbd>Esc</kbd>关闭</span></div>
       </div>
     </div>
-    <div class="cap" id="cap6" style="top:300px">
-      <div class="ln idx"><span>03</span></div>
-      <div class="ln ttl"><span>全局搜索</span></div>
+    <div class="cap" id="cap6" style="top:380px">
+      <div class="ln lbl"><span>全局搜索</span></div>
+      <div class="ln ttl"><span>一搜即达。</span></div>
       <div class="keys-sm" id="k6"><span class="kc">⌥</span><span class="kc">⌘</span><span class="kc">K</span></div>
-      <div class="dsc"><span class="ln"><span>面板、剪贴板、文件架、片段库、链接库，</span></span><span class="ln"><span>在一个地方找回任何一条。</span></span></div>
-      <div class="dsc" id="cap6b" style="color:var(--clay);margin-top:18px">⌘↵ 直接回到它的来源。</div>
     </div>
     <svg id="laptop" width="1920" height="1080">
       <rect id="lpScreen" x="575" y="203" width="770" height="450" rx="30" fill="none" stroke="rgba(243,239,231,.5)" stroke-width="2"/>
@@ -163,8 +232,7 @@
     </svg>
     <svg class="cloud" id="cloud" viewBox="0 0 132 88" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M34 76h66a22 22 0 0 0 2-44 32 32 0 0 0-60-6A25 25 0 0 0 34 76z"/></svg>
     <i class="seg" id="segA"></i><i class="seg" id="segB"></i><i class="snap" id="snap"></i>
-    <div class="priv-h" id="privH"><span class="ln"><span>数据，只留在这台机器上。</span></span></div>
-    <div class="priv-i" id="privI"><span>无账户</span><span>无云同步</span><span>不上传搜索</span><span>不抓取网页</span></div>
+    <div class="priv-h" id="privH"><span class="ln"><span>只在你的 Mac 上。</span></span></div>
   </section>
 
   <!-- S8: outro -->
@@ -172,13 +240,13 @@
     <div class="glow" id="glow"></div>
     <div class="mark dark" id="mark2"><div class="m-body"></div><div class="m-shadow"></div><div class="m-note"></div><div class="m-stem"></div><div class="m-dot"></div></div>
     <div class="word" id="word2"><span class="wm">Glance</span></div>
-    <p class="tag" id="tag2">轻量 · 本地优先 · 原生 macOS 个人办公工具</p>
+    <p class="tag" id="tag2">把重要的，留在眼前。</p>
     <div class="pill" id="pill"><span class="pr">$</span><span id="brew">brew install --cask Eric-Ruan-jingwei/glance/glance</span><i class="caret" id="brewCaret"></i></div>
-    <p class="foot" id="foot">macOS 14+ · Universal 2 · MIT 开源 · github.com/Eric-Ruan-jingwei/Glance</p>
   </section>
 
   <div id="fx">
     <div class="pin" id="pin1"><div class="m-stem"></div><div class="m-dot"></div></div>
+    <div id="morph"></div>
     <div class="chip" id="chip"><svg><use href="#i-quote"/></svg><span>把需求整理成可执行的下一步。</span></div>
     <div id="wipebar"></div>
     <svg class="cursor" id="cursor" viewBox="0 0 34 46"><path d="M4 3v34l8.6-8.2 5.8 13.6 6.2-2.6-5.8-13.3h12z" fill="#111" stroke="#fff" stroke-width="2.4" stroke-linejoin="round"/></svg>
@@ -190,6 +258,7 @@
 
 <script src="node_modules/gsap/dist/gsap.min.js"></script>
 <script src="node_modules/gsap/dist/CustomEase.min.js"></script>
+<script src="score.js"></script>
 <script src="film.js"></script>
 </body>
 </html>

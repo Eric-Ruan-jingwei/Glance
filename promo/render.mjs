@@ -2,6 +2,7 @@
 //   node render.mjs                      → out/glance-promo.mp4 (1080p60)
 //   node render.mjs --fps=30             → faster draft
 //   node render.mjs --stills=4.5,12,20   → out/stills/*.png
+//   node render.mjs --audio              → out/score.wav only
 import { chromium } from "playwright";
 import { spawn } from "node:child_process";
 import { mkdir, writeFile, rm } from "node:fs/promises";
@@ -28,6 +29,29 @@ async function openPage(browser) {
   await page.goto(url);
   await page.waitForFunction(() => window.__ready === true, null, { timeout: 30000 });
   return page;
+}
+
+async function renderAudio(browser, file) {
+  const page = await openPage(browser);
+  const { sampleRate, channels, peak, data } = await page.evaluate(() =>
+    window.renderScore(window.__film.cues, window.__film.music, window.__film.duration));
+  await page.close();
+  const pcm = Buffer.from(data, "base64");
+  const head = Buffer.alloc(44);
+  head.write("RIFF", 0);
+  head.writeUInt32LE(36 + pcm.length, 4);
+  head.write("WAVEfmt ", 8);
+  head.writeUInt32LE(16, 16);
+  head.writeUInt16LE(1, 20);
+  head.writeUInt16LE(channels, 22);
+  head.writeUInt32LE(sampleRate, 24);
+  head.writeUInt32LE(sampleRate * channels * 2, 28);
+  head.writeUInt16LE(channels * 2, 32);
+  head.writeUInt16LE(16, 34);
+  head.write("data", 36);
+  head.writeUInt32LE(pcm.length, 40);
+  await writeFile(file, Buffer.concat([head, pcm]));
+  console.log(`${file}  (raw peak ${peak.toFixed(2)})`);
 }
 
 function run(cmd, argv, opts = {}) {
@@ -58,7 +82,10 @@ async function renderChunk(browser, from, to, file, onFrame) {
 const browser = await chromium.launch({ args: ["--allow-file-access-from-files", "--font-render-hinting=none"] });
 
 try {
-  if (args.stills) {
+  if (args.audio) {
+    await mkdir(outDir, { recursive: true });
+    await renderAudio(browser, path.join(outDir, "score.wav"));
+  } else if (args.stills) {
     await mkdir(path.join(outDir, "stills"), { recursive: true });
     const page = await openPage(browser);
     for (const t of String(args.stills).split(",").map(Number)) {
@@ -96,6 +123,8 @@ try {
       segs.push(file);
       jobs.push(renderChunk(browser, from, to, file, tick));
     }
+    const wav = path.join(outDir, "score.wav");
+    jobs.push(renderAudio(browser, wav));
     await Promise.all(jobs);
     console.log();
 
@@ -103,7 +132,13 @@ try {
     await writeFile(list, segs.map((s) => `file '${s}'`).join("\n"));
     const name = args.out || (fps === 60 ? "glance-promo.mp4" : `glance-promo-${fps}fps.mp4`);
     const final = path.join(outDir, name);
-    await run("ffmpeg", ["-y", "-loglevel", "error", "-f", "concat", "-safe", "0", "-i", list, "-c", "copy", "-movflags", "+faststart", final]).done;
+    await run("ffmpeg", [
+      "-y", "-loglevel", "error",
+      "-f", "concat", "-safe", "0", "-i", list, "-i", wav,
+      "-map", "0:v", "-map", "1:a", "-c:v", "copy",
+      "-af", "loudnorm=I=-16:TP=-1.5:LRA=11", "-ar", "48000", "-c:a", "aac", "-b:a", "256k",
+      "-t", duration.toFixed(3), "-movflags", "+faststart", final,
+    ]).done;
     await rm(segDir, { recursive: true, force: true });
     console.log(`${final}  (${duration.toFixed(2)}s, ${total} frames @ ${fps}fps)`);
   }
