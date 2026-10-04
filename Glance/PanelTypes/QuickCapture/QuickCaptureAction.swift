@@ -73,6 +73,37 @@ enum QuickCapturePolicy {
     }
 }
 
+enum QuickCaptureNewlinePolicy {
+    static func allowsNewline(
+        content: QuickCaptureContent,
+        selectedAction: QuickCaptureAction?
+    ) -> Bool {
+        switch content {
+        case .files:
+            return false
+        case .empty, .text, .url:
+            return selectedAction != .createTodoPanel
+        }
+    }
+}
+
+enum QuickCaptureTodoPolicy {
+    static func isValid(_ text: String) -> Bool {
+        rejection(for: text) == nil
+    }
+
+    static func rejection(for text: String) -> GlanceActionOutcome? {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty {
+            return .failed(QuickCaptureCopy.emptyHint)
+        }
+        if trimmed.rangeOfCharacter(from: .newlines) != nil {
+            return .failed(QuickCaptureCopy.todoMustBeSingleLine)
+        }
+        return nil
+    }
+}
+
 enum QuickCaptureKeyIntent: Equatable {
     case submit
     case insertNewline
@@ -139,6 +170,7 @@ enum QuickCaptureCopy {
     static let detectedImage = "识别：图片"
     static let detectedPDF = "识别：PDF"
     static let emptyHint = "先输入内容"
+    static let todoMustBeSingleLine = "待办内容需要保持单行"
 
     static func detectedTitle(for content: QuickCaptureContent) -> String {
         switch content {

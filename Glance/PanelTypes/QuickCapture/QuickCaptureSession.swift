@@ -37,6 +37,9 @@ enum QuickCaptureExecutor {
         case (.createTextPanel, .text(let text)), (.createTextPanel, .url(let text)):
             return panel(destinations.createTextPanel(text))
         case (.createTodoPanel, .text(let text)):
+            if let rejection = QuickCaptureTodoPolicy.rejection(for: text) {
+                return rejection
+            }
             return panel(destinations.createTodoPanel(text))
         case (.createFilePanel, .files(let urls)):
             guard urls.count == 1, let url = urls.first else {
@@ -77,12 +80,7 @@ final class QuickCaptureModel {
     }
 
     var allowsNewline: Bool {
-        switch content {
-        case .text, .url, .empty:
-            return true
-        case .files:
-            return false
-        }
+        QuickCaptureNewlinePolicy.allowsNewline(content: content, selectedAction: selectedAction)
     }
 
     func reset() {

@@ -236,6 +236,38 @@ final class QuickCaptureExecutorTests: XCTestCase {
         XCTAssertEqual(todos, ["Send email"])
     }
 
+    func testMultilineTodoIsRejectedWithoutCallingTodoAPI() {
+        let destinations = trackingDestinations()
+        XCTAssertEqual(
+            QuickCaptureExecutor.perform(
+                .createTodoPanel,
+                content: .text("Line 1\nLine 2"),
+                destinations: destinations
+            ),
+            .failed(QuickCaptureCopy.todoMustBeSingleLine)
+        )
+    }
+
+    func testCarriageReturnAndCRLFTodosAreRejected() {
+        let destinations = trackingDestinations()
+        XCTAssertEqual(
+            QuickCaptureExecutor.perform(
+                .createTodoPanel,
+                content: .text("Line 1\rLine 2"),
+                destinations: destinations
+            ),
+            .failed(QuickCaptureCopy.todoMustBeSingleLine)
+        )
+        XCTAssertEqual(
+            QuickCaptureExecutor.perform(
+                .createTodoPanel,
+                content: .text("Line 1\r\nLine 2"),
+                destinations: destinations
+            ),
+            .failed(QuickCaptureCopy.todoMustBeSingleLine)
+        )
+    }
+
     func testCreateTodoPanelForURLDoesNotCallDestinations() {
         let destinations = trackingDestinations()
         XCTAssertEqual(
@@ -371,6 +403,60 @@ final class QuickCaptureModelTests: XCTestCase {
         XCTAssertEqual(model.error, "无法加入文件架")
         XCTAssertFalse(model.didComplete)
         XCTAssertEqual(model.selectedAction, .addToFileShelf)
+    }
+
+    func testTodoActionDisallowsNewline() {
+        let model = QuickCaptureModel()
+        model.setText("Buy milk")
+        model.select(.createTodoPanel)
+        XCTAssertEqual(model.selectedAction, .createTodoPanel)
+        XCTAssertFalse(model.allowsNewline)
+    }
+
+    func testSnippetAndTextPanelAllowNewline() {
+        let model = QuickCaptureModel()
+        model.setText("Buy milk")
+        XCTAssertEqual(model.selectedAction, .saveSnippet)
+        XCTAssertTrue(model.allowsNewline)
+        model.select(.createTextPanel)
+        XCTAssertTrue(model.allowsNewline)
+    }
+
+    func testNewlinePermissionFollowsActionSwitching() {
+        let model = QuickCaptureModel()
+        model.setText("Buy milk")
+        XCTAssertEqual(model.selectedAction, .saveSnippet)
+        XCTAssertTrue(model.allowsNewline)
+        model.moveAction(1)
+        XCTAssertEqual(model.selectedAction, .createTextPanel)
+        XCTAssertTrue(model.allowsNewline)
+        model.moveAction(1)
+        XCTAssertEqual(model.selectedAction, .createTodoPanel)
+        XCTAssertFalse(model.allowsNewline)
+        model.moveAction(1)
+        XCTAssertEqual(model.selectedAction, .saveSnippet)
+        XCTAssertTrue(model.allowsNewline)
+    }
+
+    func testMultilineTodoSubmitKeepsOriginalText() {
+        let model = QuickCaptureModel()
+        model.setText("Line 1\nLine 2")
+        model.select(.createTodoPanel)
+        let destinations = QuickCaptureDestinations(
+            saveSnippet: { _ in .failed("snippet") },
+            saveLink: { _ in .failed("link") },
+            addToFileShelf: { _ in .failed("files") },
+            createTextPanel: { _ in false },
+            createTodoPanel: { _ in XCTFail("todo panel"); return false },
+            createImagePanel: { _ in false },
+            createPDFPanel: { _ in false }
+        )
+        XCTAssertFalse(model.submit(using: destinations))
+        XCTAssertFalse(model.didComplete)
+        XCTAssertEqual(model.text, "Line 1\nLine 2")
+        XCTAssertEqual(model.content, .text("Line 1\nLine 2"))
+        XCTAssertEqual(model.selectedAction, .createTodoPanel)
+        XCTAssertEqual(model.error, QuickCaptureCopy.todoMustBeSingleLine)
     }
 
     func testSuccessfulSubmitMarksComplete() {
@@ -534,6 +620,23 @@ final class QuickCaptureKeyPolicyTests: XCTestCase {
                 isComposing: false,
                 allowsNewline: true
             ),
+            .submit
+        )
+    }
+
+    func testShiftReturnSubmitsWhenNewlineIsDisallowed() {
+        XCTAssertEqual(
+            QuickCaptureKeyPolicy.intent(
+                keyCode: 36,
+                command: false,
+                shift: true,
+                isComposing: false,
+                allowsNewline: false
+            ),
+            .submit
+        )
+        XCTAssertEqual(
+            QuickCaptureReturn.action(isComposing: false, shift: true, allowsNewline: false),
             .submit
         )
     }
