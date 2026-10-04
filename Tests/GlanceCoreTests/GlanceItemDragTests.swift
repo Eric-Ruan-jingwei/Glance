@@ -352,9 +352,10 @@ final class GlanceItemDragTests: XCTestCase {
             perform: { coordinator.perform($0, sourceID: $1, screen: $2) },
             screen: nil
         )
-        XCTAssertEqual(outcome, .failed(GlanceNoticeCopy.staleItem))
+        XCTAssertNil(outcome)
         XCTAssertEqual(log.createTextPanel, 0)
         XCTAssertNil(log.snippets[snippet.id])
+        XCTAssertNil(session.cachedSourceID(for: .panels))
     }
 
     func testHoverCachesFileShelfResolveForSamePayload() {
@@ -633,10 +634,10 @@ final class GlanceItemDragTests: XCTestCase {
             perform: { coordinator.perform($0, sourceID: $1, screen: $2) },
             screen: nil
         )
-        XCTAssertNotEqual(outcome, .succeeded)
-        XCTAssertEqual(outcome, .failed(GlanceNoticeCopy.fileMissing))
+        XCTAssertNil(outcome)
         XCTAssertEqual(log.importPDF, 0)
         XCTAssertEqual(log.files[pdf.id]?.id, pdf.id)
+        XCTAssertNil(session.cachedAction(for: .fileShelf(pdf.id), destination: .panels))
     }
 
     func testHandleProvidersAcceptsClipboardTextToSnippets() {
@@ -653,6 +654,229 @@ final class GlanceItemDragTests: XCTestCase {
                 performCount: &performs
             )
         )
+    }
+
+    func testLeaveTargetClearsHoverSession() {
+        let snippet = snippetRecord()
+        let coordinator = coordinator(log: ActionCallLog(), snippet: snippet)
+        let session = GlanceItemDropSession()
+        let pasteboard = isolatedPasteboard(
+            GlanceItemDragCodec.encode(GlanceItemDragPayload(sourceID: .snippet(snippet.id)))
+        )
+        XCTAssertTrue(
+            GlanceItemDropRunner.hoverHighlight(
+                targeted: true,
+                destination: .panels,
+                session: session,
+                availableActions: { coordinator.availableActions(for: $0) },
+                pasteboard: pasteboard
+            )
+        )
+        XCTAssertEqual(session.cachedSourceID(for: .panels), .snippet(snippet.id))
+        XCTAssertEqual(
+            session.cachedAction(for: .snippet(snippet.id), destination: .panels),
+            .createTextPanel
+        )
+        XCTAssertFalse(
+            GlanceItemDropRunner.hoverHighlight(
+                targeted: false,
+                destination: .panels,
+                session: session,
+                availableActions: { coordinator.availableActions(for: $0) },
+                pasteboard: pasteboard
+            )
+        )
+        XCTAssertNil(session.cachedSourceID(for: .panels))
+        XCTAssertNil(session.cachedAction(for: .snippet(snippet.id), destination: .panels))
+    }
+
+    func testOldHoverCacheCannotAcceptNewInvalidDrag() {
+        let snippet = snippetRecord()
+        let coordinator = coordinator(log: ActionCallLog(), snippet: snippet)
+        let session = GlanceItemDropSession()
+        let pasteboard = isolatedPasteboard(
+            GlanceItemDragCodec.encode(GlanceItemDragPayload(sourceID: .snippet(snippet.id)))
+        )
+        XCTAssertTrue(
+            GlanceItemDropRunner.hoverHighlight(
+                targeted: true,
+                destination: .panels,
+                session: session,
+                availableActions: { coordinator.availableActions(for: $0) },
+                pasteboard: pasteboard
+            )
+        )
+        _ = GlanceItemDropRunner.hoverHighlight(
+            targeted: false,
+            destination: .panels,
+            session: session,
+            availableActions: { coordinator.availableActions(for: $0) },
+            pasteboard: pasteboard
+        )
+        let invalid = Data("not-json".utf8)
+        XCTAssertFalse(
+            GlanceItemDropRunner.accepts(
+                providers: [invalidInternalProvider(invalid)],
+                destination: .panels,
+                session: session,
+                availableActions: { coordinator.availableActions(for: $0) },
+                pasteboard: isolatedPasteboard(invalid)
+            )
+        )
+        XCTAssertNil(session.currentAcceptedPlan())
+    }
+
+    func testProviderDecodeNilDoesNotPerformCachedSource() {
+        let snippet = snippetRecord()
+        let log = ActionCallLog()
+        let coordinator = coordinator(log: log, snippet: snippet)
+        let session = GlanceItemDropSession()
+        XCTAssertEqual(
+            session.plannedAction(
+                sourceID: .snippet(snippet.id),
+                destination: .panels,
+                availableActions: { coordinator.availableActions(for: $0) }
+            ),
+            .createTextPanel
+        )
+        var performs = 0
+        var failed: String?
+        let accepted = GlanceItemDropRunner.handleProviders(
+            [GlanceDragOffer.itemProvider(sourceID: .snippet(snippet.id), nativeText: snippet.content)],
+            destination: .panels,
+            session: session,
+            availableActions: { coordinator.availableActions(for: $0) },
+            perform: { action, sourceID, screen in
+                performs += 1
+                return coordinator.perform(action, sourceID: sourceID, screen: screen)
+            },
+            screen: nil,
+            onFailed: { failed = $0 },
+            pasteboard: isolatedPasteboard(nil),
+            loadSourceID: { _, completion in
+                completion(nil)
+            }
+        )
+        XCTAssertTrue(accepted)
+        XCTAssertEqual(performs, 0)
+        XCTAssertEqual(failed, GlanceNoticeCopy.staleItem)
+        XCTAssertEqual(log.createTextPanel, 0)
+        XCTAssertNil(session.cachedSourceID(for: .panels))
+        XCTAssertNil(session.currentAcceptedPlan())
+    }
+
+    func testDecodedIdentityMismatchDoesNotPerform() {
+        let first = snippetRecord()
+        let second = snippetRecord()
+        let log = ActionCallLog()
+        log.snippets[first.id] = first
+        log.snippets[second.id] = second
+        let coordinator = coordinator(log: log, snippet: first)
+        let session = GlanceItemDropSession()
+        var performs = 0
+        var failed: String?
+        let accepted = GlanceItemDropRunner.handleProviders(
+            [GlanceDragOffer.itemProvider(sourceID: .snippet(first.id), nativeText: first.content)],
+            destination: .panels,
+            session: session,
+            availableActions: { coordinator.availableActions(for: $0) },
+            perform: { action, sourceID, screen in
+                performs += 1
+                return coordinator.perform(action, sourceID: sourceID, screen: screen)
+            },
+            screen: nil,
+            onFailed: { failed = $0 },
+            pasteboard: isolatedPasteboard(
+                GlanceItemDragCodec.encode(GlanceItemDragPayload(sourceID: .snippet(first.id)))
+            ),
+            loadSourceID: { _, completion in
+                completion(.snippet(second.id))
+            }
+        )
+        XCTAssertTrue(accepted)
+        XCTAssertEqual(performs, 0)
+        XCTAssertEqual(failed, GlanceNoticeCopy.staleItem)
+        XCTAssertEqual(log.createTextPanel, 0)
+    }
+
+    func testMatchingDecodedIdentityPerformsSaveAsLinkOnce() {
+        let record = clipboardText("https://example.com")
+        let log = ActionCallLog()
+        let coordinator = coordinator(log: log, clipboard: record)
+        let session = GlanceItemDropSession()
+        var performs = 0
+        var failed: String?
+        let accepted = GlanceItemDropRunner.handleProviders(
+            [GlanceDragOffer.itemProvider(sourceID: .clipboard(record.id), nativeText: record.text)],
+            destination: .links,
+            session: session,
+            availableActions: { coordinator.availableActions(for: $0) },
+            perform: { action, sourceID, screen in
+                performs += 1
+                return coordinator.perform(action, sourceID: sourceID, screen: screen)
+            },
+            screen: nil,
+            onFailed: { failed = $0 },
+            pasteboard: isolatedPasteboard(
+                GlanceItemDragCodec.encode(GlanceItemDragPayload(sourceID: .clipboard(record.id)))
+            ),
+            loadSourceID: { _, completion in
+                completion(.clipboard(record.id))
+            }
+        )
+        XCTAssertTrue(accepted)
+        XCTAssertEqual(performs, 1)
+        XCTAssertNil(failed)
+        XCTAssertEqual(log.presentLinkEditor, 1)
+        XCTAssertEqual(log.linkEditorURLs, ["https://example.com"])
+        XCTAssertEqual(log.clipboards[record.id]?.id, record.id)
+        XCTAssertNil(session.currentAcceptedPlan())
+    }
+
+    func testNextHoverAfterLeaveUsesNewSourceNotOldCache() {
+        let first = fileRecord(name: "a.pdf", path: "/tmp/a.pdf", type: "pdf")
+        let second = fileRecord(name: "b.pdf", path: "/tmp/b.pdf", type: "pdf")
+        let log = ActionCallLog()
+        let coordinator = coordinator(log: log, file: first, resolvedPath: first.originalPath)
+        log.files[second.id] = second
+        let session = GlanceItemDropSession()
+        let firstBoard = isolatedPasteboard(
+            GlanceItemDragCodec.encode(GlanceItemDragPayload(sourceID: .fileShelf(first.id)))
+        )
+        XCTAssertTrue(
+            GlanceItemDropRunner.hoverHighlight(
+                targeted: true,
+                destination: .panels,
+                session: session,
+                availableActions: { coordinator.availableActions(for: $0) },
+                pasteboard: firstBoard
+            )
+        )
+        XCTAssertEqual(session.cachedSourceID(for: .panels), .fileShelf(first.id))
+        XCTAssertEqual(log.resolveFile, 1)
+        _ = GlanceItemDropRunner.hoverHighlight(
+            targeted: false,
+            destination: .panels,
+            session: session,
+            availableActions: { coordinator.availableActions(for: $0) },
+            pasteboard: firstBoard
+        )
+        XCTAssertNil(session.cachedSourceID(for: .panels))
+        let secondBoard = isolatedPasteboard(
+            GlanceItemDragCodec.encode(GlanceItemDragPayload(sourceID: .fileShelf(second.id)))
+        )
+        XCTAssertTrue(
+            GlanceItemDropRunner.hoverHighlight(
+                targeted: true,
+                destination: .panels,
+                session: session,
+                availableActions: { coordinator.availableActions(for: $0) },
+                pasteboard: secondBoard
+            )
+        )
+        XCTAssertEqual(session.cachedSourceID(for: .panels), .fileShelf(second.id))
+        XCTAssertNotEqual(session.cachedSourceID(for: .panels), .fileShelf(first.id))
+        XCTAssertEqual(log.resolveFile, 2)
     }
 
     func testProductionURLDragItemExportsInternalAndPublicURL() {
