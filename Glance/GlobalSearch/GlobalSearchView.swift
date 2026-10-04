@@ -6,6 +6,8 @@ struct GlobalSearchView: View {
     @FocusState private var searchFocused: Bool
     var onActivate: (GlobalSearchResultID) -> Void
     var onRevealInSource: (GlobalSearchResultID) -> Void
+    var onPerformItemAction: (GlanceItemAction, GlobalSearchResultID) -> Void = { _, _ in }
+    var onItemActions: (GlobalSearchResultID) -> [GlanceItemAction] = { _ in [] }
     var relativeNow: Date = Date()
 
     var body: some View {
@@ -96,6 +98,9 @@ struct GlobalSearchView: View {
                         .onTapGesture {
                             model.selection = document.id
                         }
+                        .contextMenu {
+                            contextMenu(for: document.id)
+                        }
                         .listRowInsets(EdgeInsets(
                             top: GlanceTheme.Space.sm,
                             leading: GlanceTheme.Space.md,
@@ -114,6 +119,23 @@ struct GlobalSearchView: View {
                         proxy.scrollTo(id, anchor: .center)
                     }
                 }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func contextMenu(for id: GlobalSearchResultID) -> some View {
+        Button(GlobalSearchCopy.revealInSourceLabel) {
+            onRevealInSource(id)
+        }
+        let actions = onItemActions(id)
+        if !actions.isEmpty {
+            Divider()
+            ForEach(actions, id: \.identifier) { action in
+                Button(action.title) {
+                    onPerformItemAction(action, id)
+                }
+                .accessibilityIdentifier(action.identifier)
             }
         }
     }

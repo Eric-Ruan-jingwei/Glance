@@ -106,6 +106,7 @@ enum GlobalSearchCopy {
     static let selectHint = "↑↓ 选择"
     static let actHint = "↩ 执行"
     static let revealHint = "⌘↩ 在来源中显示"
+    static let revealInSourceLabel = "在来源中显示"
     static let closeHint = "Esc 关闭"
     static let fileMissing = GlanceNoticeCopy.fileMissing
     static let fileMissingRow = "⚠ 文件已移动或不存在"

@@ -4,6 +4,8 @@ import SwiftUI
 @MainActor
 final class GlobalSearchWindowController: NSWindowController {
     var onRevealInSource: ((GlobalSearchResultID) -> GlanceActionOutcome)?
+    var onPerformItemAction: ((GlanceItemAction, GlobalSearchResultID, NSScreen?) -> GlanceActionOutcome)?
+    var onAvailableItemActions: ((GlobalSearchResultID) -> [GlanceItemAction])?
 
     private let model: GlobalSearchViewModel
     private let environment: AppEnvironment
@@ -70,7 +72,13 @@ final class GlobalSearchWindowController: NSWindowController {
         let view = GlobalSearchView(
             model: model,
             onActivate: { [weak self] id in self?.activate(id) },
-            onRevealInSource: { [weak self] id in self?.revealInSource(id) }
+            onRevealInSource: { [weak self] id in self?.revealInSource(id) },
+            onPerformItemAction: { [weak self] action, id in
+                self?.performItemAction(action, id: id)
+            },
+            onItemActions: { [weak self] id in
+                self?.onAvailableItemActions?(id) ?? []
+            }
         )
         let hosting = NSHostingController(rootView: view)
         hosting.view.frame = NSRect(origin: .zero, size: GlanceConstants.globalSearchSize)
@@ -167,6 +175,20 @@ final class GlobalSearchWindowController: NSWindowController {
         case .succeeded:
             dismiss(deactivate: false)
         case .failed(let notice):
+            NSSound.beep()
+            model.showNotice(notice)
+        }
+    }
+
+    private func performItemAction(_ action: GlanceItemAction, id: GlobalSearchResultID) {
+        let screen = window?.screen ?? DisplayManager.screenContainingMouse()
+        let outcome = onPerformItemAction?(action, id, screen)
+            ?? .failed(GlanceNoticeCopy.panelCreateFailed)
+        if GlobalSearchItemActionSessionPolicy.shouldDismiss(after: action, outcome: outcome) {
+            dismiss(deactivate: false)
+            return
+        }
+        if case .failed(let notice) = outcome {
             NSSound.beep()
             model.showNotice(notice)
         }

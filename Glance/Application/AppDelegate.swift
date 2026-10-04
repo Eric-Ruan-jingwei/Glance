@@ -271,6 +271,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, GlanceWindowHost {
         window.onRevealInSource = { [weak self] id in
             self?.actionCoordinator?.revealInSource(id) ?? .failed(GlanceNoticeCopy.staleItem)
         }
+        window.onAvailableItemActions = { [weak self] id in
+            guard let sourceID = GlobalSearchItemActionBridge.sourceID(for: id) else { return [] }
+            return self?.actionCoordinator?.availableActions(for: sourceID) ?? []
+        }
+        window.onPerformItemAction = { [weak self] action, id, screen in
+            guard let sourceID = GlobalSearchItemActionBridge.sourceID(for: id) else {
+                return .failed(GlanceNoticeCopy.panelCreateFailed)
+            }
+            return self?.actionCoordinator?.perform(action, sourceID: sourceID, screen: screen)
+                ?? .failed(GlanceNoticeCopy.panelCreateFailed)
+        }
         searchWindow = window
         return window
     }
