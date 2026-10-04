@@ -333,32 +333,27 @@ struct ClipboardHistoryRow<MoreMenu: View>: View {
                         .lineLimit(1)
                 }
             }
-            Spacer(minLength: GlanceTheme.Space.sm)
-            Text(relativeDate)
-                .font(.caption)
-                .foregroundStyle(.tertiary)
-                .padding(
-                    .trailing,
-                    GlanceRowQuickActionVisibility.dateTrailingPadding(
-                        isActive: record.isFavorite,
-                        showsSecondary: showsSecondary
-                    )
-                )
-                .opacity(showsSecondary ? 0 : 1)
-                .allowsHitTesting(false)
-        }
-        .overlay(alignment: .trailing) {
-            GlanceRowQuickActionOverlay(
-                showsPersistent: record.isFavorite,
-                showsSecondary: showsSecondary
+            .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
+            GlanceRowTrailingAccessory(
+                width: GlanceRowQuickActionLayout.slotWidth(for: .clipboard),
+                showsActions: showsSecondary
             ) {
-                GlanceRowIconButton(
-                    systemName: "star.fill",
-                    help: ClipboardHistoryCopy.unfavoriteLabel,
-                    isActive: true,
-                    action: onToggleFavorite
-                )
-            } secondary: {
+                HStack(spacing: 0) {
+                    Text(relativeDate)
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                        .lineLimit(1)
+                        .frame(maxWidth: .infinity, alignment: .trailing)
+                    if record.isFavorite {
+                        GlanceRowIconButton(
+                            systemName: "star.fill",
+                            help: ClipboardHistoryCopy.unfavoriteLabel,
+                            isActive: true,
+                            action: onToggleFavorite
+                        )
+                    }
+                }
+            } actions: {
                 HStack(spacing: 0) {
                     GlanceRowIconButton(
                         systemName: record.isFavorite ? "star.fill" : "star",

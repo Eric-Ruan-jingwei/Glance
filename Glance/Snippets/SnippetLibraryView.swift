@@ -444,32 +444,27 @@ struct SnippetRow<MoreMenu: View>: View {
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
             }
-            Spacer(minLength: GlanceTheme.Space.sm)
-            Text(SnippetRelativeDate.string(from: record.lastUsedAt, now: relativeNow))
-                .font(.caption)
-                .foregroundStyle(.tertiary)
-                .padding(
-                    .trailing,
-                    GlanceRowQuickActionVisibility.dateTrailingPadding(
-                        isActive: record.isPinned,
-                        showsSecondary: showsSecondary
-                    )
-                )
-                .opacity(showsSecondary ? 0 : 1)
-                .allowsHitTesting(false)
-        }
-        .overlay(alignment: .trailing) {
-            GlanceRowQuickActionOverlay(
-                showsPersistent: record.isPinned,
-                showsSecondary: showsSecondary
+            .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
+            GlanceRowTrailingAccessory(
+                width: GlanceRowQuickActionLayout.slotWidth(for: .snippet),
+                showsActions: showsSecondary
             ) {
-                GlanceRowIconButton(
-                    systemName: "pin.fill",
-                    help: SnippetCopy.unpinLabel,
-                    isActive: true,
-                    action: onTogglePin
-                )
-            } secondary: {
+                HStack(spacing: 0) {
+                    Text(SnippetRelativeDate.string(from: record.lastUsedAt, now: relativeNow))
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                        .lineLimit(1)
+                        .frame(maxWidth: .infinity, alignment: .trailing)
+                    if record.isPinned {
+                        GlanceRowIconButton(
+                            systemName: "pin.fill",
+                            help: SnippetCopy.unpinLabel,
+                            isActive: true,
+                            action: onTogglePin
+                        )
+                    }
+                }
+            } actions: {
                 HStack(spacing: 0) {
                     GlanceRowIconButton(
                         systemName: "doc.on.doc",

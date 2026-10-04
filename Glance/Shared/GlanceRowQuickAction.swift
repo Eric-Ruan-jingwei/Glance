@@ -1,7 +1,52 @@
 import SwiftUI
 
-enum GlanceRowQuickActionVisibility {
+enum GlanceRowQuickActionLayout {
+    enum Kind: CaseIterable {
+        case clipboard
+        case fileShelf
+        case snippet
+        case link
+        case panelLibrary
+
+        var buttonCount: Int {
+            switch self {
+            case .clipboard: return GlanceRowQuickActionLayout.clipboardButtons
+            case .fileShelf: return GlanceRowQuickActionLayout.fileShelfButtons
+            case .snippet: return GlanceRowQuickActionLayout.snippetButtons
+            case .link: return GlanceRowQuickActionLayout.linkButtons
+            case .panelLibrary: return GlanceRowQuickActionLayout.panelLibraryButtons
+            }
+        }
+
+        var width: CGFloat {
+            GlanceRowQuickActionLayout.width(for: buttonCount)
+        }
+    }
+
     static let buttonSide: CGFloat = 26
+    static let clipboardButtons = 3
+    static let fileShelfButtons = 4
+    static let snippetButtons = 4
+    static let linkButtons = 4
+    static let panelLibraryButtons = 3
+
+    static func width(for buttons: Int) -> CGFloat {
+        CGFloat(buttons) * buttonSide
+    }
+
+    static func slotWidth(
+        for kind: Kind,
+        isHovered: Bool = false,
+        isSelected: Bool = false,
+        isActive: Bool = false
+    ) -> CGFloat {
+        _ = (isHovered, isSelected, isActive)
+        return kind.width
+    }
+}
+
+enum GlanceRowQuickActionVisibility {
+    static let buttonSide = GlanceRowQuickActionLayout.buttonSide
 
     static func showsSecondary(isHovered: Bool, isSelected: Bool) -> Bool {
         isHovered || isSelected
@@ -9,10 +54,6 @@ enum GlanceRowQuickActionVisibility {
 
     static func showsPersistentMark(isActive: Bool, isHovered: Bool, isSelected: Bool) -> Bool {
         isActive || isHovered || isSelected
-    }
-
-    static func dateTrailingPadding(isActive: Bool, showsSecondary: Bool) -> CGFloat {
-        (isActive && !showsSecondary) ? buttonSide : 0
     }
 }
 
@@ -42,8 +83,8 @@ struct GlanceRowIconButton: View {
                 .font(.system(size: 12, weight: .medium))
                 .foregroundStyle(isActive ? Color.accentColor : Color.secondary)
                 .frame(
-                    width: GlanceRowQuickActionVisibility.buttonSide,
-                    height: GlanceRowQuickActionVisibility.buttonSide
+                    width: GlanceRowQuickActionLayout.buttonSide,
+                    height: GlanceRowQuickActionLayout.buttonSide
                 )
                 .contentShape(Rectangle())
                 .background(
@@ -60,21 +101,25 @@ struct GlanceRowIconButton: View {
     }
 }
 
-struct GlanceRowQuickActionOverlay<Persistent: View, Secondary: View>: View {
-    var showsPersistent: Bool
-    var showsSecondary: Bool
-    @ViewBuilder var persistent: () -> Persistent
-    @ViewBuilder var secondary: () -> Secondary
+struct GlanceRowTrailingAccessory<Normal: View, Actions: View>: View {
+    var width: CGFloat
+    var showsActions: Bool
+    @ViewBuilder var normal: () -> Normal
+    @ViewBuilder var actions: () -> Actions
 
     var body: some View {
         ZStack(alignment: .trailing) {
-            if showsPersistent && !showsSecondary {
-                persistent()
-            }
-            if showsSecondary {
-                secondary()
-            }
+            normal()
+                .opacity(showsActions ? 0 : 1)
+                .accessibilityHidden(showsActions)
+                .allowsHitTesting(!showsActions)
+            actions()
+                .opacity(showsActions ? 1 : 0)
+                .accessibilityHidden(!showsActions)
+                .allowsHitTesting(showsActions)
         }
+        .frame(width: width, alignment: .trailing)
+        .layoutPriority(1)
     }
 }
 
@@ -88,8 +133,8 @@ struct GlanceRowMoreButton<Content: View>: View {
                 .font(.system(size: 12, weight: .medium))
                 .foregroundStyle(.secondary)
                 .frame(
-                    width: GlanceRowQuickActionVisibility.buttonSide,
-                    height: GlanceRowQuickActionVisibility.buttonSide
+                    width: GlanceRowQuickActionLayout.buttonSide,
+                    height: GlanceRowQuickActionLayout.buttonSide
                 )
                 .contentShape(Rectangle())
         }
@@ -208,6 +253,8 @@ enum PanelChromeCloseRouting {
 }
 
 enum ClipboardRowQuickAction {
+    static let actionCount = GlanceRowQuickActionLayout.clipboardButtons
+
     static func toggleFavorite(_ id: UUID, using onToggleFavorite: (UUID) -> Void) {
         onToggleFavorite(id)
     }
@@ -218,6 +265,8 @@ enum ClipboardRowQuickAction {
 }
 
 enum FileShelfRowQuickAction {
+    static let actionCount = GlanceRowQuickActionLayout.fileShelfButtons
+
     static func performPrimary(
         missing: Bool,
         id: UUID,
@@ -240,6 +289,7 @@ enum FileShelfRowQuickAction {
 enum SnippetRowQuickAction {
     static let doubleClickPerformsEdit = true
     static let leadingSymbol = "text.quote"
+    static let actionCount = GlanceRowQuickActionLayout.snippetButtons
 
     static func copy(_ id: UUID, using onCopy: (UUID) -> Void) {
         onCopy(id)
@@ -256,6 +306,7 @@ enum SnippetRowQuickAction {
 
 enum LinkRowQuickAction {
     static let doubleClickPerformsOpen = true
+    static let actionCount = GlanceRowQuickActionLayout.linkButtons
 
     static func open(_ id: UUID, using onOpen: (UUID) -> Void) {
         onOpen(id)
@@ -271,6 +322,8 @@ enum LinkRowQuickAction {
 }
 
 enum PanelLibraryRowQuickAction {
+    static let actionCount = GlanceRowQuickActionLayout.panelLibraryButtons
+
     static func toggleVisibility(
         isHidden: Bool,
         id: UUID,

@@ -1,4 +1,5 @@
 import AppKit
+import SwiftUI
 import XCTest
 
 #if canImport(GlanceCore)
@@ -50,19 +51,83 @@ final class GlanceUXPolishTests: XCTestCase {
                 isSelected: true
             )
         )
+        XCTAssertEqual(GlanceRowQuickActionVisibility.buttonSide, GlanceRowQuickActionLayout.buttonSide)
+        XCTAssertEqual(GlanceRowQuickActionLayout.buttonSide, 26, accuracy: 0.1)
+    }
+
+    func testTrailingSlotWidthsStayStableAcrossHoverSelectionAndActive() {
+        XCTAssertEqual(GlanceRowQuickActionLayout.clipboardButtons, ClipboardRowQuickAction.actionCount)
+        XCTAssertEqual(GlanceRowQuickActionLayout.fileShelfButtons, FileShelfRowQuickAction.actionCount)
+        XCTAssertEqual(GlanceRowQuickActionLayout.snippetButtons, SnippetRowQuickAction.actionCount)
+        XCTAssertEqual(GlanceRowQuickActionLayout.linkButtons, LinkRowQuickAction.actionCount)
+        XCTAssertEqual(GlanceRowQuickActionLayout.panelLibraryButtons, PanelLibraryRowQuickAction.actionCount)
+
+        XCTAssertEqual(ClipboardRowQuickAction.actionCount, 3)
+        XCTAssertEqual(FileShelfRowQuickAction.actionCount, 4)
+        XCTAssertEqual(SnippetRowQuickAction.actionCount, 4)
+        XCTAssertEqual(LinkRowQuickAction.actionCount, 4)
+        XCTAssertEqual(PanelLibraryRowQuickAction.actionCount, 3)
+
         XCTAssertEqual(
-            GlanceRowQuickActionVisibility.dateTrailingPadding(isActive: false, showsSecondary: false),
-            0
+            GlanceRowQuickActionLayout.width(for: GlanceRowQuickActionLayout.clipboardButtons),
+            78,
+            accuracy: 0.1
         )
         XCTAssertEqual(
-            GlanceRowQuickActionVisibility.dateTrailingPadding(isActive: true, showsSecondary: false),
-            GlanceRowQuickActionVisibility.buttonSide
+            GlanceRowQuickActionLayout.width(for: GlanceRowQuickActionLayout.fileShelfButtons),
+            104,
+            accuracy: 0.1
         )
         XCTAssertEqual(
-            GlanceRowQuickActionVisibility.dateTrailingPadding(isActive: true, showsSecondary: true),
-            0
+            GlanceRowQuickActionLayout.width(for: GlanceRowQuickActionLayout.snippetButtons),
+            104,
+            accuracy: 0.1
         )
-        XCTAssertEqual(GlanceRowQuickActionVisibility.buttonSide, 26, accuracy: 0.1)
+        XCTAssertEqual(
+            GlanceRowQuickActionLayout.width(for: GlanceRowQuickActionLayout.linkButtons),
+            104,
+            accuracy: 0.1
+        )
+        XCTAssertEqual(
+            GlanceRowQuickActionLayout.width(for: GlanceRowQuickActionLayout.panelLibraryButtons),
+            78,
+            accuracy: 0.1
+        )
+
+        for kind in GlanceRowQuickActionLayout.Kind.allCases {
+            let expected = GlanceRowQuickActionLayout.width(for: kind.buttonCount)
+            let hovered = GlanceRowQuickActionLayout.slotWidth(for: kind, isHovered: true)
+            let selected = GlanceRowQuickActionLayout.slotWidth(for: kind, isSelected: true)
+            let active = GlanceRowQuickActionLayout.slotWidth(for: kind, isActive: true)
+            let idle = GlanceRowQuickActionLayout.slotWidth(
+                for: kind,
+                isHovered: false,
+                isSelected: false,
+                isActive: false
+            )
+            XCTAssertEqual(idle, expected)
+            XCTAssertEqual(hovered, idle)
+            XCTAssertEqual(selected, idle)
+            XCTAssertEqual(active, idle)
+        }
+
+        XCTAssertEqual(
+            GlanceRowQuickActionLayout.slotWidth(for: .clipboard, isActive: false),
+            GlanceRowQuickActionLayout.slotWidth(for: .clipboard, isActive: true)
+        )
+        XCTAssertEqual(
+            GlanceRowQuickActionLayout.slotWidth(for: .snippet, isActive: false),
+            GlanceRowQuickActionLayout.slotWidth(for: .snippet, isActive: true)
+        )
+        XCTAssertEqual(
+            GlanceRowQuickActionLayout.slotWidth(for: .fileShelf),
+            GlanceRowQuickActionLayout.slotWidth(for: .fileShelf, isHovered: true, isSelected: true)
+        )
+        XCTAssertEqual(FileShelfQuickAction.primary(missing: true), .relink)
+        XCTAssertEqual(
+            GlanceRowQuickActionLayout.slotWidth(for: .fileShelf),
+            GlanceRowQuickActionLayout.width(for: FileShelfRowQuickAction.actionCount)
+        )
     }
 
     func testClipboardQuickActionsCallExistingCallbacks() {
@@ -289,5 +354,108 @@ final class GlanceUXPolishTests: XCTestCase {
         XCTAssertFalse(PanelLibraryCreatePresentation.showsCreateCTA(for: .loading))
         XCTAssertFalse(PanelLibraryCreatePresentation.showsCreateCTA(for: .none))
         XCTAssertEqual(GlanceEmptyCopy.workspaceDetail, "新建一个面板，开始使用这个工作区。")
+    }
+
+    @MainActor
+    func testTrailingSlotOccupiesStableLayoutWidthBesideLongTitles() {
+        let titles = [
+            "这是一个非常非常非常非常长的剪贴板内容……",
+            "2026年度产品规划最终最终最终修改版v18.pdf",
+            "这是一个非常长的项目会议纪要模板名称",
+            "https://very-long-domain.example.com/path/to/a-very-long-article"
+        ]
+        for title in titles {
+            let idle104 = measureTrailingSlot(width: 104, showsActions: false, title: title, rowWidth: 400)
+            let hover104 = measureTrailingSlot(width: 104, showsActions: true, title: title, rowWidth: 400)
+            XCTAssertEqual(idle104.slot, 104, accuracy: 0.5, "slot \(title)")
+            XCTAssertEqual(hover104.slot, 104, accuracy: 0.5)
+            XCTAssertEqual(idle104.title, hover104.title, accuracy: 0.5)
+            XCTAssertGreaterThan(idle104.title, 80)
+            XCTAssertLessThanOrEqual(idle104.title + idle104.slot + GlanceTheme.Space.md, 401)
+
+            let idle78 = measureTrailingSlot(width: 78, showsActions: false, title: title, rowWidth: 360)
+            let selected78 = measureTrailingSlot(width: 78, showsActions: true, title: title, rowWidth: 360)
+            XCTAssertEqual(idle78.slot, 78, accuracy: 0.5)
+            XCTAssertEqual(selected78.slot, 78, accuracy: 0.5)
+            XCTAssertEqual(idle78.title, selected78.title, accuracy: 0.5)
+        }
+    }
+
+    @MainActor
+    private func measureTrailingSlot(
+        width: CGFloat,
+        showsActions: Bool,
+        title: String,
+        rowWidth: CGFloat
+    ) -> (title: CGFloat, slot: CGFloat) {
+        let box = LayoutWidthBox()
+        let root = TrailingSlotLayoutProbe(
+            slotWidth: width,
+            showsActions: showsActions,
+            title: title,
+            box: box
+        )
+        .frame(width: rowWidth, height: 36)
+        let hosting = NSHostingView(rootView: root)
+        hosting.frame = NSRect(x: 0, y: 0, width: rowWidth, height: 36)
+        hosting.layoutSubtreeIfNeeded()
+        RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.05))
+        return (box.title, box.slot)
+    }
+}
+
+private final class LayoutWidthBox {
+    var title: CGFloat = 0
+    var slot: CGFloat = 0
+}
+
+private struct TitleWidthKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = nextValue()
+    }
+}
+
+private struct SlotWidthKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = nextValue()
+    }
+}
+
+private struct TrailingSlotLayoutProbe: View {
+    var slotWidth: CGFloat
+    var showsActions: Bool
+    var title: String
+    var box: LayoutWidthBox
+
+    var body: some View {
+        HStack(alignment: .center, spacing: GlanceTheme.Space.md) {
+            Text(title)
+                .lineLimit(1)
+                .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
+                .background {
+                    GeometryReader { geo in
+                        Color.clear.preference(key: TitleWidthKey.self, value: geo.size.width)
+                    }
+                }
+            GlanceRowTrailingAccessory(width: slotWidth, showsActions: showsActions) {
+                Text("3分钟前")
+            } actions: {
+                HStack(spacing: 0) {
+                    Color.clear.frame(width: 26, height: 26)
+                    Color.clear.frame(width: 26, height: 26)
+                    Color.clear.frame(width: 26, height: 26)
+                    Color.clear.frame(width: 26, height: 26)
+                }
+            }
+            .background {
+                GeometryReader { geo in
+                    Color.clear.preference(key: SlotWidthKey.self, value: geo.size.width)
+                }
+            }
+        }
+        .onPreferenceChange(TitleWidthKey.self) { box.title = $0 }
+        .onPreferenceChange(SlotWidthKey.self) { box.slot = $0 }
     }
 }

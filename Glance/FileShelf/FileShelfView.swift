@@ -439,20 +439,20 @@ struct FileShelfRow<MoreMenu: View>: View {
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
             }
-            Spacer(minLength: GlanceTheme.Space.sm)
-        }
-        .overlay(alignment: .trailing) {
-            GlanceRowQuickActionOverlay(
-                showsPersistent: record.isFavorite,
-                showsSecondary: showsSecondary
+            .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
+            GlanceRowTrailingAccessory(
+                width: GlanceRowQuickActionLayout.slotWidth(for: .fileShelf),
+                showsActions: showsSecondary
             ) {
-                GlanceRowIconButton(
-                    systemName: "star.fill",
-                    help: FileShelfCopy.unfavoriteLabel,
-                    isActive: true,
-                    action: onToggleFavorite
-                )
-            } secondary: {
+                if record.isFavorite {
+                    GlanceRowIconButton(
+                        systemName: "star.fill",
+                        help: FileShelfCopy.unfavoriteLabel,
+                        isActive: true,
+                        action: onToggleFavorite
+                    )
+                }
+            } actions: {
                 HStack(spacing: 0) {
                     GlanceRowIconButton(
                         systemName: FileShelfQuickAction.primarySymbol(missing: missing),

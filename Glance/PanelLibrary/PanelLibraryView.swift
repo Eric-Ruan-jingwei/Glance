@@ -420,17 +420,15 @@ private struct PanelLibraryRow: View {
                     .lineLimit(1)
                 }
             }
+            .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
             .layoutPriority(0)
 
-            Spacer(minLength: GlanceTheme.Space.sm)
-        }
-        .overlay(alignment: .trailing) {
-            GlanceRowQuickActionOverlay(
-                showsPersistent: false,
-                showsSecondary: showsSecondaryActions
+            GlanceRowTrailingAccessory(
+                width: GlanceRowQuickActionLayout.slotWidth(for: .panelLibrary),
+                showsActions: showsSecondaryActions
             ) {
                 EmptyView()
-            } secondary: {
+            } actions: {
                 HStack(spacing: 0) {
                     GlanceRowIconButton(
                         systemName: PanelLibraryQuickAction.visibilitySymbol(isHidden: summary.isHidden),

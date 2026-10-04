@@ -502,32 +502,27 @@ struct LinkRow<MoreMenu: View>: View {
                     .lineLimit(1)
                     .truncationMode(.middle)
             }
-            Spacer(minLength: GlanceTheme.Space.sm)
-            Text(LinkRelativeDate.string(from: record.lastOpenedAt, now: relativeNow))
-                .font(.caption)
-                .foregroundStyle(.tertiary)
-                .padding(
-                    .trailing,
-                    GlanceRowQuickActionVisibility.dateTrailingPadding(
-                        isActive: record.isPinned,
-                        showsSecondary: showsSecondary
-                    )
-                )
-                .opacity(showsSecondary ? 0 : 1)
-                .allowsHitTesting(false)
-        }
-        .overlay(alignment: .trailing) {
-            GlanceRowQuickActionOverlay(
-                showsPersistent: record.isPinned,
-                showsSecondary: showsSecondary
+            .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
+            GlanceRowTrailingAccessory(
+                width: GlanceRowQuickActionLayout.slotWidth(for: .link),
+                showsActions: showsSecondary
             ) {
-                GlanceRowIconButton(
-                    systemName: "pin.fill",
-                    help: LinkCopy.unpinLabel,
-                    isActive: true,
-                    action: onTogglePin
-                )
-            } secondary: {
+                HStack(spacing: 0) {
+                    Text(LinkRelativeDate.string(from: record.lastOpenedAt, now: relativeNow))
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                        .lineLimit(1)
+                        .frame(maxWidth: .infinity, alignment: .trailing)
+                    if record.isPinned {
+                        GlanceRowIconButton(
+                            systemName: "pin.fill",
+                            help: LinkCopy.unpinLabel,
+                            isActive: true,
+                            action: onTogglePin
+                        )
+                    }
+                }
+            } actions: {
                 HStack(spacing: 0) {
                     GlanceRowIconButton(
                         systemName: "arrow.up.right.square",
