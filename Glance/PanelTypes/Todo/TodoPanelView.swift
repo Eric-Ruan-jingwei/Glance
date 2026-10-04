@@ -63,8 +63,9 @@ final class TodoPanelView: NSView, PanelContentControlling {
     func enterEditing() {
         if case .none = session {
             beginAdding()
+            return
         }
-        focusedRow?.focusField()
+        focusEditorAfterLayout()
     }
 
     func exitEditing() {
@@ -166,8 +167,7 @@ final class TodoPanelView: NSView, PanelContentControlling {
     private func beginAdding() {
         session = .adding
         lastAbsorbedDraft = nil
-        reloadRows()
-        focusedRow?.focusField()
+        reloadAndFocusEditor()
     }
 
     private func beginEditing(id: UUID) {
@@ -177,7 +177,7 @@ final class TodoPanelView: NSView, PanelContentControlling {
         session = .editing(id, original: item.text)
         reloadRows()
         onRequestEditing?()
-        focusedRow?.focusField()
+        focusEditorAfterLayout()
     }
 
     private func pendingSession() -> TodoPendingSession {
@@ -237,9 +237,10 @@ final class TodoPanelView: NSView, PanelContentControlling {
         if mutated, notify {
             onPayloadChange?()
         }
-        reloadRows()
         if case .adding = session {
-            focusedRow?.focusField()
+            reloadAndFocusEditor()
+        } else {
+            reloadRows()
         }
     }
 
@@ -265,6 +266,18 @@ final class TodoPanelView: NSView, PanelContentControlling {
         guard TodoMutation.delete(&document, id: id) else { return }
         onPayloadChange?()
         reloadRows()
+    }
+
+    private func reloadAndFocusEditor() {
+        reloadRows()
+        focusEditorAfterLayout()
+    }
+
+    private func focusEditorAfterLayout() {
+        guard focusedRow != nil else { return }
+        layoutSubtreeIfNeeded()
+        window?.layoutIfNeeded()
+        focusedRow?.focusField()
     }
 
     private func reloadRows() {

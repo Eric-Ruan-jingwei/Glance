@@ -224,6 +224,7 @@ extension TodoRowView: NSTextFieldDelegate {
 
     func controlTextDidEndEditing(_ obj: Notification) {
         guard !ignoreEndEditing, isEditing else { return }
+        guard bounds.width > 1 else { return }
         onCommit?(field.stringValue, false)
     }
 }
