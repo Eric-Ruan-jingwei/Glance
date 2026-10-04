@@ -60,6 +60,9 @@ final class TodoRowView: NSView {
         field.lineBreakMode = .byTruncatingTail
         field.cell?.isScrollable = true
         field.usesSingleLineMode = true
+        field.alignment = .left
+        field.setContentHuggingPriority(.defaultLow, for: .horizontal)
+        field.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         field.delegate = self
         field.translatesAutoresizingMaskIntoConstraints = false
 
@@ -79,6 +82,7 @@ final class TodoRowView: NSView {
         addSubview(checkbox)
         addSubview(field)
         addSubview(deleteButton)
+        setContentHuggingPriority(.defaultLow, for: .horizontal)
         NSLayoutConstraint.activate([
             heightAnchor.constraint(equalToConstant: GlanceTheme.Size.todoRowHeight),
             checkbox.leadingAnchor.constraint(equalTo: leadingAnchor, constant: GlanceTheme.Space.md),

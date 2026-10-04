@@ -88,9 +88,10 @@ final class TodoPanelView: NSView, PanelContentControlling {
         translatesAutoresizingMaskIntoConstraints = false
 
         stack.orientation = .vertical
-        stack.alignment = .width
+        stack.alignment = .leading
         stack.spacing = GlanceTheme.Space.xxs
         stack.translatesAutoresizingMaskIntoConstraints = false
+        stack.setHuggingPriority(.defaultLow, for: .horizontal)
 
         documentView.translatesAutoresizingMaskIntoConstraints = false
         documentView.addSubview(stack)
@@ -137,11 +138,10 @@ final class TodoPanelView: NSView, PanelContentControlling {
             placeholder.leadingAnchor.constraint(equalTo: leadingAnchor, constant: GlanceTheme.Space.lg),
             placeholder.topAnchor.constraint(equalTo: scrollView.topAnchor, constant: GlanceTheme.Space.sm),
             documentView.leadingAnchor.constraint(equalTo: clip.leadingAnchor),
-            documentView.trailingAnchor.constraint(equalTo: clip.trailingAnchor),
             documentView.topAnchor.constraint(equalTo: clip.topAnchor),
             documentView.widthAnchor.constraint(equalTo: clip.widthAnchor),
             stack.leadingAnchor.constraint(equalTo: documentView.leadingAnchor),
-            stack.trailingAnchor.constraint(equalTo: documentView.trailingAnchor),
+            stack.widthAnchor.constraint(equalTo: documentView.widthAnchor),
             stack.topAnchor.constraint(equalTo: documentView.topAnchor),
             stack.bottomAnchor.constraint(equalTo: documentView.bottomAnchor)
         ])
@@ -284,12 +284,14 @@ final class TodoPanelView: NSView, PanelContentControlling {
             }
             let row = makeRow(item: item, editing: editing)
             stack.addArrangedSubview(row)
+            row.widthAnchor.constraint(equalTo: stack.widthAnchor).isActive = true
             if editing { focusedRow = row }
         }
 
         if case .adding = session {
             let row = makeRow(item: nil, editing: true)
             stack.addArrangedSubview(row)
+            row.widthAnchor.constraint(equalTo: stack.widthAnchor).isActive = true
             focusedRow = row
         }
 
