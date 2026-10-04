@@ -257,7 +257,7 @@ struct FileShelfView: View {
                     model.selection = record.id
                 }
                 .contextMenu {
-                    contextMenu(for: record, missing: resolved.isMissing, resolvedPath: resolved.urlPath)
+                    contextMenu(for: record, missing: resolved.isMissing, resolution: resolved)
                 }
                 .modifier(FileShelfDragModifier(
                     path: FileShelfDragPayload.fileURL(
@@ -287,7 +287,11 @@ struct FileShelfView: View {
     }
 
     @ViewBuilder
-    private func contextMenu(for record: FileShelfRecord, missing: Bool, resolvedPath: String?) -> some View {
+    private func contextMenu(
+        for record: FileShelfRecord,
+        missing: Bool,
+        resolution: FileShelfResolvedReference
+    ) -> some View {
         if missing {
             Button(FileShelfCopy.relinkLabel) { onRelink(record.id) }
         } else {
@@ -296,7 +300,7 @@ struct FileShelfView: View {
             Button(FileShelfCopy.previewLabel) { onPreview(record.id) }
             Button(FileShelfCopy.copyFileLabel) { onCopyFile(record.id) }
             Button(FileShelfCopy.copyPathLabel) { onCopyPath(record.id) }
-            ForEach(fileShelfActions(for: record, resolvedPath: resolvedPath), id: \.identifier) { action in
+            ForEach(fileShelfActions(for: record, resolution: resolution), id: \.identifier) { action in
                 Button(action.title) {
                     onPerformItemAction(action, record.id)
                 }
@@ -311,10 +315,11 @@ struct FileShelfView: View {
         }
     }
 
-    private func fileShelfActions(for record: FileShelfRecord, resolvedPath: String?) -> [GlanceItemAction] {
-        GlanceItemActionPolicy.actions(
-            for: .fileShelf(record, resolvedURL: resolvedPath.map { URL(fileURLWithPath: $0) })
-        )
+    private func fileShelfActions(
+        for record: FileShelfRecord,
+        resolution: FileShelfResolvedReference
+    ) -> [GlanceItemAction] {
+        GlanceItemActionPolicy.actions(for: .fileShelf(record, resolution: resolution))
     }
 
     private func emptyState(title: String, detail: String?) -> some View {

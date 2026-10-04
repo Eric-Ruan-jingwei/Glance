@@ -131,13 +131,10 @@ final class GlanceActionCoordinator {
             return .failed(GlanceNoticeCopy.staleItem)
         }
         let resolved = dependencies.resolveFile(id)
-        guard !resolved.isMissing, let path = resolved.urlPath else {
+        guard !resolved.isMissing, resolved.urlPath != nil else {
             return .failed(GlanceNoticeCopy.fileMissing)
         }
-        let source = GlanceActionSource.fileShelf(
-            record,
-            resolvedURL: URL(fileURLWithPath: path)
-        )
+        let source = GlanceActionSource.fileShelf(record, resolution: resolved)
         guard let action = GlanceItemActionPolicy.panelAction(for: source) else {
             return .failed(GlanceNoticeCopy.panelCreateFailed)
         }

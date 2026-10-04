@@ -78,19 +78,64 @@ final class GlanceItemActionTests: XCTestCase {
         let pdf = fileRecord(name: "brief.pdf", path: "/tmp/brief.pdf", type: "com.adobe.pdf")
         let zip = fileRecord(name: "archive.zip", path: "/tmp/archive.zip", type: "zip")
         XCTAssertEqual(
-            GlanceItemActionPolicy.actions(for: .fileShelf(image, resolvedURL: nil)),
+            GlanceItemActionPolicy.actions(for: .fileShelf(image, resolution: presentFile(image.originalPath))),
             [.createImagePanel]
         )
         XCTAssertEqual(
-            GlanceItemActionPolicy.actions(for: .fileShelf(pdf, resolvedURL: nil)),
+            GlanceItemActionPolicy.actions(for: .fileShelf(pdf, resolution: presentFile(pdf.originalPath))),
             [.createPDFPanel]
         )
         XCTAssertEqual(
-            GlanceItemActionPolicy.actions(for: .fileShelf(zip, resolvedURL: nil)),
+            GlanceItemActionPolicy.actions(for: .fileShelf(zip, resolution: presentFile(zip.originalPath))),
             []
         )
-        XCTAssertNil(
-            GlanceItemActionPolicy.panelAction(for: .fileShelf(zip, resolvedURL: URL(fileURLWithPath: "/tmp/archive.zip")))
+        XCTAssertEqual(
+            GlanceItemActionPolicy.actions(for: .fileShelf(pdf, resolution: .missing)),
+            []
+        )
+        XCTAssertEqual(
+            GlanceItemActionPolicy.actions(for: .fileShelf(image, resolution: .missing)),
+            []
+        )
+    }
+
+    func testMissingFileShelfPDFHasNoActions() {
+        let pdf = fileRecord(name: "brief.pdf", path: "/tmp/brief.pdf", type: "pdf")
+        XCTAssertEqual(
+            GlanceItemActionPolicy.actions(for: .fileShelf(pdf, resolution: .missing)),
+            []
+        )
+    }
+
+    func testMissingFileShelfImageHasNoActions() {
+        let image = fileRecord(name: "shot.png", path: "/tmp/shot.png", type: "png")
+        XCTAssertEqual(
+            GlanceItemActionPolicy.actions(for: .fileShelf(image, resolution: .missing)),
+            []
+        )
+    }
+
+    func testValidFileShelfPDFOffersCreatePDFPanel() {
+        let pdf = fileRecord(name: "brief.pdf", path: "/tmp/brief.pdf", type: "pdf")
+        XCTAssertEqual(
+            GlanceItemActionPolicy.actions(for: .fileShelf(pdf, resolution: presentFile(pdf.originalPath))),
+            [.createPDFPanel]
+        )
+    }
+
+    func testValidFileShelfImageOffersCreateImagePanel() {
+        let image = fileRecord(name: "shot.png", path: "/tmp/shot.png", type: "png")
+        XCTAssertEqual(
+            GlanceItemActionPolicy.actions(for: .fileShelf(image, resolution: presentFile(image.originalPath))),
+            [.createImagePanel]
+        )
+    }
+
+    func testValidFileShelfZipHasNoPanelActions() {
+        let zip = fileRecord(name: "archive.zip", path: "/tmp/archive.zip", type: "zip")
+        XCTAssertEqual(
+            GlanceItemActionPolicy.actions(for: .fileShelf(zip, resolution: presentFile(zip.originalPath))),
+            []
         )
     }
 
@@ -354,13 +399,58 @@ final class GlanceItemActionTests: XCTestCase {
         )
     }
 
+    func testAvailableActionsForMissingFileShelfPDFAreEmpty() {
+        let record = fileRecord(name: "brief.pdf", path: "/tmp/brief.pdf", type: "pdf")
+        let log = ActionCallLog()
+        let actions = coordinator(log: log, file: record, fileMissing: true)
+            .availableActions(for: .fileShelf(record.id))
+        XCTAssertEqual(actions, [])
+        XCTAssertGreaterThanOrEqual(log.resolveFile, 1)
+    }
+
+    func testAvailableActionsForValidFileShelfPDF() {
+        let record = fileRecord(name: "brief.pdf", path: "/tmp/brief.pdf", type: "pdf")
+        let log = ActionCallLog()
+        let actions = coordinator(log: log, file: record, resolvedPath: record.originalPath)
+            .availableActions(for: .fileShelf(record.id))
+        XCTAssertEqual(actions, [.createPDFPanel])
+        XCTAssertGreaterThanOrEqual(log.resolveFile, 1)
+    }
+
+    func testMissingFileShelfPDFCreatePanelFailsClosed() {
+        let record = fileRecord(name: "brief.pdf", path: "/tmp/brief.pdf", type: "pdf")
+        let log = ActionCallLog()
+        let outcome = coordinator(log: log, file: record, fileMissing: true).perform(
+            .createPDFPanel,
+            sourceID: .fileShelf(record.id),
+            screen: nil
+        )
+        XCTAssertEqual(outcome, .failed(GlanceNoticeCopy.fileMissing))
+        XCTAssertEqual(log.importPDF, 0)
+        XCTAssertEqual(log.importImage, 0)
+        XCTAssertEqual(log.createTextPanel, 0)
+    }
+
+    func testMissingFileShelfSourceCreatePDFPanelDoesNotImport() {
+        let record = fileRecord(name: "brief.pdf", path: "/tmp/brief.pdf", type: "pdf")
+        let log = ActionCallLog()
+        let outcome = coordinator(log: log).perform(
+            .createPDFPanel,
+            source: .fileShelf(record, resolution: .missing),
+            screen: nil
+        )
+        XCTAssertEqual(outcome, .failed(GlanceNoticeCopy.fileMissing))
+        XCTAssertEqual(log.importPDF, 0)
+    }
+
     private func coordinator(
         log: ActionCallLog,
         clipboard: ClipboardHistoryRecord? = nil,
         snippet: SnippetRecord? = nil,
         link: LinkRecord? = nil,
         file: FileShelfRecord? = nil,
-        resolvedPath: String? = nil
+        resolvedPath: String? = nil,
+        fileMissing: Bool = false
     ) -> GlanceActionCoordinator {
         if let clipboard {
             log.clipboards[clipboard.id] = clipboard
@@ -401,6 +491,9 @@ final class GlanceItemActionTests: XCTestCase {
                 fileRecord: { id in log.files[id] },
                 resolveFile: { id in
                     log.resolveFile += 1
+                    if fileMissing {
+                        return .missing
+                    }
                     guard let path = resolvedPath ?? log.files[id]?.originalPath else {
                         return .missing
                     }
@@ -532,6 +625,15 @@ private func linkRecord(id: UUID = UUID()) -> LinkRecord {
         updatedAt: Date(),
         lastOpenedAt: Date(),
         isPinned: false
+    )
+}
+
+private func presentFile(_ path: String) -> FileShelfResolvedReference {
+    FileShelfResolvedReference(
+        urlPath: path,
+        isMissing: false,
+        isStale: false,
+        bookmarkDataToRefresh: nil
     )
 }
 

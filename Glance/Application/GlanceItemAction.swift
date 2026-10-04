@@ -52,7 +52,7 @@ enum GlanceActionSource: Equatable {
     case clipboard(ClipboardHistoryRecord)
     case snippet(SnippetRecord)
     case link(LinkRecord)
-    case fileShelf(FileShelfRecord, resolvedURL: URL?)
+    case fileShelf(FileShelfRecord, resolution: FileShelfResolvedReference)
 }
 
 enum GlanceActionSourceID: Equatable {
@@ -71,8 +71,11 @@ enum GlanceItemActionPolicy {
             return [.createTextPanel]
         case .link:
             return [.createTextPanel]
-        case .fileShelf(let record, let resolvedURL):
-            switch FileShelfPanelSupport.kind(for: record, resolvedURL: resolvedURL) {
+        case .fileShelf(let record, let resolution):
+            guard let url = fileURL(from: resolution) else {
+                return []
+            }
+            switch FileShelfPanelSupport.kind(for: record, resolvedURL: url) {
             case .image:
                 return [.createImagePanel]
             case .pdf:
@@ -93,6 +96,13 @@ enum GlanceItemActionPolicy {
 
     static func secondaryActions(for source: GlanceActionSource) -> [GlanceItemAction] {
         actions(for: source).filter { !$0.createsPanel }
+    }
+
+    static func fileURL(from resolution: FileShelfResolvedReference) -> URL? {
+        guard !resolution.isMissing, let path = resolution.urlPath else {
+            return nil
+        }
+        return URL(fileURLWithPath: path)
     }
 
     private static func clipboardActions(_ record: ClipboardHistoryRecord) -> [GlanceItemAction] {
@@ -130,14 +140,7 @@ enum GlanceItemActionExecutor {
             return .link(record)
         case .fileShelf(let id):
             guard let record = dependencies.fileRecord(id) else { return nil }
-            let resolved = dependencies.resolveFile(id)
-            let url: URL?
-            if !resolved.isMissing, let path = resolved.urlPath {
-                url = URL(fileURLWithPath: path)
-            } else {
-                url = nil
-            }
-            return .fileShelf(record, resolvedURL: url)
+            return .fileShelf(record, resolution: dependencies.resolveFile(id))
         }
     }
 
@@ -159,6 +162,13 @@ enum GlanceItemActionExecutor {
         screen: NSScreen?,
         dependencies: GlanceActionDependencies
     ) -> GlanceActionOutcome {
+        if case .fileShelf(_, let resolution) = source,
+           GlanceItemActionPolicy.fileURL(from: resolution) == nil {
+            if action.createsPanel {
+                return .failed(GlanceNoticeCopy.fileMissing)
+            }
+            return .failed(rejectionNotice(for: action))
+        }
         guard GlanceItemActionPolicy.allows(action, for: source) else {
             return .failed(rejectionNotice(for: action))
         }
@@ -181,18 +191,18 @@ enum GlanceItemActionExecutor {
             return panel(
                 dependencies.createTextPanel(request.customTitle, request.content, screen)
             )
-        case (.createImagePanel, .fileShelf(let record, let url)):
+        case (.createImagePanel, .fileShelf(let record, let resolution)):
             return importFilePanel(
                 record: record,
-                url: url,
+                resolution: resolution,
                 expected: .image,
                 screen: screen,
                 dependencies: dependencies
             )
-        case (.createPDFPanel, .fileShelf(let record, let url)):
+        case (.createPDFPanel, .fileShelf(let record, let resolution)):
             return importFilePanel(
                 record: record,
-                url: url,
+                resolution: resolution,
                 expected: .pdf,
                 screen: screen,
                 dependencies: dependencies
@@ -261,12 +271,12 @@ enum GlanceItemActionExecutor {
 
     private static func importFilePanel(
         record: FileShelfRecord,
-        url: URL?,
+        resolution: FileShelfResolvedReference,
         expected: FileShelfPanelKind,
         screen: NSScreen?,
         dependencies: GlanceActionDependencies
     ) -> GlanceActionOutcome {
-        guard let url else {
+        guard let url = GlanceItemActionPolicy.fileURL(from: resolution) else {
             return .failed(GlanceNoticeCopy.fileMissing)
         }
         guard FileShelfPanelSupport.kind(for: record, resolvedURL: url) == expected else {
