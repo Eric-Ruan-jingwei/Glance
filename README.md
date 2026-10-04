@@ -410,17 +410,43 @@ Glance settings include launch at login (`SMAppService.mainApp`), customizable g
 
 ## Install
 
-Download the latest Glance DMG from GitHub Releases.
+### Download
 
-1. Open the DMG
+Download Glance 0.27.0 Beta 1 from [GitHub Releases](https://github.com/Eric-Ruan-jingwei/Glance/releases/tag/v0.27.0-beta.1).
+
+1. Open `Glance-0.27.0.dmg`
 2. Drag Glance to Applications
-3. Launch Glance
+3. Launch Glance from Applications
 
 Glance is a menu bar app (`LSUIElement`): look for the pin icon in the menu bar, not in the Dock.
 
-### Beta distribution
+Requires **macOS 14 Sonoma or later**. The beta is **Universal 2** (Apple Silicon and Intel).
 
-Current GitHub beta builds are not Apple Developer ID notarized. On some macOS versions, the first launch may show a developer verification prompt. Use **System Settings → Privacy & Security → Open Anyway**.
+### Homebrew
+
+```bash
+brew install --cask Eric-Ruan-jingwei/glance/glance
+```
+
+```bash
+brew uninstall --cask Eric-Ruan-jingwei/glance/glance
+```
+
+Uninstalling the app does not remove Glance user data (`~/Library/Application Support/Glance`).
+
+Secondary, if you prefer to tap first:
+
+```bash
+brew tap Eric-Ruan-jingwei/glance
+brew trust --cask Eric-Ruan-jingwei/glance/glance
+brew install --cask glance
+```
+
+Prefer the fully-qualified install so Homebrew trusts only the Glance cask, not the whole tap.
+
+### Beta notice
+
+This build is ad-hoc signed and is not Apple notarized. Homebrew does not bypass Gatekeeper. On some macOS versions, the first launch may show a developer verification prompt. Use **System Settings → Privacy & Security → Open Anyway**.
 
 Do not disable Gatekeeper or run `xattr` / `spctl --master-disable` workarounds.
 
