@@ -52,6 +52,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, GlanceWindowHost {
                 onShowSnippets: { [weak self] in self?.toggleSnippets() },
                 onShowLinks: { [weak self] in self?.toggleLinks() },
                 onShowGlobalSearch: { [weak self] in self?.toggleGlobalSearch() },
+                homeSnapshot: { [weak self] in self?.homeSnapshot() ?? .empty },
+                onRevealHomeItem: { [weak self] id in
+                    self?.actionCoordinator?.revealInSource(id) ?? .failed(GlanceNoticeCopy.staleItem)
+                },
                 shortcutSnapshot: { [weak environment] in
                     environment?.shortcutCoordinator.shortcuts ?? [:]
                 }
@@ -162,6 +166,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate, GlanceWindowHost {
 
     private func showPanelLibrary() {
         panelLibraryWindow().present()
+    }
+
+    private func homeSnapshot() -> GlanceHomeSnapshot {
+        guard let environment else { return .empty }
+        let panels = ((try? environment.repository.all()) ?? []).map(GlanceHomePanelCandidate.init(record:))
+        return GlanceHomeSnapshotBuilder.build(
+            clipboards: environment.clipboardHistoryService.records,
+            files: environment.fileShelfService.records,
+            snippets: environment.snippetService.records,
+            links: environment.linkService.records,
+            panels: panels
+        )
     }
 
     private func toggleClipboardHistory() {

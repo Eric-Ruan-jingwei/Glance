@@ -27,7 +27,11 @@ enum StatusMenuBuilder {
         onQuit: @escaping () -> Void,
         shortcuts: [ShortcutAction: GlanceShortcut] = [:],
         diagnostic: PersistenceDiagnostic? = nil,
-        onShowDiagnostic: @escaping () -> Void = {}
+        onShowDiagnostic: @escaping () -> Void = {},
+        homeSnapshot: GlanceHomeSnapshot = .empty,
+        onRevealHomeItem: @escaping (GlobalSearchResultID) -> GlanceActionOutcome = { _ in
+            .failed(GlanceNoticeCopy.staleItem)
+        }
     ) {
         menu.removeAllItems()
 
@@ -47,16 +51,33 @@ enum StatusMenuBuilder {
                 modifiers: quickCapture.modifiers
             )
         )
+        menu.addItem(.separator())
         menu.addItem(
-            actionItem(
-                "搜索 Glance…",
-                onShowGlobalSearch,
-                symbol: "magnifyingglass",
-                keyEquivalent: globalSearch.keyEquivalent,
-                modifiers: globalSearch.modifiers
+            homeMenu(
+                title: GlanceHomeCopy.preferred,
+                symbol: "star",
+                items: homeSnapshot.preferred,
+                emptyTitle: GlanceHomeCopy.emptyPreferred,
+                onReveal: onRevealHomeItem
+            )
+        )
+        menu.addItem(
+            homeMenu(
+                title: GlanceHomeCopy.recent,
+                symbol: "clock",
+                items: homeSnapshot.recent,
+                emptyTitle: GlanceHomeCopy.emptyRecent,
+                onReveal: onRevealHomeItem
             )
         )
         menu.addItem(.separator())
+        menu.addItem(
+            actionItem(
+                GlanceHomeCopy.panel,
+                onManagePanels,
+                symbol: GlobalSearchSource.panels.symbol
+            )
+        )
         menu.addItem(
             actionItem(
                 "剪贴板…",
@@ -94,6 +115,16 @@ enum StatusMenuBuilder {
             )
         )
         menu.addItem(
+            actionItem(
+                "搜索 Glance…",
+                onShowGlobalSearch,
+                symbol: "magnifyingglass",
+                keyEquivalent: globalSearch.keyEquivalent,
+                modifiers: globalSearch.modifiers
+            )
+        )
+        menu.addItem(.separator())
+        menu.addItem(
             panelMenu(
                 allHidden: allHidden,
                 clipboardCaptureEnabled: clipboardCaptureEnabled,
@@ -102,7 +133,6 @@ enum StatusMenuBuilder {
                 onCaptureClipboard: onCaptureClipboard,
                 onSelectWorkspace: onSelectWorkspace,
                 onCreateWorkspace: onCreateWorkspace,
-                onManagePanels: onManagePanels,
                 onNewText: onNewText,
                 onNewMarkdown: onNewMarkdown,
                 onNewTodo: onNewTodo,
@@ -129,7 +159,6 @@ enum StatusMenuBuilder {
         onCaptureClipboard: @escaping () -> Void,
         onSelectWorkspace: @escaping (String) -> Void,
         onCreateWorkspace: @escaping () -> Void,
-        onManagePanels: @escaping () -> Void,
         onNewText: @escaping () -> Void,
         onNewMarkdown: @escaping () -> Void,
         onNewTodo: @escaping () -> Void,
@@ -140,8 +169,8 @@ enum StatusMenuBuilder {
         let clipboardCapture = menuKey(shortcuts[.clipboardCapture])
         let hideShow = menuKey(shortcuts[.hideShow])
 
-        let item = NSMenuItem(title: "面板", action: nil, keyEquivalent: "")
-        item.image = GlanceTheme.menuSymbol("pin")
+        let item = NSMenuItem(title: GlanceHomeCopy.panelOperations, action: nil, keyEquivalent: "")
+        item.image = GlanceTheme.menuSymbol("ellipsis.circle")
         let submenu = NSMenu()
         submenu.autoenablesItems = false
         submenu.addItem(newPanelMenu(
@@ -161,7 +190,6 @@ enum StatusMenuBuilder {
                 enabled: clipboardCaptureEnabled
             )
         )
-        submenu.addItem(actionItem("管理面板…", onManagePanels, symbol: "square.stack"))
         submenu.addItem(workspaceMenu(
             items: workspaces,
             onSelect: onSelectWorkspace,
@@ -220,6 +248,40 @@ enum StatusMenuBuilder {
         submenu.addItem(actionItem("待办", onNewTodo, symbol: PanelKindSymbol.name(for: PanelKind.todo)))
         submenu.addItem(actionItem("图片", onNewImage, symbol: PanelKindSymbol.name(for: PanelKind.image)))
         submenu.addItem(actionItem("PDF…", onNewPDF, symbol: PanelKindSymbol.name(for: PanelKind.pdf)))
+        item.submenu = submenu
+        return item
+    }
+
+    private static func homeMenu(
+        title: String,
+        symbol: String,
+        items: [GlanceHomeItem],
+        emptyTitle: String,
+        onReveal: @escaping (GlobalSearchResultID) -> GlanceActionOutcome
+    ) -> NSMenuItem {
+        let item = NSMenuItem(title: title, action: nil, keyEquivalent: "")
+        item.image = GlanceTheme.menuSymbol(symbol)
+        let submenu = NSMenu()
+        submenu.autoenablesItems = false
+        if items.isEmpty {
+            let empty = NSMenuItem(title: emptyTitle, action: nil, keyEquivalent: "")
+            empty.isEnabled = false
+            submenu.addItem(empty)
+        } else {
+            for homeItem in items {
+                submenu.addItem(
+                    actionItem(
+                        homeItem.title,
+                        {
+                            if case .failed = onReveal(homeItem.id) {
+                                NSSound.beep()
+                            }
+                        },
+                        symbol: homeItem.source.symbol
+                    )
+                )
+            }
+        }
         item.submenu = submenu
         return item
     }

@@ -20,7 +20,11 @@ enum GlanceMenuQuery {
     }
 
     static func panelMenu(in menu: NSMenu) -> NSMenu? {
-        menu.items.first { $0.title == "面板" }?.submenu
+        menu.items.first { $0.title == GlanceHomeCopy.panelOperations }?.submenu
+    }
+
+    static func homeMenu(titled title: String, in menu: NSMenu) -> NSMenu? {
+        menu.items.first { $0.title == title }?.submenu
     }
 
     static func newPanelMenu(in menu: NSMenu) -> NSMenu? {
@@ -57,7 +61,11 @@ enum GlanceMenuFixtures {
         onToggleVisibility: @escaping () -> Void = {},
         onSettings: @escaping () -> Void = {},
         onOpenGuide: @escaping () -> Void = {},
-        onQuit: @escaping () -> Void = {}
+        onQuit: @escaping () -> Void = {},
+        homeSnapshot: GlanceHomeSnapshot = .empty,
+        onRevealHomeItem: @escaping (GlobalSearchResultID) -> GlanceActionOutcome = { _ in
+            .failed(GlanceNoticeCopy.staleItem)
+        }
     ) {
         StatusMenuBuilder.populate(
             menu,
@@ -84,7 +92,9 @@ enum GlanceMenuFixtures {
             onOpenGuide: onOpenGuide,
             onQuit: onQuit,
             shortcuts: shortcuts,
-            diagnostic: diagnostic
+            diagnostic: diagnostic,
+            homeSnapshot: homeSnapshot,
+            onRevealHomeItem: onRevealHomeItem
         )
     }
 }

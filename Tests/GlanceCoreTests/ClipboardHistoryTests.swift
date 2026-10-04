@@ -541,7 +541,8 @@ final class ClipboardHistoryStoreAndServiceTests: XCTestCase {
         XCTAssertEqual(menu.items.first { $0.title == "文件架…" }?.title, "文件架…")
         XCTAssertEqual(menu.items.first { $0.title == "片段库…" }?.title, "片段库…")
         XCTAssertEqual(menu.items.first { $0.title == "链接库…" }?.title, "链接库…")
-        XCTAssertNotNil(menu.items.first { $0.title == "面板" }?.submenu)
+        XCTAssertNotNil(menu.items.first { $0.title == GlanceHomeCopy.panel })
+        XCTAssertNotNil(menu.items.first { $0.title == GlanceHomeCopy.panelOperations }?.submenu)
         let history = menu.items.first { $0.title == "剪贴板…" }
         XCTAssertEqual(history?.keyEquivalent, "v")
         XCTAssertEqual(history?.keyEquivalentModifierMask, [.option, .command])

@@ -45,7 +45,9 @@ final class GlanceVisualSystemTests: XCTestCase {
         let titles = menu.items.map(\.title)
         XCTAssertEqual(menu.items.first { $0.title == "快速记录…" }?.title, "快速记录…")
         XCTAssertEqual(menu.items.first { $0.title == "剪贴板…" }?.title, "剪贴板…")
-        XCTAssertNotNil(menu.items.first { $0.title == "面板" }?.submenu)
+        XCTAssertNotNil(menu.items.first { $0.title == GlanceHomeCopy.panel }?.action)
+        XCTAssertNil(menu.items.first { $0.title == GlanceHomeCopy.panel }?.submenu)
+        XCTAssertNotNil(menu.items.first { $0.title == GlanceHomeCopy.panelOperations }?.submenu)
         XCTAssertNil(menu.items.first { $0.title == "从当前剪贴板创建…" })
         XCTAssertNil(menu.items.first { $0.title == "工作区" })
         XCTAssertNil(menu.items.first { $0.title == "管理面板…" })
@@ -58,7 +60,7 @@ final class GlanceVisualSystemTests: XCTestCase {
         XCTAssertNotNil(menu.items.first { $0.title == "设置…" })
         XCTAssertEqual(titles.last, "退出")
         XCTAssertNotNil(menu.items.first { $0.title == "快速记录…" }?.image)
-        XCTAssertNotNil(GlanceMenuQuery.item(titled: "管理面板…", in: menu)?.image)
+        XCTAssertNotNil(menu.items.first { $0.title == GlanceHomeCopy.panel }?.image)
         XCTAssertNotNil(newPanel?.image)
         XCTAssertEqual(
             GlanceMenuQuery.newPanelMenu(in: menu)?.items.map(\.title),

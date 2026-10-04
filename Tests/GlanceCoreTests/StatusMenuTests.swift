@@ -9,29 +9,37 @@ import XCTest
 
 @MainActor
 final class StatusMenuTests: XCTestCase {
-    func testRootExposesUtilityHubNotPanelInternals() {
+    func testRootExposesPeerToolsAndHomeNotPanelInternals() {
         let menu = NSMenu()
         GlanceMenuFixtures.populate(menu)
         let titles = GlanceMenuQuery.rootTitles(in: menu)
         XCTAssertEqual(titles.first, "快速记录…")
-        XCTAssertEqual(titles.dropFirst().first, "搜索 Glance…")
-        XCTAssertEqual(menu.items.first { $0.title == "搜索 Glance…" }?.title, "搜索 Glance…")
-        XCTAssertEqual(menu.items.first { $0.title == "剪贴板…" }?.title, "剪贴板…")
-        XCTAssertEqual(menu.items.first { $0.title == "文件架…" }?.title, "文件架…")
-        XCTAssertEqual(menu.items.first { $0.title == "片段库…" }?.title, "片段库…")
-        XCTAssertEqual(menu.items.first { $0.title == "链接库…" }?.title, "链接库…")
-        XCTAssertNotNil(menu.items.first { $0.title == "面板" }?.submenu)
-        let searchIndex = titles.firstIndex(of: "搜索 Glance…")
+        XCTAssertEqual(Array(titles.dropFirst().prefix(2)), ["常用", "最近使用"])
+        XCTAssertEqual(
+            Array(titles.drop { $0 != GlanceHomeCopy.panel }.prefix(6)),
+            ["面板…", "剪贴板…", "文件架…", "片段库…", "链接库…", "搜索 Glance…"]
+        )
+
+        let panel = menu.items.first { $0.title == GlanceHomeCopy.panel }
+        XCTAssertNotNil(panel?.action)
+        XCTAssertNil(panel?.submenu)
+        XCTAssertNotNil(menu.items.first { $0.title == GlanceHomeCopy.panelOperations }?.submenu)
+
+        let preferredIndex = titles.firstIndex(of: GlanceHomeCopy.preferred)
+        let recentIndex = titles.firstIndex(of: GlanceHomeCopy.recent)
+        let panelIndex = titles.firstIndex(of: GlanceHomeCopy.panel)
         let clipboardIndex = titles.firstIndex(of: "剪贴板…")
         let fileShelfIndex = titles.firstIndex(of: "文件架…")
         let snippetsIndex = titles.firstIndex(of: "片段库…")
         let linksIndex = titles.firstIndex(of: "链接库…")
-        let panelIndex = titles.firstIndex(of: "面板")
-        XCTAssertEqual(searchIndex.map { $0 + 1 }, clipboardIndex)
+        let searchIndex = titles.firstIndex(of: "搜索 Glance…")
+        XCTAssertEqual(preferredIndex.map { $0 + 1 }, recentIndex)
+        XCTAssertEqual(panelIndex.map { $0 + 1 }, clipboardIndex)
         XCTAssertEqual(clipboardIndex.map { $0 + 1 }, fileShelfIndex)
         XCTAssertEqual(fileShelfIndex.map { $0 + 1 }, snippetsIndex)
         XCTAssertEqual(snippetsIndex.map { $0 + 1 }, linksIndex)
-        XCTAssertEqual(linksIndex.map { $0 + 1 }, panelIndex)
+        XCTAssertEqual(linksIndex.map { $0 + 1 }, searchIndex)
+        XCTAssertLessThan(recentIndex ?? .max, panelIndex ?? .min)
         XCTAssertNotNil(menu.items.first { $0.title == GlanceGuideEntry.menuTitle })
         XCTAssertNotNil(menu.items.first { $0.title == "设置…" })
         XCTAssertEqual(titles.last, "退出")
@@ -55,16 +63,28 @@ final class StatusMenuTests: XCTestCase {
             XCTAssertNil(menu.items.first { $0.title == title }, "\(title) must not stay at root")
         }
         XCTAssertFalse(titles.contains("状态"))
+        XCTAssertNil(menu.items.first { $0.title == "面板" }?.submenu)
     }
 
-    func testPanelSubmenuHoldsCreateManageOrganizeAndVisibility() throws {
+    func testEmptyHomeMenusKeepStablePlaceholders() {
+        let menu = NSMenu()
+        GlanceMenuFixtures.populate(menu)
+        let preferred = GlanceMenuQuery.homeMenu(titled: GlanceHomeCopy.preferred, in: menu)
+        let recent = GlanceMenuQuery.homeMenu(titled: GlanceHomeCopy.recent, in: menu)
+        XCTAssertEqual(preferred?.items.map(\.title), [GlanceHomeCopy.emptyPreferred])
+        XCTAssertEqual(preferred?.items.first?.isEnabled, false)
+        XCTAssertEqual(recent?.items.map(\.title), [GlanceHomeCopy.emptyRecent])
+        XCTAssertEqual(recent?.items.first?.isEnabled, false)
+    }
+
+    func testPanelOperationsHoldCreateOrganizeAndVisibility() throws {
         let menu = NSMenu()
         GlanceMenuFixtures.populate(menu, allHidden: false)
         let panel = try XCTUnwrap(GlanceMenuQuery.panelMenu(in: menu))
         let titles = panel.items.map(\.title)
         XCTAssertEqual(titles.first, "新建面板")
         XCTAssertNotNil(panel.items.first { $0.title == "从当前剪贴板创建…" })
-        XCTAssertNotNil(panel.items.first { $0.title == "管理面板…" })
+        XCTAssertNil(panel.items.first { $0.title == "管理面板…" })
         XCTAssertNotNil(panel.items.first { $0.title == "工作区" })
         XCTAssertNotNil(panel.items.first { $0.title == "隐藏全部" })
         XCTAssertNil(panel.items.first { $0.title == "显示全部" })
@@ -74,10 +94,6 @@ final class StatusMenuTests: XCTestCase {
         )
         XCTAssertLessThan(
             panel.items.firstIndex(where: { $0.title == "从当前剪贴板创建…" }) ?? .max,
-            panel.items.firstIndex(where: { $0.title == "管理面板…" }) ?? .min
-        )
-        XCTAssertLessThan(
-            panel.items.firstIndex(where: { $0.title == "管理面板…" }) ?? .max,
             panel.items.firstIndex(where: { $0.title == "工作区" }) ?? .min
         )
         XCTAssertLessThan(
@@ -238,7 +254,7 @@ final class StatusMenuTests: XCTestCase {
         invoke(menu.items.first { $0.title == "文件架…" })
         invoke(menu.items.first { $0.title == "片段库…" })
         invoke(menu.items.first { $0.title == "链接库…" })
-        invoke(GlanceMenuQuery.item(titled: "管理面板…", in: menu))
+        invoke(menu.items.first { $0.title == GlanceHomeCopy.panel })
         invoke(GlanceMenuQuery.item(titled: "从当前剪贴板创建…", in: menu))
         invoke(GlanceMenuQuery.item(titled: "隐藏全部", in: menu))
         XCTAssertTrue(search)

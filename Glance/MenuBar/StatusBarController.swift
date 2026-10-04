@@ -11,6 +11,8 @@ final class StatusBarController: NSObject, NSMenuDelegate {
     private let onShowSnippets: () -> Void
     private let onShowLinks: () -> Void
     private let onShowGlobalSearch: () -> Void
+    private let homeSnapshot: () -> GlanceHomeSnapshot
+    private let onRevealHomeItem: (GlobalSearchResultID) -> GlanceActionOutcome
     private let shortcutSnapshot: () -> [ShortcutAction: GlanceShortcut]
     private var statusItem: NSStatusItem?
 
@@ -24,6 +26,10 @@ final class StatusBarController: NSObject, NSMenuDelegate {
         onShowSnippets: @escaping () -> Void = {},
         onShowLinks: @escaping () -> Void = {},
         onShowGlobalSearch: @escaping () -> Void = {},
+        homeSnapshot: @escaping () -> GlanceHomeSnapshot = { .empty },
+        onRevealHomeItem: @escaping (GlobalSearchResultID) -> GlanceActionOutcome = { _ in
+            .failed(GlanceNoticeCopy.staleItem)
+        },
         shortcutSnapshot: @escaping () -> [ShortcutAction: GlanceShortcut] = { ShortcutDefaults.all }
     ) {
         self.manager = manager
@@ -35,6 +41,8 @@ final class StatusBarController: NSObject, NSMenuDelegate {
         self.onShowSnippets = onShowSnippets
         self.onShowLinks = onShowLinks
         self.onShowGlobalSearch = onShowGlobalSearch
+        self.homeSnapshot = homeSnapshot
+        self.onRevealHomeItem = onRevealHomeItem
         self.shortcutSnapshot = shortcutSnapshot
     }
 
@@ -85,7 +93,11 @@ final class StatusBarController: NSObject, NSMenuDelegate {
             },
             shortcuts: shortcutSnapshot(),
             diagnostic: manager.persistenceDiagnostic(),
-            onShowDiagnostic: { [weak self] in self?.presentPersistenceDiagnostic() }
+            onShowDiagnostic: { [weak self] in self?.presentPersistenceDiagnostic() },
+            homeSnapshot: homeSnapshot(),
+            onRevealHomeItem: { [weak self] id in
+                self?.onRevealHomeItem(id) ?? .failed(GlanceNoticeCopy.staleItem)
+            }
         )
     }
 

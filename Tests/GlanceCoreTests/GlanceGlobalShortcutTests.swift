@@ -39,8 +39,9 @@ final class GlanceGlobalShortcutTests: XCTestCase {
         XCTAssertEqual(menu.items.first?.title, "快速记录…")
         XCTAssertEqual(menu.items.first { $0.title == "搜索 Glance…" }?.title, "搜索 Glance…")
         XCTAssertEqual(menu.items.first { $0.title == "剪贴板…" }?.title, "剪贴板…")
-        XCTAssertNotNil(menu.items.first { $0.title == "面板" }?.submenu)
-        XCTAssertEqual(GlanceMenuQuery.item(titled: "管理面板…", in: menu)?.title, "管理面板…")
+        XCTAssertNotNil(menu.items.first { $0.title == GlanceHomeCopy.panel }?.action)
+        XCTAssertNil(menu.items.first { $0.title == GlanceHomeCopy.panel }?.submenu)
+        XCTAssertNotNil(menu.items.first { $0.title == GlanceHomeCopy.panelOperations }?.submenu)
     }
 
     func testPassThroughHintMentionsLockLimit() {
