@@ -225,6 +225,17 @@ extension TodoRowView: NSTextFieldDelegate {
     func controlTextDidEndEditing(_ obj: Notification) {
         guard !ignoreEndEditing, isEditing else { return }
         guard bounds.width > 1 else { return }
+        // An empty adding row is not a Todo. The Add click (and the
+        // nonactivating panel becoming key) often ends editing immediately;
+        // dismissing here would delete the row the user just asked to type in.
+        if itemID == nil, TodoMutation.trimmed(field.stringValue).isEmpty {
+            if window?.isKeyWindow == true {
+                ignoreEndEditing = true
+                window?.makeFirstResponder(field)
+                ignoreEndEditing = false
+            }
+            return
+        }
         onCommit?(field.stringValue, false)
     }
 }

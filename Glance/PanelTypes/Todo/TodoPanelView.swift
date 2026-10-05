@@ -119,6 +119,7 @@ final class TodoPanelView: NSView, PanelContentControlling {
         addButton.contentTintColor = .tertiaryLabelColor
         addButton.target = self
         addButton.action = #selector(addClicked)
+        addButton.refusesFirstResponder = true
         addButton.translatesAutoresizingMaskIntoConstraints = false
         addButton.alignment = .left
 

@@ -9,7 +9,7 @@ import XCTest
 
 @MainActor
 final class TodoAddInteractionTests: XCTestCase {
-    func testEmptyTodoAddCreatesEditableRowAndCommitsOnReturn() throws {
+    func testEmptyTodoAddCreatesEditableRow() throws {
         let harness = try HostedTodoPanel(document: .empty)
         harness.layout()
 
@@ -25,14 +25,26 @@ final class TodoAddInteractionTests: XCTestCase {
         let field = harness.rows[0].field
         XCTAssertTrue(field.isEditable)
         XCTAssertTrue(field.isSelectable)
+        XCTAssertFalse(field.isHidden)
+        XCTAssertGreaterThan(field.alphaValue, 0.01)
         XCTAssertGreaterThan(harness.rows[0].frame.width, 0)
         XCTAssertGreaterThan(harness.rows[0].frame.height, 0)
         XCTAssertTrue(
             harness.scrollVisibleRect.intersects(harness.rows[0].frame),
             "adding row must be in the document"
         )
-        XCTAssertTrue(harness.window.firstResponder === field.currentEditor() || harness.window.firstResponder === field)
+        XCTAssertTrue(
+            harness.window.firstResponder === field.currentEditor() || harness.window.firstResponder === field
+        )
+    }
 
+    func testEmptyTodoAddCommitsOnReturnAndKeepsAdding() throws {
+        let harness = try HostedTodoPanel(document: .empty)
+        harness.layout()
+        harness.addButton.performClick(nil)
+        harness.layout()
+
+        let field = harness.rows[0].field
         field.stringValue = "测试待办"
         XCTAssertTrue(harness.submitReturn(on: field))
         harness.layout()
@@ -40,7 +52,9 @@ final class TodoAddInteractionTests: XCTestCase {
         XCTAssertEqual(try harness.savedTexts(), ["测试待办"])
         XCTAssertEqual(harness.changes.count, 1)
         XCTAssertEqual(harness.rows.count, 2, "Return in adding should commit and keep a new draft row")
+        XCTAssertFalse(harness.rows[0].field.isEditable)
         XCTAssertTrue(harness.rows[1].field.isEditable)
+        XCTAssertEqual(harness.rows[0].field.stringValue, "测试待办")
     }
 
     func testExistingTodoAddAppendsEditableRow() throws {
@@ -122,6 +136,7 @@ final class TodoAddInteractionTests: XCTestCase {
 
         harness.panel.onRequestEditing = { [panel = harness.panel, window = harness.window] in
             (window as? PanelWindow)?.allowsKey = true
+            NSApp.activate(ignoringOtherApps: true)
             window.makeKeyAndOrderFront(nil)
             panel.enterEditing()
         }
@@ -133,6 +148,76 @@ final class TodoAddInteractionTests: XCTestCase {
         XCTAssertGreaterThan(harness.rows[0].frame.width, 1)
         let field = harness.rows[0].field
         XCTAssertTrue(harness.window.firstResponder === field.currentEditor() || harness.window.firstResponder === field)
+    }
+
+    func testEmptyTodoAddSurvivesSpuriousEndEditingFromTheAddClick() throws {
+        let harness = try HostedTodoPanel(document: .empty, embedInChrome: true)
+        if let panelWindow = harness.window as? PanelWindow {
+            panelWindow.allowsKey = false
+        }
+        harness.layout()
+        harness.installProductionEditingHandoff()
+
+        harness.addButton.performClick(nil)
+        XCTAssertEqual(harness.rows.count, 1, "Add must create a row before any follow-up end-editing")
+        let field = harness.rows[0].field
+        field.delegate?.controlTextDidEndEditing?(
+            Notification(name: NSControl.textDidEndEditingNotification, object: field)
+        )
+
+        XCTAssertEqual(
+            harness.rows.count,
+            1,
+            "empty end-editing from the same Add click must not abort the new row"
+        )
+        XCTAssertTrue(harness.rows[0].field.isEditable)
+        XCTAssertFalse(harness.placeholderVisible)
+        XCTAssertEqual(try harness.savedTexts(), [])
+        XCTAssertEqual(harness.changes.count, 0)
+        let restored = harness.rows[0].field
+        XCTAssertTrue(
+            harness.window.firstResponder === restored.currentEditor() || harness.window.firstResponder === restored,
+            "empty adding row must keep focus so the user can type immediately"
+        )
+    }
+
+    func testTypedAddingDraftStillCommitsOnEndEditing() throws {
+        let harness = try HostedTodoPanel(document: .empty)
+        harness.layout()
+        harness.addButton.performClick(nil)
+        harness.layout()
+        let field = harness.rows[0].field
+        field.stringValue = "回复邮件"
+        field.delegate?.controlTextDidEndEditing?(
+            Notification(name: NSControl.textDidEndEditingNotification, object: field)
+        )
+        harness.layout()
+        XCTAssertEqual(try harness.savedTexts(), ["回复邮件"])
+        XCTAssertEqual(harness.changes.count, 1)
+        XCTAssertEqual(harness.rows.count, 1)
+        XCTAssertFalse(harness.rows[0].field.isEditable)
+    }
+
+    func testEmptyTodoAddMouseClickOnProductionPanelCreatesFocusedRow() throws {
+        let harness = try HostedTodoPanel(document: .empty, embedInChrome: true)
+        if let panelWindow = harness.window as? PanelWindow {
+            panelWindow.allowsKey = false
+        }
+        harness.layout()
+        harness.installProductionEditingHandoff()
+        XCTAssertEqual(harness.rows.count, 0)
+
+        XCTAssertTrue(harness.clickAddButtonWithMouse(), "Add button mouse click must dispatch")
+        XCTAssertEqual(harness.rows.count, 1, "real mouse click must create the adding row")
+        XCTAssertFalse(harness.placeholderVisible)
+        let field = harness.rows[0].field
+        XCTAssertTrue(field.isEditable)
+        XCTAssertGreaterThan(harness.rows[0].frame.width, 1)
+        XCTAssertGreaterThan(harness.rows[0].frame.height, 0)
+        XCTAssertTrue(
+            harness.window.firstResponder === field.currentEditor() || harness.window.firstResponder === field,
+            "field must be first responder after the Add mouse click, got \(String(describing: harness.window.firstResponder))"
+        )
     }
 }
 
@@ -250,6 +335,54 @@ private final class HostedTodoPanel {
     func addButtonCenterInChrome() -> NSPoint {
         let bounds = addButton.convert(addButton.bounds, to: chrome!)
         return NSPoint(x: bounds.midX, y: bounds.midY)
+    }
+
+    func installProductionEditingHandoff() {
+        panel.onRequestEditing = { [panel, window] in
+            (window as? PanelWindow)?.allowsKey = true
+            NSApp.activate(ignoringOtherApps: true)
+            window.makeKeyAndOrderFront(nil)
+            panel.enterEditing()
+        }
+    }
+
+    @discardableResult
+    func clickAddButtonWithMouse() -> Bool {
+        let button = addButton
+        let location = button.convert(
+            NSPoint(x: button.bounds.midX, y: button.bounds.midY),
+            to: nil
+        )
+        let timestamp = ProcessInfo.processInfo.systemUptime
+        guard
+            let down = NSEvent.mouseEvent(
+                with: .leftMouseDown,
+                location: location,
+                modifierFlags: [],
+                timestamp: timestamp,
+                windowNumber: window.windowNumber,
+                context: nil,
+                eventNumber: 1,
+                clickCount: 1,
+                pressure: 1
+            ),
+            let up = NSEvent.mouseEvent(
+                with: .leftMouseUp,
+                location: location,
+                modifierFlags: [],
+                timestamp: timestamp + 0.05,
+                windowNumber: window.windowNumber,
+                context: nil,
+                eventNumber: 2,
+                clickCount: 1,
+                pressure: 0
+            )
+        else {
+            return false
+        }
+        window.sendEvent(down)
+        window.sendEvent(up)
+        return true
     }
 
     private func makeEditor(for field: NSTextField) -> NSTextView? {
