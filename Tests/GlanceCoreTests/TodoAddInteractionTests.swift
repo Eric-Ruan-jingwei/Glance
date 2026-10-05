@@ -9,6 +9,14 @@ import XCTest
 
 @MainActor
 final class TodoAddInteractionTests: XCTestCase {
+    override func setUpWithError() throws {
+        try super.setUpWithError()
+        try XCTSkipIf(
+            Bundle.main.bundleIdentifier == "com.glance.app",
+            "Hosted Todo panel tests run under swift test; Glance.app TEST_HOST deadlocks extra NSPanel key-window work"
+        )
+    }
+
     func testEmptyTodoAddFocusesWhenWindowBecomesKeyAfterTheClick() throws {
         let harness = try HostedTodoPanel(document: .empty, embedInChrome: true)
         if let panelWindow = harness.window as? PanelWindow {
