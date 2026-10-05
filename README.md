@@ -169,7 +169,7 @@ open dist/Glance.app
 - 数据格式 → [docs/architecture/data-format.md](docs/architecture/data-format.md)
 - 版本记录 → [CHANGELOG.md](CHANGELOG.md)
 
-当前应用版本 **0.27.0**（Build 50）。数据库 schema 仍是 Panel 5、Clipboard / File Shelf / Snippet / Link 1。
+当前应用版本 **0.27.0**（Build 51）。数据库 schema 仍是 Panel 5、Clipboard / File Shelf / Snippet / Link 1。
 
 ## License
 

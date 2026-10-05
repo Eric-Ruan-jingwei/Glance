@@ -1,8 +1,14 @@
 # Changelog
 
-Glance 的产品版本独立于数据库 schema。当前应用版本是 **0.27.0**（Build 50）；schema 仍为 Panel 5、Clipboard / File Shelf / Snippet / Link 1。
+Glance 的产品版本独立于数据库 schema。当前应用版本是 **0.27.0**（Build 51）；schema 仍为 Panel 5、Clipboard / File Shelf / Snippet / Link 1。
 
-GitHub 上的 Beta 身份由 tag 表示，例如 `v0.27.0-beta.1`。应用包内的 `CFBundleShortVersionString` 仍是 `0.27.0`。
+GitHub 上的 Beta 身份由 tag 表示，例如 `v0.27.0-beta.2`。应用包内的 `CFBundleShortVersionString` 仍是 `0.27.0`。
+
+## 0.27.0 Beta 2
+
+- 修复空待办面板点击「添加待办」后无法开始第一项的问题
+- 修复非激活悬浮面板进入 Todo 编辑状态时的焦点与 First Responder 竞态
+- 提升面板内真实控件相对于拖动 / Resize 区域的点击优先级
 
 ## 0.27.0
 
