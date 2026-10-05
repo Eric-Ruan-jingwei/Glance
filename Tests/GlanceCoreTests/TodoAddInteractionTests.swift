@@ -160,7 +160,8 @@ final class TodoAddInteractionTests: XCTestCase {
 
     func testProductionPanelWindowControllerEmptyAddCreatesFocusedRow() throws {
         try XCTSkipIf(
-            ProcessInfo.processInfo.environment["CI"] != nil,
+            ProcessInfo.processInfo.environment["CI"] != nil
+                || ProcessInfo.processInfo.environment["GITHUB_ACTIONS"] != nil,
             "PanelWindowController.enterEditing activates the app, which hung GitHub-hosted macOS runners"
         )
         let root = FileManager.default.temporaryDirectory
@@ -211,7 +212,8 @@ final class TodoAddInteractionTests: XCTestCase {
 
     func testProductionResignKeyAfterAddHandshakeCancelsEmptyDraft() throws {
         try XCTSkipIf(
-            ProcessInfo.processInfo.environment["CI"] != nil,
+            ProcessInfo.processInfo.environment["CI"] != nil
+                || ProcessInfo.processInfo.environment["GITHUB_ACTIONS"] != nil,
             "PanelWindowController.enterEditing activates the app, which hung GitHub-hosted macOS runners"
         )
         let root = FileManager.default.temporaryDirectory
@@ -242,7 +244,8 @@ final class TodoAddInteractionTests: XCTestCase {
 
     func testProductionNonKeyAccessoryPanelMouseClickAddsRow() throws {
         try XCTSkipIf(
-            ProcessInfo.processInfo.environment["CI"] != nil,
+            ProcessInfo.processInfo.environment["CI"] != nil
+                || ProcessInfo.processInfo.environment["GITHUB_ACTIONS"] != nil,
             "synthetic mouse events are not reliable on GitHub-hosted macOS runners"
         )
         _ = NSApplication.shared
@@ -437,7 +440,8 @@ final class TodoAddInteractionTests: XCTestCase {
 
     func testEmptyTodoAddMouseClickOnProductionPanelCreatesFocusedRow() throws {
         try XCTSkipIf(
-            ProcessInfo.processInfo.environment["CI"] != nil,
+            ProcessInfo.processInfo.environment["CI"] != nil
+                || ProcessInfo.processInfo.environment["GITHUB_ACTIONS"] != nil,
             "synthetic mouse events are not reliable on GitHub-hosted macOS runners"
         )
         let harness = try HostedTodoPanel(document: .empty, embedInChrome: true)

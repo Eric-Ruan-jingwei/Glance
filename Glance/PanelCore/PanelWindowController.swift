@@ -223,7 +223,9 @@ final class PanelWindowController: NSWindowController, NSWindowDelegate {
         interactionState = .editing
         panelWindow.allowsKey = true
         environment.interaction.update(window: panelWindow, passThrough: false)
-        NSApp.activate(ignoringOtherApps: true)
+        if ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] == nil {
+            NSApp.activate(ignoringOtherApps: true)
+        }
         panelWindow.makeKeyAndOrderFront(nil)
         content.enterEditing()
         installClickOutsideMonitor()
