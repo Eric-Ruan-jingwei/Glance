@@ -9,6 +9,47 @@ import XCTest
 
 @MainActor
 final class TodoAddInteractionTests: XCTestCase {
+    func testEmptyTodoAddFocusesWhenWindowBecomesKeyAfterTheClick() throws {
+        let harness = try HostedTodoPanel(document: .empty, embedInChrome: true)
+        if let panelWindow = harness.window as? PanelWindow {
+            panelWindow.allowsKey = false
+        }
+        let decoy = NSWindow(
+            contentRect: NSRect(x: 40, y: 40, width: 120, height: 80),
+            styleMask: [.titled],
+            backing: .buffered,
+            defer: false
+        )
+        decoy.isReleasedWhenClosed = false
+        decoy.makeKeyAndOrderFront(nil)
+        harness.window.orderFrontRegardless()
+        harness.layout()
+        XCTAssertFalse(harness.window.isKeyWindow)
+        XCTAssertEqual(harness.rows.count, 0)
+
+        harness.panel.onRequestEditing = { [panel = harness.panel, window = harness.window] in
+            (window as? PanelWindow)?.allowsKey = true
+            panel.enterEditing()
+        }
+        harness.addButton.performClick(nil)
+        harness.layout()
+        XCTAssertEqual(harness.rows.count, 1, "Add must create the adding row before the window is key")
+        XCTAssertTrue(harness.panel.isAddingForTests)
+
+        (harness.window as? PanelWindow)?.allowsKey = true
+        harness.window.makeKeyAndOrderFront(nil)
+        harness.layout()
+        RunLoop.current.run(until: Date().addingTimeInterval(0.05))
+
+        let field = harness.rows[0].field
+        XCTAssertTrue(
+            harness.window.firstResponder === field.currentEditor() || harness.window.firstResponder === field,
+            "becoming key after Add must focus the draft field, got \(String(describing: harness.window.firstResponder))"
+        )
+        XCTAssertEqual(field.placeholderString, GlanceEmptyCopy.todoDraftPlaceholder)
+        decoy.close()
+    }
+
     func testEmptyTodoAddCreatesEditableRow() throws {
         let harness = try HostedTodoPanel(document: .empty)
         harness.layout()
@@ -27,6 +68,7 @@ final class TodoAddInteractionTests: XCTestCase {
         XCTAssertTrue(field.isSelectable)
         XCTAssertFalse(field.isHidden)
         XCTAssertGreaterThan(field.alphaValue, 0.01)
+        XCTAssertEqual(field.placeholderString, GlanceEmptyCopy.todoDraftPlaceholder)
         XCTAssertGreaterThan(harness.rows[0].frame.width, 0)
         XCTAssertGreaterThan(harness.rows[0].frame.height, 0)
         XCTAssertTrue(
@@ -70,6 +112,7 @@ final class TodoAddInteractionTests: XCTestCase {
 
         XCTAssertEqual(harness.rows.count, 3)
         XCTAssertTrue(harness.rows[2].field.isEditable)
+        XCTAssertNil(harness.rows[2].field.placeholderString)
         XCTAssertGreaterThan(harness.rows[2].frame.width, 0)
         harness.rows[2].field.stringValue = "C"
         XCTAssertTrue(harness.submitReturn(on: harness.rows[2].field))
@@ -113,6 +156,171 @@ final class TodoAddInteractionTests: XCTestCase {
 
         let drag = NSPoint(x: 40, y: chrome.bounds.height - 10)
         XCTAssertTrue(chrome.hitTest(drag) === chrome, "chrome drag strip should still move")
+    }
+
+    func testProductionPanelWindowControllerEmptyAddCreatesFocusedRow() throws {
+        try XCTSkipIf(
+            ProcessInfo.processInfo.environment["CI"] != nil,
+            "PanelWindowController.enterEditing activates the app, which hung GitHub-hosted macOS runners"
+        )
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("GlanceTodoController-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        let environment = try AppEnvironment.isolatedForTesting(root: root)
+        XCTAssertTrue(ApplicationDataLocation.isIsolatedFromUserData(environment.applicationSupportRoot))
+        let manager = PanelManager(environment: environment)
+        XCTAssertTrue(manager.createPanel(kindIdentifier: PanelKind.todo))
+
+        let window = try XCTUnwrap(manager.windows.first)
+        window.layoutIfNeeded()
+        let chrome = try XCTUnwrap(window.contentView as? PanelChromeView)
+        chrome.layoutSubtreeIfNeeded()
+        let panel = try XCTUnwrap(views(of: TodoPanelView.self, in: chrome).first)
+        let addButton = try XCTUnwrap(
+            views(of: NSButton.self, in: panel).first { $0.title == "添加待办" }
+        )
+        XCTAssertEqual(views(of: TodoRowView.self, in: panel).count, 0)
+
+        let buttonInChrome = addButton.convert(addButton.bounds, to: chrome)
+        let center = NSPoint(x: buttonInChrome.midX, y: buttonInChrome.midY)
+        let hit = chrome.hitTest(center)
+        XCTAssertTrue(
+            hit === addButton || hit?.ancestor(of: NSButton.self) === addButton,
+            "production chrome hit test missed add button: \(String(describing: hit)) buttonFrame=\(buttonInChrome) chrome=\(chrome.bounds)"
+        )
+
+        addButton.performClick(nil)
+        window.layoutIfNeeded()
+        panel.layoutSubtreeIfNeeded()
+        RunLoop.main.run(until: Date().addingTimeInterval(0.15))
+        window.layoutIfNeeded()
+        panel.layoutSubtreeIfNeeded()
+
+        let rows = views(of: TodoRowView.self, in: panel)
+        XCTAssertEqual(rows.count, 1, "production add click must create the adding row")
+        XCTAssertTrue(rows[0].field.isEditable)
+        XCTAssertGreaterThan(rows[0].frame.width, 1)
+        XCTAssertGreaterThan(rows[0].frame.height, 0)
+        XCTAssertTrue(
+            window.firstResponder === rows[0].field.currentEditor() || window.firstResponder === rows[0].field,
+            "field must be first responder, got \(String(describing: window.firstResponder)) key=\(window.isKeyWindow) allowsKey=\((window as? PanelWindow)?.allowsKey ?? false)"
+        )
+    }
+
+    func testProductionResignKeyAfterAddHandshakeCancelsEmptyDraft() throws {
+        try XCTSkipIf(
+            ProcessInfo.processInfo.environment["CI"] != nil,
+            "PanelWindowController.enterEditing activates the app, which hung GitHub-hosted macOS runners"
+        )
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("GlanceTodoResign-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        let environment = try AppEnvironment.isolatedForTesting(root: root)
+        let manager = PanelManager(environment: environment)
+        XCTAssertTrue(manager.createPanel(kindIdentifier: PanelKind.todo))
+        let window = try XCTUnwrap(manager.windows.first)
+        let chrome = try XCTUnwrap(window.contentView as? PanelChromeView)
+        window.layoutIfNeeded()
+        chrome.layoutSubtreeIfNeeded()
+        let panel = try XCTUnwrap(views(of: TodoPanelView.self, in: chrome).first)
+        let addButton = try XCTUnwrap(
+            views(of: NSButton.self, in: panel).first { $0.title == "添加待办" }
+        )
+        addButton.performClick(nil)
+        RunLoop.main.run(until: Date().addingTimeInterval(0.2))
+        XCTAssertEqual(views(of: TodoRowView.self, in: panel).count, 1)
+
+        window.delegate?.windowDidResignKey?(Notification(name: NSWindow.didResignKeyNotification, object: window))
+        window.layoutIfNeeded()
+        XCTAssertFalse(panel.isAddingForTests)
+        XCTAssertEqual(views(of: TodoRowView.self, in: panel).count, 0)
+    }
+
+    func testProductionNonKeyAccessoryPanelMouseClickAddsRow() throws {
+        try XCTSkipIf(
+            ProcessInfo.processInfo.environment["CI"] != nil,
+            "synthetic mouse events are not reliable on GitHub-hosted macOS runners"
+        )
+        _ = NSApplication.shared
+        let previousPolicy = NSApp.activationPolicy()
+        NSApp.setActivationPolicy(.accessory)
+        defer { NSApp.setActivationPolicy(previousPolicy) }
+
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("GlanceTodoAccessory-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        let environment = try AppEnvironment.isolatedForTesting(root: root)
+        let manager = PanelManager(environment: environment)
+        XCTAssertTrue(manager.createPanel(kindIdentifier: PanelKind.todo))
+
+        let window = try XCTUnwrap(manager.windows.first as? PanelWindow)
+        window.orderFrontRegardless()
+        NSApp.deactivate()
+        window.layoutIfNeeded()
+        XCTAssertFalse(window.allowsKey)
+        XCTAssertFalse(window.isKeyWindow)
+
+        let chrome = try XCTUnwrap(window.contentView as? PanelChromeView)
+        chrome.layoutSubtreeIfNeeded()
+        let panel = try XCTUnwrap(views(of: TodoPanelView.self, in: chrome).first)
+        let addButton = try XCTUnwrap(
+            views(of: NSButton.self, in: panel).first { $0.title == "添加待办" }
+        )
+        let buttonInChrome = addButton.convert(addButton.bounds, to: chrome)
+        let hit = chrome.hitTest(NSPoint(x: buttonInChrome.midX, y: buttonInChrome.midY))
+        XCTAssertTrue(
+            hit === addButton || hit?.ancestor(of: NSButton.self) === addButton,
+            "non-key accessory chrome missed add button: \(String(describing: hit)) frame=\(buttonInChrome)"
+        )
+
+        let location = addButton.convert(
+            NSPoint(x: addButton.bounds.midX, y: addButton.bounds.midY),
+            to: nil
+        )
+        let timestamp = ProcessInfo.processInfo.systemUptime
+        let down = try XCTUnwrap(NSEvent.mouseEvent(
+            with: .leftMouseDown,
+            location: location,
+            modifierFlags: [],
+            timestamp: timestamp,
+            windowNumber: window.windowNumber,
+            context: nil,
+            eventNumber: 11,
+            clickCount: 1,
+            pressure: 1
+        ))
+        let up = try XCTUnwrap(NSEvent.mouseEvent(
+            with: .leftMouseUp,
+            location: location,
+            modifierFlags: [],
+            timestamp: timestamp + 0.05,
+            windowNumber: window.windowNumber,
+            context: nil,
+            eventNumber: 12,
+            clickCount: 1,
+            pressure: 0
+        ))
+        window.sendEvent(down)
+        window.sendEvent(up)
+        RunLoop.main.run(until: Date().addingTimeInterval(0.15))
+        window.layoutIfNeeded()
+        panel.layoutSubtreeIfNeeded()
+
+        XCTAssertTrue(panel.isAddingForTests, "add click must enter adding session")
+        let rows = views(of: TodoRowView.self, in: panel)
+        XCTAssertEqual(
+            rows.count,
+            1,
+            "non-key accessory mouse click must create the adding row; firstResponder=\(String(describing: window.firstResponder)) key=\(window.isKeyWindow)"
+        )
+        XCTAssertTrue(rows[0].field.isEditable)
+        XCTAssertGreaterThan(rows[0].frame.width, 1)
     }
 
     func testLockedTodoAddButtonDoesNotMutate() throws {
@@ -195,6 +403,36 @@ final class TodoAddInteractionTests: XCTestCase {
         XCTAssertEqual(harness.changes.count, 1)
         XCTAssertEqual(harness.rows.count, 1)
         XCTAssertFalse(harness.rows[0].field.isEditable)
+    }
+
+    func testAddButtonHitTestBeatsBottomResizeAcrossTheButtonFrame() throws {
+        let harness = try HostedTodoPanel(document: .empty, embedInChrome: true)
+        harness.layout()
+        let chrome = try XCTUnwrap(harness.chrome)
+        let button = harness.addButton
+        let buttonInChrome = button.convert(button.bounds, to: chrome)
+
+        XCTAssertGreaterThan(buttonInChrome.width, 1, "add button width \(buttonInChrome)")
+        XCTAssertGreaterThan(buttonInChrome.height, 1, "add button height \(buttonInChrome)")
+        XCTAssertGreaterThan(
+            buttonInChrome.minY,
+            GlanceConstants.resizeEdge,
+            "add button overlaps the bottom resize edge: button=\(buttonInChrome) chrome=\(chrome.bounds)"
+        )
+
+        let samples = [
+            NSPoint(x: buttonInChrome.midX, y: buttonInChrome.midY),
+            NSPoint(x: buttonInChrome.minX + 4, y: buttonInChrome.midY),
+            NSPoint(x: buttonInChrome.midX, y: buttonInChrome.minY + 2),
+            NSPoint(x: buttonInChrome.midX, y: buttonInChrome.maxY - 2)
+        ]
+        for point in samples {
+            let hit = chrome.hitTest(point)
+            XCTAssertTrue(
+                hit === button || hit?.ancestor(of: NSButton.self) === button,
+                "click at \(point) in button frame \(buttonInChrome) hit \(String(describing: hit)) instead of the add button"
+            )
+        }
     }
 
     func testEmptyTodoAddMouseClickOnProductionPanelCreatesFocusedRow() throws {

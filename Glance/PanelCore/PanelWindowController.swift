@@ -19,6 +19,7 @@ final class PanelWindowController: NSWindowController, NSWindowDelegate {
     private var settingsModel: PanelSettingsModel?
     private var settingsWindowController: PanelSettingsWindowController?
     private var collectionObserver: NSObjectProtocol?
+    private var suppressLeaveOnResignKey = false
 
     var panelWindow: PanelWindow {
         window as! PanelWindow
@@ -218,6 +219,7 @@ final class PanelWindowController: NSWindowController, NSWindowDelegate {
 
     private func enterEditing() {
         guard currentPolicy().allowsEdit else { return }
+        suppressLeaveOnResignKey = true
         interactionState = .editing
         panelWindow.allowsKey = true
         environment.interaction.update(window: panelWindow, passThrough: false)
@@ -226,6 +228,22 @@ final class PanelWindowController: NSWindowController, NSWindowDelegate {
         content.enterEditing()
         installClickOutsideMonitor()
         applyPolicyToViews()
+        DispatchQueue.main.async { [weak self] in
+            self?.finishEnteringEditing()
+        }
+    }
+
+    private func finishEnteringEditing() {
+        guard interactionState == .editing else {
+            suppressLeaveOnResignKey = false
+            return
+        }
+        panelWindow.allowsKey = true
+        panelWindow.makeKeyAndOrderFront(nil)
+        content.enterEditing()
+        DispatchQueue.main.async { [weak self] in
+            self?.suppressLeaveOnResignKey = false
+        }
     }
 
     private func leaveEditing() {
@@ -536,7 +554,14 @@ final class PanelWindowController: NSWindowController, NSWindowDelegate {
         panelWindow.invalidateShadow()
     }
 
+    func windowDidBecomeKey(_ notification: Notification) {
+        if interactionState == .editing {
+            content.enterEditing()
+        }
+    }
+
     func windowDidResignKey(_ notification: Notification) {
+        if suppressLeaveOnResignKey { return }
         if interactionState == .editing {
             leaveEditing()
         }

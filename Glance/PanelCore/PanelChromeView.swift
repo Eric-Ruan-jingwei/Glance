@@ -216,6 +216,9 @@ final class PanelChromeView: NSView {
            accessory !== accessoryStack {
             return accessory
         }
+        if let hit = super.hitTest(point), Self.isPreferentialControl(hit, stoppingAt: self) {
+            return hit
+        }
         if isInteractable, allowsResize, !edges(at: point).isEmpty {
             return self
         }
@@ -379,6 +382,17 @@ final class PanelChromeView: NSView {
     @objc private func moreClicked(_ sender: NSButton) {
         guard let event = NSApp.currentEvent, let menu = onContextMenu?(event) else { return }
         NSMenu.popUpContextMenu(menu, with: event, for: sender)
+    }
+
+    private static func isPreferentialControl(_ view: NSView, stoppingAt root: NSView) -> Bool {
+        var current: NSView? = view
+        while let candidate = current, candidate !== root {
+            if candidate is NSControl || candidate is NSTextView {
+                return true
+            }
+            current = candidate.superview
+        }
+        return false
     }
 
     private func applyKindIcon() {

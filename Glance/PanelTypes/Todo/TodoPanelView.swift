@@ -81,6 +81,11 @@ final class TodoPanelView: NSView, PanelContentControlling {
     func additionalContextMenuItems() -> [NSMenuItem] { [] }
     func handlePaste() -> Bool { false }
 
+    var isAddingForTests: Bool {
+        if case .adding = session { return true }
+        return false
+    }
+
     var automaticDisplayTitle: String? {
         PanelSummaryText.todoTitle(items: document.items).title
     }
@@ -304,6 +309,9 @@ final class TodoPanelView: NSView, PanelContentControlling {
 
         if case .adding = session {
             let row = makeRow(item: nil, editing: true)
+            if document.items.isEmpty {
+                row.field.placeholderString = GlanceEmptyCopy.todoDraftPlaceholder
+            }
             stack.addArrangedSubview(row)
             row.widthAnchor.constraint(equalTo: stack.widthAnchor).isActive = true
             focusedRow = row

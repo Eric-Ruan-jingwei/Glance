@@ -143,6 +143,8 @@ final class GlanceVisualSystemTests: XCTestCase {
         XCTAssertEqual(GlanceEmptyCopy.quickCapturePlaceholder, "记录点什么…")
         XCTAssertEqual(GlanceEmptyCopy.textPlaceholder, "单击编辑")
         XCTAssertEqual(GlanceEmptyCopy.markdownPlaceholder, "单击编辑 Markdown")
+        XCTAssertEqual(GlanceEmptyCopy.todoPlaceholder, "添加你的第一项待办")
+        XCTAssertEqual(GlanceEmptyCopy.todoDraftPlaceholder, "输入第一项待办")
         XCTAssertEqual(PanelSummaryFallback.pdfUnreadable, "无法读取 PDF")
     }
 

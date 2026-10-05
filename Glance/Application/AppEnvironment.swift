@@ -29,11 +29,16 @@ final class AppEnvironment {
     let applicationSupportRoot: URL
 
     static func live() throws -> AppEnvironment {
-        try AppEnvironment()
+        try AppEnvironment(processEnvironment: ProcessInfo.processInfo.environment)
     }
 
-    private init() throws {
-        let environment = ProcessInfo.processInfo.environment
+    static func isolatedForTesting(root: URL) throws -> AppEnvironment {
+        try AppEnvironment(processEnvironment: [
+            ApplicationDataLocation.environmentKey: root.path
+        ])
+    }
+
+    private init(processEnvironment environment: [String: String]) throws {
         var root = ApplicationDataLocation.resolve(environment: environment)
         if environment[ApplicationDataLocation.environmentKey] != nil,
            environment["XCTestConfigurationFilePath"] != nil {

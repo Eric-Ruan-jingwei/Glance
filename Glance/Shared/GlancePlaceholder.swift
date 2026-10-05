@@ -20,6 +20,7 @@ enum GlanceEmptyCopy {
     static let textPlaceholder = "单击编辑"
     static let markdownPlaceholder = "单击编辑 Markdown"
     static let todoPlaceholder = "添加你的第一项待办"
+    static let todoDraftPlaceholder = "输入第一项待办"
 }
 
 enum GlancePromptField {
