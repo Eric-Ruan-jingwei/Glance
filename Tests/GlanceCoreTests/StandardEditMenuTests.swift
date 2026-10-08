@@ -56,8 +56,6 @@ final class StandardEditMenuTests: XCTestCase {
             modifiers: [.command, .shift],
             in: mainMenu
         )
-
-        XCTAssertTrue(mainMenu.performKeyEquivalent(with: commandKey("v", keyCode: 9)))
     }
 
     func testInstallOnApplicationIsIdempotent() {
@@ -68,7 +66,9 @@ final class StandardEditMenuTests: XCTestCase {
         application.mainMenu = NSMenu()
         GlanceStandardEditMenu.install(on: application)
         GlanceStandardEditMenu.install(on: application)
-        let editMenus = application.mainMenu?.items.compactMap(\.submenu).filter { $0.title == GlanceStandardEditMenu.title } ?? []
+        let editMenus = application.mainMenu?.items.compactMap(\.submenu).filter {
+            $0.title == GlanceStandardEditMenu.title
+        } ?? []
         XCTAssertEqual(editMenus.count, 1)
         XCTAssertEqual(
             editMenus.first?.items.filter { $0.action == GlanceStandardEditMenu.paste }.count,
@@ -76,21 +76,42 @@ final class StandardEditMenuTests: XCTestCase {
         )
     }
 
-    func testPasteReplacesSelectionThroughStandardAction() throws {
-        try withTemporaryPasteboardString("https://example.com") {
-            let textView = NSTextView(frame: NSRect(x: 0, y: 0, width: 240, height: 24))
-            textView.string = "abCDef"
-            textView.setSelectedRange(NSRange(location: 2, length: 2))
+    func testStandardEditActionsDispatchToExplicitResponder() {
+        let recorder = RecordingEditResponder()
+        let commands: [Selector] = [
+            GlanceStandardEditMenu.paste,
+            GlanceStandardEditMenu.copy,
+            GlanceStandardEditMenu.cut,
+            GlanceStandardEditMenu.selectAll,
+            GlanceStandardEditMenu.undo,
+            GlanceStandardEditMenu.redo
+        ]
+        for action in commands {
+            XCTAssertTrue(
+                NSApp.sendAction(action, to: recorder, from: nil),
+                "\(action) should reach a responder that implements the standard selector"
+            )
+        }
+        XCTAssertEqual(recorder.received, commands)
+    }
 
-            XCTAssertTrue(NSApp.sendAction(#selector(NSText.paste(_:)), to: textView, from: nil))
-            XCTAssertEqual(textView.string, "abhttps://example.comef")
-
-            XCTAssertTrue(NSApp.sendAction(#selector(NSText.selectAll(_:)), to: textView, from: nil))
-            XCTAssertEqual(textView.selectedRange(), NSRange(location: 0, length: textView.string.count))
-
-            XCTAssertTrue(NSApp.sendAction(#selector(NSText.copy(_:)), to: textView, from: nil))
-            XCTAssertTrue(NSApp.sendAction(#selector(NSText.cut(_:)), to: textView, from: nil))
-            XCTAssertEqual(textView.string, "")
+    func testMenuKeyEquivalentsMatchStandardActionsWithoutSendingThem() {
+        let mainMenu = NSMenu()
+        GlanceStandardEditMenu.install(into: mainMenu)
+        let expected: [(Selector, String, NSEvent.ModifierFlags)] = [
+            (GlanceStandardEditMenu.paste, "v", .command),
+            (GlanceStandardEditMenu.copy, "c", .command),
+            (GlanceStandardEditMenu.cut, "x", .command),
+            (GlanceStandardEditMenu.selectAll, "a", .command),
+            (GlanceStandardEditMenu.undo, "z", .command),
+            (GlanceStandardEditMenu.redo, "z", [.command, .shift])
+        ]
+        for (action, key, modifiers) in expected {
+            let item = tryUnwrapItem(action, in: mainMenu)
+            XCTAssertNil(item.target)
+            XCTAssertEqual(item.keyEquivalent, key)
+            XCTAssertEqual(item.keyEquivalentModifierMask, modifiers)
+            XCTAssertEqual(item.action, action)
         }
     }
 
@@ -227,24 +248,6 @@ final class StandardEditMenuTests: XCTestCase {
         )!
     }
 
-    private func withTemporaryPasteboardString(_ value: String, _ body: () throws -> Void) throws {
-        let pasteboard = NSPasteboard.general
-        let savedTypes = pasteboard.types ?? []
-        let savedItems = savedTypes.compactMap { type -> (NSPasteboard.PasteboardType, Data)? in
-            guard let data = pasteboard.data(forType: type) else { return nil }
-            return (type, data)
-        }
-        pasteboard.clearContents()
-        pasteboard.setString(value, forType: .string)
-        defer {
-            pasteboard.clearContents()
-            for (type, data) in savedItems {
-                pasteboard.setData(data, forType: type)
-            }
-        }
-        try body()
-    }
-
     private func unwrap(_ result: Result<LinkRecord, LinkCommitError>) throws -> LinkRecord {
         switch result {
         case .success(let record):
@@ -253,5 +256,34 @@ final class StandardEditMenuTests: XCTestCase {
             XCTFail("unexpected \(error)")
             throw error
         }
+    }
+}
+
+/// Records standard AppKit edit selectors without touching NSPasteboard.general.
+private final class RecordingEditResponder: NSObject {
+    var received: [Selector] = []
+
+    @objc func paste(_ sender: Any?) {
+        received.append(#selector(NSText.paste(_:)))
+    }
+
+    @objc func copy(_ sender: Any?) {
+        received.append(#selector(NSText.copy(_:)))
+    }
+
+    @objc func cut(_ sender: Any?) {
+        received.append(#selector(NSText.cut(_:)))
+    }
+
+    @objc func selectAll(_ sender: Any?) {
+        received.append(#selector(NSText.selectAll(_:)))
+    }
+
+    @objc func undo(_ sender: Any?) {
+        received.append(NSSelectorFromString("undo:"))
+    }
+
+    @objc func redo(_ sender: Any?) {
+        received.append(NSSelectorFromString("redo:"))
     }
 }
