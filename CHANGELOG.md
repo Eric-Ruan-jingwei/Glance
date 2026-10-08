@@ -1,8 +1,14 @@
 # Changelog
 
-Glance 的产品版本独立于数据库 schema。当前应用版本是 **0.27.0**（Build 51）；schema 仍为 Panel 5、Clipboard / File Shelf / Snippet / Link 1。
+Glance 的产品版本独立于数据库 schema。当前应用版本是 **0.27.0**（Build 52）；schema 仍为 Panel 5、Clipboard / File Shelf / Snippet / Link 1。
 
-GitHub 上的 Beta 身份由 tag 表示，例如 `v0.27.0-beta.2`。应用包内的 `CFBundleShortVersionString` 仍是 `0.27.0`。
+GitHub 上的 Beta 身份由 tag 表示，例如 `v0.27.0-beta.3`。应用包内的 `CFBundleShortVersionString` 仍是 `0.27.0`。
+
+## 0.27.0 Beta 3
+
+- 修复链接库等文本输入场景无法通过 ⌘V 粘贴的问题
+- 恢复标准 macOS 剪切、复制、粘贴、全选、撤销与重做命令
+- 修复自动化测试直接修改系统剪贴板的隔离问题
 
 ## 0.27.0 Beta 2
 

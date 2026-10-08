@@ -11,7 +11,7 @@ final class GlanceBundleMetadataTests: XCTestCase {
     func testSourceInfoPlistIsCanonicalAppVersion() throws {
         let plist = try loadSourceInfoPlist()
         XCTAssertEqual(plist["CFBundleShortVersionString"] as? String, "0.27.0")
-        XCTAssertEqual(plist["CFBundleVersion"] as? String, "51")
+        XCTAssertEqual(plist["CFBundleVersion"] as? String, "52")
         XCTAssertEqual(plist["CFBundleIdentifier"] as? String, "com.glance.app")
         XCTAssertEqual(plist["LSMultipleInstancesProhibited"] as? Bool, true)
         XCTAssertEqual(plist["LSUIElement"] as? Bool, true)
