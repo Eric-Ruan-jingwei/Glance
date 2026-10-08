@@ -179,10 +179,14 @@ final class SnippetLibraryWindowController: NSWindowController {
         }
     }
 
-    private func handleKey(_ event: NSEvent) -> NSEvent? {
+    func handleKey(_ event: NSEvent) -> NSEvent? {
         guard isLibraryVisible else { return event }
-        if model.editor != nil { return event }
-        if isComposingIME() { return event }
+        if GlanceLibraryKeyMonitor.shouldDeliverToResponder(
+            editorOpen: model.editor != nil,
+            isComposingIME: isComposingIME()
+        ) {
+            return event
+        }
         let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
         guard let action = SnippetActionPolicy.action(
             keyCode: event.keyCode,

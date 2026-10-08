@@ -94,6 +94,8 @@ final class SnippetPolicyTests: XCTestCase {
         XCTAssertEqual(SnippetActionPolicy.action(keyCode: 36, characters: "\r", command: false), .copy)
         XCTAssertEqual(SnippetActionPolicy.action(keyCode: 36, characters: "\r", command: true), .edit)
         XCTAssertEqual(SnippetActionPolicy.action(keyCode: 45, characters: "n", command: true), .create)
+        XCTAssertNil(SnippetActionPolicy.action(keyCode: 9, characters: "v", command: true))
+        XCTAssertNil(SnippetActionPolicy.action(keyCode: 8, characters: "c", command: true))
         XCTAssertEqual(SnippetActionPolicy.action(keyCode: 51, characters: nil, command: false), .delete)
         XCTAssertEqual(SnippetActionPolicy.action(keyCode: 53, characters: nil, command: false), .dismiss)
     }

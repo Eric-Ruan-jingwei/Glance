@@ -6,6 +6,7 @@ public enum GlanceMain {
 
     public static func main() {
         let app = NSApplication.shared
+        GlanceStandardEditMenu.install(on: app)
         let delegate = AppDelegate()
         Self.delegate = delegate
         app.delegate = delegate
