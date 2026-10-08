@@ -9,9 +9,9 @@
 <p align="center">轻量 · 本地优先 · 原生 macOS 个人办公工具</p>
 
 <p align="center">
-  <a href="https://github.com/Eric-Ruan-jingwei/Glance/releases/tag/v0.27.0-beta.2"><img src="https://img.shields.io/badge/macOS-14%2B-111111" alt="macOS 14+"></a>
-  <a href="https://github.com/Eric-Ruan-jingwei/Glance/releases/tag/v0.27.0-beta.2"><img src="https://img.shields.io/badge/Universal-2-111111" alt="Universal 2"></a>
-  <a href="https://github.com/Eric-Ruan-jingwei/Glance/releases/tag/v0.27.0-beta.2"><img src="https://img.shields.io/badge/beta-v0.27.0-0B57D0" alt="v0.27.0 Beta"></a>
+  <a href="https://github.com/Eric-Ruan-jingwei/Glance/releases/tag/v0.27.0-beta.3"><img src="https://img.shields.io/badge/macOS-14%2B-111111" alt="macOS 14+"></a>
+  <a href="https://github.com/Eric-Ruan-jingwei/Glance/releases/tag/v0.27.0-beta.3"><img src="https://img.shields.io/badge/Universal-2-111111" alt="Universal 2"></a>
+  <a href="https://github.com/Eric-Ruan-jingwei/Glance/releases/tag/v0.27.0-beta.3"><img src="https://img.shields.io/badge/beta-v0.27.0-0B57D0" alt="v0.27.0 Beta"></a>
   <a href="https://github.com/Eric-Ruan-jingwei/Glance/actions/workflows/ci.yml"><img src="https://github.com/Eric-Ruan-jingwei/Glance/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-111111" alt="MIT"></a>
 </p>
@@ -48,7 +48,7 @@ brew install --cask glance
 
 ### DMG
 
-下载 [Glance 0.27.0 Beta 2](https://github.com/Eric-Ruan-jingwei/Glance/releases/tag/v0.27.0-beta.2)，打开 `Glance-0.27.0.dmg`，把 Glance 拖进 Applications。
+下载 [Glance 0.27.0 Beta 3](https://github.com/Eric-Ruan-jingwei/Glance/releases/tag/v0.27.0-beta.3)，打开 `Glance-0.27.0.dmg`，把 Glance 拖进 Applications。
 
 Glance 是菜单栏应用：请看菜单栏里的图钉图标，不要在 Dock 里找。
 
